@@ -55,3 +55,12 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Development artifacts (not for GitHub)
+.vs/
+openspec/
+.atl/
+AGENTS.md
+
+# BenchmarkDotNet output
+BenchmarkDotNet.Artifacts/
