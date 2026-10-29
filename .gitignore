@@ -64,3 +64,6 @@ AGENTS.md
 
 # BenchmarkDotNet output
 BenchmarkDotNet.Artifacts/
+
+# CodeGraph index (local, machine-specific)
+.codegraph/
