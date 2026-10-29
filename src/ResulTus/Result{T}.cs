@@ -2,7 +2,6 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace ResulTus;
 
@@ -16,8 +15,15 @@ namespace ResulTus;
 /// <see cref="Error"/> for failure. Do NOT access a direct <c>Value</c> property —
 /// use <see cref="TryGetValue(out T?, out Error)"/>, <see cref="GetValueOrDefault(T)"/>,
 /// <see cref="GetValueOr(System.Func{Error, T})"/>, or <see cref="Match"/> instead.
+/// <para>
+/// Deliberately **not** marked <c>[StructLayout(LayoutKind.Sequential, Pack = 1)]</c>: the
+/// inline <see cref="Error"/> holds object references, the GC forces pointer alignment, and the
+/// attribute is a measured no-op here — <c>Result&lt;int&gt;</c> measures 32 B with and without
+/// it. It is kept on <c>Result&lt;TSuccess, TError&gt;</c> only, where it is honored and saves
+/// three bytes when the error type holds no references. Both sizes are pinned by
+/// <c>LayoutTests</c>; see docs/decisions/001-result-struct-size.md.
+/// </para>
 /// </remarks>
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly record struct Result<T>
 {
     private readonly T _value;

@@ -15,6 +15,16 @@ namespace ResulTus;
 /// <remarks>
 /// Use implicit conversion from either <typeparamref name="TSuccess"/> or <typeparamref name="TError"/>
 /// to create instances. Use <see cref="Match{TResult}"/> or <see cref="Deconstruct"/> to access the value.
+/// <para>
+/// Keeps <c>[StructLayout(LayoutKind.Sequential, Pack = 1)]</c> for a measured reason: when the
+/// error type holds no references the runtime honors the pack, so <c>Result&lt;int, EightByteError&gt;</c>
+/// is 13 B instead of an aligned 16 B. The aligned alternative was measured against it twice per
+/// layout on 2026-10-29 (two samples each, success and failure, 1 000 and 7 000 elements): the
+/// aligned stride was 2.5% faster in one cell and 1.5%–5.0% slower in the other three, i.e. at or
+/// below this machine's resolution, with the failure path consistently favoring the packed stride.
+/// When the error type does hold references the runtime realigns anyway and the attribute is inert.
+/// See docs/decisions/001-result-struct-size.md.
+/// </para>
 /// </remarks>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public readonly record struct Result<TSuccess, TError>
