@@ -1,0 +1,292 @@
+# Performance Charter
+
+ResulTus exists to be the **fastest zero-allocation result type in .NET**. That is not a marketing line — it is an acceptance criterion. This document defines what "fastest" means in a way that can be measured, reviewed, and enforced.
+
+> **North star:** ResulTus must not lose a single benchmark against any library in the comparison set.
+
+---
+
+## 1. Comparison set
+
+| Library | Why it is here |
+| --- | --- |
+| [ZeroResult](https://www.nuget.org/packages/ZeroResult) | Closest design — `readonly record struct` result, but its `SingleError` error type is a **class**, so its failure path allocates unless the caller reuses a cached instance. The real adversary. |
+| [ErrorOr](https://www.nuget.org/packages/ErrorOr) | Popular, allocation-free on success. |
+| [CSharpFunctionalExtensions](https://www.nuget.org/packages/CSharpFunctionalExtensions) | Popular functional result type. |
+| [FluentResults](https://www.nuget.org/packages/FluentResults) | Class-based reference point. Baseline for "what we must never become". |
+
+## 2. Definition of victory
+
+A benchmark row is judged on **mean time** and **allocation**. Three outcomes are possible:
+
+| Outcome | Rule | Consequence |
+| --- | --- | --- |
+| **Win** | Strictly lowest mean, difference resolvable | Ship it |
+| **Tie** | Within the noise floor of the lowest mean | Acceptable — counts as not losing |
+| **Loss** | Slower than the lowest mean, outside the noise floor | **Defect.** Tracked, explained, or fixed |
+
+### Noise floor
+
+BenchmarkDotNet reports a 99.9% confidence interval. Below that threshold a difference is not a fact, it is a coin flip.
+
+- Both means `< 1.0 ns` → **always a tie.** At sub-nanosecond scale the JIT has eliminated the work and the stopwatch is measuring its own loop overhead. Do not chase these.
+- Either mean `>= 1.0 ns` → the gap is a candidate, but **only counts if the confidence intervals do not overlap AND the result reproduces in a second run**. Measured evidence (2026-10-27): a non-overlapping 33% gap in one run vanished in the next, on the same machine, SDK, and package. One run proves nothing.
+- Secondary check: a `MultimodalDistribution` warning invalidates the row's mean until the bimodality is explained.
+- Tertiary check: a row that collapses to `0.0000 ns` with `StdDev = 0` is **JIT elimination**, not a speedup. Report it as unmeasurable, never as a win.
+
+### Allocation — hard rule, no tolerance
+
+`0 B` on **both** the success and the failure path of every core operation. This is not a comparison, it is a floor. A competitor allocating where we allocate nothing is a marketing win; us allocating where a competitor does not is a defect.
+
+## 3. Fair comparison rule
+
+Benchmarks must compare **equivalent semantics**. When a competitor's default type is structurally cheaper than ours, both readings are recorded:
+
+- **As-used** — default type of each library, as a user would write it.
+- **Fair** — same error payload richness on both sides.
+
+A loss in *as-used* with a win in *fair* is a documentation task, not an engineering task. A loss in *fair* is an engineering task.
+
+> Current example: ResulTus `Result<int>` is **32 B** — a 24-byte `Error` inline (code, message, type) plus the payload and a flag. ZeroResult's `Result<int, SingleError>` is **16 B**, but those 16 bytes hold a **reference to a class**, not an inline error: `SingleError` is a class. ErrorOr's 16 B holds a `List<Error>`, and `ErrorOr.Error` itself is 32 B. These are not the same type. The comparison is still valid, but the reason for a gap must be stated, never hand-waved.
+
+## 4. Baseline
+
+Machine: Windows, .NET SDK 10.0.403, `Release`, `DefaultJob`, `MemoryDiagnoser`.
+Benchmarks: `tests/ResulTus.Benchmarks/`.
+
+### Result creation — measured 2026-10-29
+
+Post-B1: `Error` is 24 B and `Result<int>` is 32 B, zero allocation on both paths.
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| **ResulTus_Create_Success** | 0.0118 ns | **0 B** |
+| **ResulTus_Create_Failure** | 0.0192 ns | **0 B** |
+| ResulTus_Create_Implicit_From_Value | 0.0130 ns | 0 B |
+| ResulTus_Create_Implicit_From_Error | 0.1153 ns | 0 B |
+| ZeroResult_Create_Success | 0.0150 ns | 0 B |
+| ZeroResult_Create_Failure | 0.3182 ns | 0 B |
+| CSharpFunctionalExtensions_Create_Success | 2.2914 ns | 0 B |
+| CSharpFunctionalExtensions_Create_Failure | 0.0544 ns | 0 B |
+| ErrorOr_Create_Success | 0.1295 ns | 0 B |
+| ErrorOr_Create_Failure | 11.6516 ns | **88 B** |
+| FluentResults_Create_Success | 18.7471 ns | **112 B** |
+| FluentResults_Create_Failure | 40.6202 ns | **240 B** |
+
+**Verdict:** every row below 1 ns is a tie by the noise-floor rule — that includes CSharpFunctionalExtensions' `0.0544 ns` failure, which is not a loss we can measure. The meaningful result is `Create_Failure`: **0.0192 ns and 0 B** against ErrorOr's `11.65 ns` + **88 B** and FluentResults' `40.62 ns` + **240 B**, i.e. **607x** and **2116x** faster with no allocation while they allocate an error object. ZeroResult's `0.3182 ns` is also zero-allocation; the gap is real in direction but is not the story — the story is that every competitor except ZeroResult must allocate to report a failure.
+
+### Result matching — measured 2026-10-29
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| **ResulTus_Match_Success** | 0.9235 ns | **0 B** |
+| **ResulTus_Match_Failure** | 1.3834 ns | **0 B** |
+| ErrorOr_Match_Success | **0.7175 ns** | 0 B |
+| ErrorOr_Match_Failure | **0.5482 ns** | 0 B |
+| ZeroResult_Match_Success | 0.9391 ns | 0 B |
+| ZeroResult_Match_Failure | **0.7818 ns** | 0 B |
+| CSharpFunctionalExtensions_Match_Success | 1.9599 ns | 0 B |
+| CSharpFunctionalExtensions_Match_Failure | 1.8911 ns | 0 B |
+| FluentResults_Match_Success | 21.4166 ns | **96 B** |
+| FluentResults_Match_Failure | 19.0831 ns | **88 B** |
+
+**Verdict:** the settled wins are structural, not nanosecond-sized.
+
+- **CSharpFunctionalExtensions** — **2.1x / 1.4x** faster (success / failure).
+- **FluentResults** — **23x / 14x** faster, and it allocates 96 B / 88 B while we allocate nothing.
+- **ZeroResult — tie on success, loss on failure.** `0.9235 vs 0.9391` success is a tie. `1.3834 vs 0.7818` failure is **1.8x slower**, and it is **not reproducible**: the 2026-10-27 run measured our own failure path at `0.9095 ns`, a 52% swing across runs on the same machine, SDK and package set. §4.1, Finding 4 applies: this hardware cannot resolve it, and one run is an anecdote. Do not publish a failure-path verdict until a repeat agrees.
+- **ErrorOr — still contested.** `0.7175` versus our `0.9235` on success and `0.5482` versus `1.3834` on failure. ErrorOr has now been faster in every run, which is more consistent than the 2026-10-27 picture, but the magnitude swung from 33% to 250% on the failure path, so the number is unstable. Treat it as *unresolved with ErrorOr ahead*, not as a documented loss.
+
+### 4.1 Spike — struct size and delegate dispatch (2026-10-27)
+
+Self-contained experiment replicating the layouts, plus a real `ErrorOr` and `ZeroResult` baseline in the same process.
+
+| Variant | Mean | Error | Struct |
+| --- | ---: | ---: | ---: |
+| Rich `Error` + delegate (success) | 1.2014 ns | ±0.0623 | **40 B** |
+| Rich `Error` + delegate (failure) | 1.1310 ns | ±0.0604 | 40 B |
+| Tiny `Error` + delegate (success) | 1.0064 ns | ±0.0458 | **16 B** |
+| Tiny `Error` + delegate (failure) | 1.0271 ns | ±0.0211 | 16 B |
+| Rich `Error` + static dispatch (success) | **0.0000 ns** | 0 | 40 B |
+| Rich `Error` + static dispatch (failure) | 0.0079 ns | ±0.0073 | 40 B |
+| Rich `Error` + `TryGetValue` branch (success) | **0.0000 ns** | 0 | 40 B |
+| ZeroResult (success) | 1.0167 ns | ±0.0513 | 16 B |
+| ZeroResult (failure) | 1.0798 ns | ±0.0431 | 16 B |
+| ErrorOr (success) | 1.0743 ns | ±0.0346 | 16 B |
+| ErrorOr (failure) | 0.8432 ns | ±0.0526 | 16 B |
+
+**Finding 1 — `[StructLayout(Pack = 1)]` is a no-op on `Error`.**
+
+Measured managed sizes: `Error` = **32 B**, `Result<int>` = **40 B**. Not 25 and 30.
+
+`Error` holds three reference fields (`_code`, `_message`, `_metadata`). The GC requires object references to stay pointer-aligned, so the runtime relaxes `Pack = 1` and realigns. Measured proof: a rich-`Error` result is **40 B both with `Pack = 1` and with natural alignment**. The attribute does nothing here. The earlier "25 B / 30 B" figures were layout arithmetic, never the actual managed size.
+
+**Finding 2 — struct size costs ~0.2 ns, at the edge of measurability.**
+
+40 B → 16 B takes success from `1.2014` to `1.0064` ns. CIs do not overlap, so the effect is real in direction, but ~0.2 ns is the same order as the run-to-run variance below.
+
+**Finding 3 — the delegate *is* the entire measurable cost of `Match`.**
+
+Both delegate-free variants collapsed to `0.0000 ns` with `StdDev = 0`. Without a `Func<>` barrier the JIT proves the result constant and hoists the whole operation out of the loop. This proves the indirect call is what `Match` costs — but it also means the delegate-free variants **cannot be measured**; the number is an artifact, not a speedup. Option C (a static-dispatch `Match` API) is therefore unjustifiable on performance grounds.
+
+**Finding 4 — the Match numbers do not reproduce across runs.**
+
+| Row | Run B (21:15) | Spike (22:19) | Delta |
+| --- | ---: | ---: | ---: |
+| `ErrorOr_Match_Success` | 0.6694 ns | 1.0743 ns | **+60%** |
+| `ResulTus_Match_Success` | 0.9879 ns | 1.2014 ns | +22% |
+
+Same machine, same SDK 10.0.403, same `DefaultJob`, same `ErrorOr` package. The spread between runs (0.2–0.4 ns) **exceeds the effect being measured** (0.2 ns). This hardware — an i7-6700, 4 physical cores, `StdDev` of 0.16 ns on a 1.2 ns mean — cannot resolve fractional-nanosecond differences in `Match`. Any Match verdict at this scale is noise until proven otherwise.
+
+**Consequence:** the `Match` column is a **tie across all 16-byte competitors** on this hardware. The reproducible facts are the allocation results and the struct sizes.
+
+### 4.2 Struct size is a design problem, not a `Match` problem — resolved 2026-10-28
+
+`Result<int>` was **40 B** because of `Error`'s 32-byte inline payload. Decision 001 closed it.
+
+The owner chose **zero heap allocation on both paths as the hard contract promise**, which mathematically rules out the 16-byte layout: reaching 16 B requires the error behind a single reference, and building that reference allocates on the failure path. Zero allocation requires the error stored inline, which floors the type at 32 B. The two goals cannot coexist in one type, and the contract picked allocation.
+
+The chosen option was **B1**: remove the untyped `Metadata` dictionary from `Error` (32 B → **24 B**), taking `Result<int>` from 40 B to **32 B** with zero allocation on both paths preserved. 32 B puts exactly two results in a 64-byte cache line with no straddling.
+
+The 16-byte-and-zero-allocation combination lives in the **generic tier**, which measures **13 B** with an 8-byte struct error — tighter than every competitor's 16 B. **No competitor combines 16 B with an inline error:** `ZeroResult` reaches 16 B by putting a *class* behind a reference, `ErrorOr` by putting a `List<Error>` behind one, and `CSharpFunctionalExtensions.Result<int>` by putting its error behind one. Measured 2026-10-29:
+
+| Element type | Kind | `SizeOf` | Array stride |
+| --- | --- | ---: | ---: |
+| `ResulTus.Result<int>` | struct | 32 | 32 |
+| `ResulTus.Error` | struct | 24 | 24 |
+| `ResulTus.Result<int, EightByteError>` | struct | **13** | 13 |
+| `ErrorOr.ErrorOr<int>` | struct | 16 | 16 |
+| `ErrorOr.Error` | struct | 32 | 32 |
+| `ZeroResult.Result<int, SingleError>` | struct | 16 | 16 |
+| `ZeroResult.Errors.SingleError` | **class** | 8 | 8 |
+| `FluentResults.Result<int>` | **class** | 8 | 8 |
+| `CSharpFunctionalExtensions.Result<int>` | struct | 16 | 16 |
+
+That table is the honest form of the size claim: we are the only one that keeps a **rich error inline**, and the price is 32 B against their 16.
+
+### 4.3 Array traversal — 32 B versus 40 B, measured 2026-10-28
+
+Self-contained spike, throwaway replicas, BenchmarkDotNet 0.15.8, `Release`, Intel i7-6700, .NET 10.0.14.
+
+| N | Array size 32 B / 40 B | 32 B ns/elem | 40 B ns/elem | Ratio 40/32 | Established? |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 5 000 | 156 KiB / 195 KiB — both fit L2 | 0.7251–0.7376 | 0.7242–0.7598 | 0.982 / 1.048 | **No** — straddles 1.0 |
+| 7 000 | 219 KiB / **273 KiB** — 40 B crosses 256 KiB L2 | 0.7113–0.7479 | 0.7420–0.7707 | **1.023–1.043, mean 1.035** | **Yes, marginally** — 5/5 suites same sign |
+| 10 000 | 312 KiB / 391 KiB — both exceed L2 | 0.7779–0.8409 | 0.8218–0.8356 | 1.056 / 0.994 | **No** — bimodal |
+
+**The 25% cache-line prediction was correct as traffic and wrong as time.** 40 B does fetch 1.25x more lines (1.6 elements per line versus 2.0, half of them straddling). But at ~0.74 ns/element the loop is issue-limited on the load–compare–add chain, and the hardware prefetcher absorbs the extra lines ahead of demand. The measured effect is **~3.5%, at the L2 boundary only** — roughly 1.5σ in a single run, trustworthy only because five independent suites agreed in sign.
+
+**Verdict: the 8 bytes are a design win, not a performance win.** Do not quote 25%, and do not sell 32 B as a performance feature. The case for B1 rests on removing an `object?`-based dictionary from a library whose charter is zero allocation — that dictionary boxes value types, which is an allocation hole on the failure path.
+
+### 4.4 Array traversal against competitors — measured 2026-10-29
+
+`ArrayTraversalBenchmark`, `DefaultJob`, one fully populated array per row, checksum verified in `Setup` so every library does the same useful work. Success path, ns per whole array:
+
+| N | ResulTus 32 B | ErrorOr 16 B | ZeroResult 16 B | CSharpFunctionalExtensions 16 B | FluentResults 8 B (class) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 000 | 804.9 | **644.4** | **551.6** | **546.7** | 20,806.2 — 96 KB allocated |
+| 7 000 | 5,711.2 | **4,239.4** | **4,506.9** | **4,221.4** | 159,103.7 — 672 KB allocated |
+| 10 000 | 8,886.7 | **6,526.1** | **6,178.2** | **6,338.7** | 250,669.9 — 960 KB allocated |
+
+Failure path (ResulTus counts failures, the others likewise; FluentResults has no equivalent row):
+
+| N | ResulTus 32 B | ErrorOr 16 B | ZeroResult 16 B |
+| ---: | ---: | ---: | ---: |
+| 1 000 | 629.0 | **585.0** | **547.9** |
+| 7 000 | 4,574.8 | **3,983.0** | **3,979.4** |
+| 10 000 | 6,848.1 | **5,968.0** | **5,441.7** |
+
+**Verdict: a documented structural loss, not a mystery.** On the success path we are **1.25x–1.47x slower per element** than every 16-byte competitor, and the ordering is stable across all three sizes. The cause is the layout, and §4.3 already proved the mechanism: at 32 B only two elements fit a 64-byte cache line, against four at 16 B, so the loop issues roughly twice as many line requests for the same array. That is the deliberate price of keeping a rich `Error` inline — the same 32 B that buys 0 B on both paths.
+
+Two things this run does **not** say. It does not contradict §4.3: the 32-vs-40 comparison measured the effect of 8 bytes at the L2 boundary, and it stays true. And it does not make the failure path equally bad: there we are only **1.08x–1.26x** slower, because the failure loop touches one flag per element and never reads the error payload.
+
+FluentResults is the exception that proves the point: at 8 B per element it should be the fastest, and it is **25x–28x slower**, because each element is a heap object it also allocates by the kilobyte.
+
+> Run note: these rows come from the 2026-10-29 run. The four classes were measured by two sequential processes (traversal finished 12:52, creation/match/allocation 13:04–13:17); no benchmark process overlapped another. A benchmark host from an earlier attempt was found hung on a closed output pipe and terminated before this measurement — it never ran concurrently with a recorded run, but it is why the Release binaries had to be released before rebuilding.
+
+### 4.5 Generic tier — packed 13 B versus aligned 16 B, measured 2026-10-29
+
+`GenericTierTraversalBenchmark` measures one build, so the same code was built twice: with `[StructLayout(Pack = 1)]` on `Result<TSuccess, TError>` (13 B stride) and without it (16 B aligned). Two full runs per layout, `DefaultJob`, machine idle, layout confirmed by `Unsafe.SizeOf` in each run (`13/13` versus `16/16`).
+
+| Method | N | Packed 13 B | Aligned 16 B | Aligned vs packed |
+| --- | ---: | ---: | ---: | ---: |
+| Success | 1 000 | 616.4 / 618.3 ns | 601.2 / 602.4 ns | **−2.5%** |
+| Failure | 1 000 | 578.4 / 586.5 ns | 594.2 / 588.5 ns | +1.5% |
+| Success | 7 000 | 4 946.1 / 4 902.5 ns | 5 079.5 / 5 265.1 ns | +5.0% |
+| Failure | 7 000 | 3 993.1 / 4 088.4 ns | 4 104.8 / 4 183.0 ns | +2.6% |
+
+**Verdict: no resolvable difference; the smaller stride wins.** The aligned build wins one cell out of four and loses the rest. The cell it wins hardest contains a within-layout spread of 3.6% (5 079.5 versus 5 265.1 on the same build), larger than the between-layout effect. The two cells that separate cleanly are both failure paths, and both favour 13 B. Nothing here is a performance argument for 13 B — it is the evidence that 16 B is not worth paying for, and 13 B keeps the only sub-16-byte result type in the comparison set. **The pack stays** (Decision 001).
+
+### Allocation — measured 2026-10-29
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| Error_NotFound_Allocation | 0.0031 ns | 0 B |
+| **ResulTus_Success_Allocation** | 0.0187 ns | **0 B** |
+| **ResulTus_Failure_Allocation** | 0.0000 ns | **0 B** |
+| ErrorOr_Success_Allocation | 0.0109 ns | 0 B |
+| ZeroResult_Success_Allocation | 0.0000 ns | 0 B |
+| ZeroResult_Failure_Allocation | 0.2633 ns | 0 B |
+| FluentResults_Success_Allocation | 16.8744 ns | **112 B** |
+
+**Verdict:** every row except FluentResults is below 1 ns and several collapsed to `0.0000 ns`, meaning the JIT eliminated the work — which is exactly the result we want, and exactly why the nanosecond column is not a ranking. All are **ties** by the noise-floor rule.
+
+The allocation rule itself holds: **ResulTus allocates 0 B on success and on failure.** Do not quote a speed ratio against `ZeroResult_Failure_Allocation` from this run: it measured `0.0000` for us, so there is no difference left to divide. The 2026-10-27 figure of `6.5x` is retired.
+
+## 5. Reproduction
+
+```bash
+dotnet run -c Release --project tests/ResulTus.Benchmarks
+```
+
+Rules for a valid run:
+
+- Never run two benchmark processes concurrently. CPU contention invalidates every number.
+- Always `Release`. Debug measurements are meaningless.
+- Use the pinned `DefaultJob` — no shortcuts, no `InProcess`.
+- Compare only runs produced on the same machine and SDK.
+- **Run a suspect row at least twice.** On this hardware the run-to-run spread is 0.2–0.4 ns, larger than most of the effects being measured. A single run is an anecdote, not a measurement.
+- **Never call a sub-nanosecond difference a win or a loss without a repeat.** See §4.1, Finding 4.
+
+## 6. Current standing
+
+Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 B, `Result<int>` 32 B).
+
+| Benchmark area | Standing | Margin |
+| --- | --- | --- |
+| Creation — success | Tie (noise floor) | all rows < 1 ns |
+| Creation — failure | **Win** | 607x vs ErrorOr (88 B allocated), 2116x vs FluentResults (240 B), 0 B |
+| Match — vs FluentResults | **Win** | 23x / 14x, 0 B vs 96 B / 88 B |
+| Match — vs CSharpFunctionalExtensions | **Win** | 2.1x / 1.4x |
+| Match — vs ZeroResult | **Tie on success, unresolved loss on failure** | 0.9235 vs 0.9391; failure 1.3834 vs 0.7818 did not reproduce (§4.1, Finding 4) |
+| Match — vs ErrorOr | **Unresolved, ErrorOr ahead** | ahead in every run, magnitude swung 33% → 250% |
+| Allocation — success | Tie (noise floor) | 0 B, ZeroMeasurement |
+| Allocation — failure | **0 B** | the speed column is eliminated code, not a ranking |
+| Struct size — generic tier | **Win** | `Result<int, 8-byte error>` = **13 B**, measured against the aligned 16 B alternative with no resolvable performance gain (§4.5); every competitor is 16 B |
+| Struct size — default tier | **Documented loss** | `Result<int>` 32 B vs 16 B; deliberate trade for zero allocation on both paths |
+| Array traversal — vs 16 B competitors | **Documented loss** | 1.25x–1.47x slower (success), 1.08x–1.26x (failure); the 32 B stride is the cause (§4.4) |
+| Array traversal — 32 B vs 40 B | **Marginal win for 40 B → 32 B** | ~3.5% at the 256 KiB L2 boundary, unresolved elsewhere (§4.3) |
+| Array traversal — vs FluentResults | **Win** | 25x–28x faster, and it allocates 96 KB–960 KB per traversal |
+
+**The north star is met on allocation, met on the generic tier's size, and not met on the default tier's size — that last one is now a written decision, not an open issue.** The allocation result needs one precision: the benchmarked failure rows reuse a pre-built error object, so what they prove is "constructing a result from an already-built error allocates nothing on either side". They do **not** show that a competitor's failure path is allocation-free — `ZeroResult` must allocate a `SingleError` class, `ErrorOr` a `List<Error>`, and `CSharpFunctionalExtensions` and `FluentResults` a class, the first time each distinct error is built. ResulTus builds an inline struct `Error` and allocates nothing, ever. That is the real allocation claim, and the benchmark that would prove it head-to-head (failure from a unique message, no caching) does not exist yet. The default `Result<T>` is 2x the competitors' size on purpose: it is the ergonomic tier, and it is the only one of the five that keeps a rich error stored inline — and §4.4 is the price of that decision stated as a number.
+
+## 7. Known open gaps
+
+| Area | Status |
+| --- | --- |
+| `Match` vs ErrorOr | **Unresolved, ErrorOr ahead.** Ahead in the 2026-10-27 baseline and again on 2026-10-29 (`0.7175` vs `0.9235` success, `0.5482` vs `1.3834` failure), but the failure-path margin swung from 33% to 250%, so the magnitude is not trustworthy. Direction is consistent; size is not. |
+| `Match` vs ZeroResult on failure | **Unresolved.** 2026-10-27 measured us at `0.9095` against `0.8301`; 2026-10-29 measured `1.3834` against `0.7818`. Our own row moved 52% between runs, so no verdict is available on this hardware. |
+| `Match` outcome overall | **Noise-floor tie** against every 16-byte competitor except the failure-path question above. The delegate is the entire measurable cost; removing it makes the JIT eliminate the operation, so it cannot be measured. |
+| `Result<int>` was 40 B instead of 16 B | **Fixed 2026-10-28.** `Error` lost its untyped `Metadata` dictionary (32 → 24 B) and `Result<int>` is now **32 B**, zero allocation on both paths. The 16 B target was rejected: incompatible with the allocation contract. See **[Decision 001](decisions/001-result-struct-size.md)**. |
+| `[StructLayout(Pack = 1)]` | **Fixed 2026-10-29.** Removed from `Error` (runtime realigns: 40 B either way) and from `Result<T>` (its inline `Error` holds references, so the same realignment applies: 32 B either way). Kept only on `Result<TSuccess, TError>`, where it is honored when the error type holds no references and yields the measured 13 B. The attribute now exists only where it is measured to do something. |
+| Alignment of the generic tier | **Closed 2026-10-29 — no resolvable difference, 13 B kept.** Measured in §4.5: the aligned 16 B stride was 2.5% faster in one cell and 1.5%–5.0% slower in three, with a within-layout spread larger than the effect. |
+| **Failure-path allocation vs competitors** | **Open, high value.** Every existing failure row reuses a pre-built error object, which hides the allocation a class-based error costs. The honest comparison is *failure from a unique message with no caching*: ResulTus 0 B, and one object for each of the other four. No benchmark measures it yet. |
+| **Array traversal vs competitors** | **Fixed 2026-10-29 — it is a loss.** Measured in §4.4: 1.25x–1.47x slower than every 16-byte competitor on the success path. The 32 B inline error is the cause and the trade is deliberate. Kept here as a standing fact, not an open question. |
+
+Every gap in this table must eventually resolve to one of: **fixed**, **noise-floor tie**, or **documented structural difference**. "We are close enough" is not a resolution.
+
+## 8. Enforcement
+
+- A result type change that regresses any row outside the noise floor does not merge.
+- A new benchmark row must be added to this document in the same commit that adds the benchmark.
+- This charter is the authority. If a benchmark contradicts it, the charter wins and the benchmark is suspect.
