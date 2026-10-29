@@ -13,12 +13,12 @@ Objective: close the two known debts (`default(Error) != Error.None` under `==`,
 
 ## Tasks
 
-| ID | Spec | Route | Status |
-| --- | --- | --- | --- |
-| T1 | S1, S2 | inline | done — RED on `DefaultStruct_ShouldEqualNone`, then 47/47 green |
-| T2 | S3 | inline (4 benchmark runs in background) | done — packed 13 B kept, two samples per layout |
-| T3 | S4 | inline | done — §4, §4.4, §4.5, §6, §7 rewritten from the 2026-10-29 run |
-| T4 | S5, S6 | inline | done — solution build 0 warnings, 47/47 green, `.codegraph/` ignored |
+| ID | Spec | Route | Status | Commit |
+| --- | --- | --- | --- | --- |
+| T1 | S1, S2 | inline | done — RED on `DefaultStruct_ShouldEqualNone`, then 47/47 green | `e0f2d92` |
+| T2 | S3 | inline (4 benchmark runs in background) | done — packed 13 B kept, two samples per layout | `8559653`, `6ae9996` |
+| T3 | S4 | inline | done — §4, §4.4, §4.5, §6, §7 rewritten from the 2026-10-29 run | `6ae9996` |
+| T4 | S5, S6 | inline | done — solution build 0 warnings, 47/47 green, `.codegraph/` ignored | `85ff46f`, `a87212e` |
 
 ## Log
 
@@ -75,5 +75,20 @@ Aligned wins 1 of 4 cells. The aligned success/7000 pair itself spreads 3.6% run
 - `Pack = 1` was also removed from `Result<T>`, where it is an inert attribute (its inline `Error` holds references, so the GC realigns and `Result<int>` is 32 B either way). The attribute now exists only where it is measured to save bytes. `LayoutTests` still pins 32 B.
 - Decision 001 gained the measurement section, closed its `Pack` follow-up, and records the `default(Error)` fix (ER-7).
 - performance.md gained §4.5 for the generic-tier spike and §4.4 for competitor traversal; §6/§7 reclassified both as resolved.
+
+### L8 — Program.cs guard, added on request
+
+`ConfigParser.Parse` returns no config when it rejects an option (it prints the error and the usage first), and the old code dereferenced it, so a mistyped flag produced `NullReferenceException` at the `ManualConfig.Create(...).AddFilter(...)` chain. The parsed result is now checked and the runner exits 1 with a readable line. Verified both ways: a rejected option exits 1 with the message, a valid filter that matches nothing still exits 0 with "executed benchmarks: 0".
+
+### L9 — commits
+
+| Commit | Holds |
+| --- | --- |
+| `e0f2d92` | `Error` 24 B (Metadata gone), `default(Error) == Error.None`, ER-7, force-added `openspec/` |
+| `8559653` | `LayoutTests`, `Pack=1` kept only on the generic tier |
+| `85ff46f` | the two benchmark classes and the `Program.cs` guard |
+| `6ae9996` | `docs/performance.md`, Decision 001, this record |
+| `a87212e` | `.codegraph/` ignored |
+
 
 
