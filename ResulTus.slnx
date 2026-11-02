@@ -2,10 +2,12 @@
   <Folder Name="/src/">
     <Project Path="src/ResulTus/ResulTus.csproj" />
     <Project Path="src/ResulTus.Extensions/ResulTus.Extensions.csproj" />
+    <Project Path="src/ResulTus.Collections/ResulTus.Collections.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
     <Project Path="tests/ResulTus.Extensions.Tests/ResulTus.Extensions.Tests.csproj" />
+    <Project Path="tests/ResulTus.Collections.Tests/ResulTus.Collections.Tests.csproj" />
     <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
   </Folder>
 </Solution>
