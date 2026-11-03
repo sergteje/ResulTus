@@ -4,12 +4,14 @@
     <Project Path="src/ResulTus.Extensions/ResulTus.Extensions.csproj" />
     <Project Path="src/ResulTus.Collections/ResulTus.Collections.csproj" />
     <Project Path="src/ResulTus.Serialization/ResulTus.Serialization.csproj" />
+    <Project Path="src/ResulTus.AspNetCore/ResulTus.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
     <Project Path="tests/ResulTus.Extensions.Tests/ResulTus.Extensions.Tests.csproj" />
     <Project Path="tests/ResulTus.Collections.Tests/ResulTus.Collections.Tests.csproj" />
     <Project Path="tests/ResulTus.Serialization.Tests/ResulTus.Serialization.Tests.csproj" />
+    <Project Path="tests/ResulTus.AspNetCore.Tests/ResulTus.AspNetCore.Tests.csproj" />
     <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
   </Folder>
 </Solution>
