@@ -33,6 +33,8 @@ public static class ResultJsonSerializerOptionsExtensions
 
         options.Converters.Add(new ErrorTypeJsonConverter());
         options.Converters.Add(new ErrorJsonConverter());
+        options.Converters.Add(new UnitResultJsonConverter());
+        options.Converters.Add(new ResultJsonConverterFactory());
 
         return options;
     }
