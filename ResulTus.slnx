@@ -7,6 +7,7 @@
     <Project Path="src/ResulTus.AspNetCore/ResulTus.AspNetCore.csproj" />
     <Project Path="src/ResulTus.Validation/ResulTus.Validation.csproj" />
     <Project Path="src/ResulTus.Validation.FluentValidation/ResulTus.Validation.FluentValidation.csproj" />
+    <Project Path="src/ResulTus.Logging/ResulTus.Logging.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
@@ -16,5 +17,6 @@
     <Project Path="tests/ResulTus.AspNetCore.Tests/ResulTus.AspNetCore.Tests.csproj" />
     <Project Path="tests/ResulTus.Validation.Tests/ResulTus.Validation.Tests.csproj" />
     <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
+    <Project Path="tests/ResulTus.Logging.Tests/ResulTus.Logging.Tests.csproj" />
   </Folder>
 </Solution>
