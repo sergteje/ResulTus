@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>ResulTus.Diagnostics</RootNamespace>
+    <AssemblyName>ResulTus.Diagnostics</AssemblyName>
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ResulTus\ResulTus.csproj" />
+  </ItemGroup>
+
+</Project>
