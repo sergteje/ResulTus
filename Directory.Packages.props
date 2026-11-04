@@ -16,5 +16,6 @@
     <PackageVersion Include="ErrorOr" Version="2.1.1" />
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
     <PackageVersion Include="ZeroResult" Version="1.0.0" />
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
   </ItemGroup>
 </Project>

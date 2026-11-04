@@ -5,6 +5,8 @@
     <Project Path="src/ResulTus.Collections/ResulTus.Collections.csproj" />
     <Project Path="src/ResulTus.Serialization/ResulTus.Serialization.csproj" />
     <Project Path="src/ResulTus.AspNetCore/ResulTus.AspNetCore.csproj" />
+    <Project Path="src/ResulTus.Validation/ResulTus.Validation.csproj" />
+    <Project Path="src/ResulTus.Validation.FluentValidation/ResulTus.Validation.FluentValidation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
@@ -12,6 +14,7 @@
     <Project Path="tests/ResulTus.Collections.Tests/ResulTus.Collections.Tests.csproj" />
     <Project Path="tests/ResulTus.Serialization.Tests/ResulTus.Serialization.Tests.csproj" />
     <Project Path="tests/ResulTus.AspNetCore.Tests/ResulTus.AspNetCore.Tests.csproj" />
+    <Project Path="tests/ResulTus.Validation.Tests/ResulTus.Validation.Tests.csproj" />
     <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
   </Folder>
 </Solution>
