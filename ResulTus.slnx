@@ -9,6 +9,7 @@
     <Project Path="src/ResulTus.Validation.FluentValidation/ResulTus.Validation.FluentValidation.csproj" />
     <Project Path="src/ResulTus.Logging/ResulTus.Logging.csproj" />
     <Project Path="src/ResulTus.Diagnostics/ResulTus.Diagnostics.csproj" />
+    <Project Path="src/ResulTus.Analyzers/ResulTus.Analyzers.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
@@ -20,5 +21,6 @@
     <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
     <Project Path="tests/ResulTus.Logging.Tests/ResulTus.Logging.Tests.csproj" />
     <Project Path="tests/ResulTus.Diagnostics.Tests/ResulTus.Diagnostics.Tests.csproj" />
+    <Project Path="tests/ResulTus.Analyzers.Tests/ResulTus.Analyzers.Tests.csproj" />
   </Folder>
 </Solution>

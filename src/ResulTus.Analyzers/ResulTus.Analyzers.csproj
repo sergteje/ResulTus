@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>ResulTus.Analyzers</RootNamespace>
+    <AssemblyName>ResulTus.Analyzers</AssemblyName>
+    <!-- Directory.Build.props turns trimming and AOT compatibility on for every project. Neither
+         means anything for a netstandard2.0 assembly that runs inside the compiler, and both would
+         emit warnings about the Roslyn API surface. -->
+    <IsTrimmable>false</IsTrimmable>
+    <IsAotCompatible>false</IsAotCompatible>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <!-- The extended analyzer rules catch the mistakes that make an analyzer crash inside a
+         consumer's build: a missing concurrent-execution opt-in, an unreleased diagnostic id, an
+         unsupported API. They are errors here, not advice. -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets keeps the compiler API out of a consumer's package graph: the analyzer runs
+         inside Roslyn, it does not hand Roslyn types to the project it analyses. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+    <!-- The symbol matcher and the lambda reader are the correctness core of the rules, and they
+         are internal so consumers never see them. The test project drives them directly. -->
+    <ItemGroup>
+      <InternalsVisibleTo Include="ResulTus.Analyzers.Tests" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <!-- Roslyn reads rule severity from .editorconfig/.globalconfig, never from an MSBuild
+         property, so this is the file that can actually configure the rules. -->
+    <None Include="ResulTus.Analyzers.globalconfig" Pack="true" PackagePath="build/" />
+  </ItemGroup>
+
+</Project>
