@@ -26,6 +26,7 @@ BenchmarkRunner.Run<ResultMatchBenchmark>(config);
 BenchmarkRunner.Run<AllocationBenchmark>(config);
 BenchmarkRunner.Run<FailurePathAllocationBenchmark>(config);
 BenchmarkRunner.Run<CollectionOperationBenchmark>(config);
+BenchmarkRunner.Run<SerializationOperationBenchmark>(config);
 ArrayTraversalBenchmark.PrintLayoutTable();
 BenchmarkRunner.Run<ArrayTraversalBenchmark>(config);
 BenchmarkRunner.Run<GenericTierTraversalBenchmark>(config);

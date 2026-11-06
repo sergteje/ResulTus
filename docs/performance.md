@@ -285,6 +285,27 @@ BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET 
 
 **Scope:** one size only, as requested. The per-call allocations are not a scaling experiment; deterministic allocation tests in P1 cover the collection-size question.
 
+### Serialization — baseline before converter caching — measured 2026-11-06
+
+`SerializationOperationBenchmark` measures the existing factory-based `AddResulTusConverters()` path with `DefaultJob`. The `Result<int>[]` rows use 1,000 successful values and expose the per-element converter lookup in the pre-P1 baseline. Input JSON and serializer options are prepared in `GlobalSetup`; benchmark outputs escape through instance sinks read in `GlobalCleanup`.
+
+BenchmarkDotNet 0.15.8, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14. One complete run:
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| Serialize `Result<int>` success | 177.8 ns | 80 B |
+| Serialize `Result<int>` failure | 310.9 ns | 224 B |
+| Deserialize `Result<int>` success | 212.3 ns | 0 B |
+| Deserialize `Result<int>` failure | 513.9 ns | 152 B |
+| Serialize `Result<int>[1000]` | 85.444 μs | 61,808 B |
+| Deserialize `Result<int>[1000]` | 159.317 μs | 97,680 B |
+| Serialize `Error` | 246.1 ns | 176 B |
+| Deserialize `Error` | 367.2 ns | 160 B |
+| Serialize `ErrorType` | 110.9 ns | 48 B |
+| Deserialize `ErrorType` | 115.3 ns | 40 B |
+
+**Readout:** this is a serialization baseline, not a comparison against other libraries. The success-result deserialization row allocates 0 B. The array rows include the JSON string or materialized result array and all per-element work; they are not an isolated allocation measure of converter lookup. P1 will remeasure the same rows after caching and record any change in the same commit as the fix.
+
 ## 5. Reproduction
 
 ```bash

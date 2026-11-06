@@ -28,7 +28,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 | --- | --- | --- | --- | --- |
 | T1 | S4, S1 | inline | done | `this commit` |
 | T2 | S2 (Collections) | inline | done | `0fbedd7` |
-| T3 | S2 (Serialization) | inline | pending | — |
+| T3 | S2 (Serialization) | inline | done | pending commit |
 | T4 | S2 (Logging, Validation) | inline | pending | — |
 | T5 | S3, S5, S6, S7 | inline | pending | — |
 
@@ -94,3 +94,13 @@ The first full run exposed a harness bug: BenchmarkDotNet calls `GlobalCleanup` 
 The Combine row measures only the existing unit `Result` overload; the absence of `Combine(Result<T>)` is a product gap, not a benchmark defect. That gap is now explicitly authorized for a separate implementation feature and must not be filled in P0.
 
 **Verification:** `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. `dotnet run -c Release --project tests/ResulTus.Benchmarks -- --filter "*CollectionOperationBenchmark*"` -> exit 0; all 12 rows measured.
+
+### L8 — T3 Serialization measured
+
+`SerializationOperationBenchmark` records the factory-based converter baseline before P1's cache. It covers success/failure serialize and deserialize for `Result<int>`, both directions for a 1,000-element `Result<int>[]`, and both directions for `Error` and `ErrorType`. The ten rows are in `docs/performance.md` §4.8, measured 2026-11-06 with BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, SDK 10.0.403 / runtime 10.0.14. One full run completed with ten rows and no benchmark issues.
+
+Key baseline: deserializing the 1,000-result array takes 159.317 μs and allocates 97,680 B; serializing it takes 85.444 μs and allocates 61,808 B. These totals include array materialization/output JSON and per-element work, so they do not isolate converter lookup. `DeserializeResultSuccess` allocates 0 B.
+
+The first benchmark build failed with IL2026/IL3050 because the project treats AOT/trimming warnings as errors. These calls intentionally exercise the existing reflection-based converter path; a file-scoped suppression now documents that measurement, while AOT compatibility is tested separately in API-completion T6. No production serialization code changed.
+
+**Verification:** initial Release build observed RED (30 IL2026/IL3050 errors); after the benchmark-scoped suppression, `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. `dotnet run -c Release --project tests/ResulTus.Benchmarks -- --filter "*SerializationOperationBenchmark*"` -> exit 0; 10 rows, 0 `ERROR` sections, 0 `Benchmarks with issues` sections.
