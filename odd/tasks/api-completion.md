@@ -4,7 +4,7 @@ Objective: finish the already-shipped `Result<TSuccess, TError>` tier and close 
 
 Test runner: `dotnet test ResulTus.slnx`; targeted commands are recorded per task. New public APIs require XML docs and focused public-interface tests.
 
-Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement, P1 allocation fixes, and the now-authorized P2 phase. P2 owns `Combine(Result<T>)`; implement it once there, not again in this feature.
+Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement, P1 allocation fixes, and the now-authorized P2 phase. P2 owns `Combine(Result<T>)`; implement it once there, not again in this feature. The generic typed-result collection operators follow the existing API completion tasks.
 
 Risk: none anticipated. New APIs are additive; existing behavior must remain unchanged and every new behavior is pinned by tests. Reassess if implementation touches a listed high-risk surface.
 
@@ -14,10 +14,11 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 - **S2 — bridge the two result tiers.** Add `ToErrorResult` conversions from `Result<TSuccess, TError>` to `Result<TSuccess>` using a caller-supplied `TError -> Error` mapping (and a direct overload when `TError` is `Error`), plus a `ToGenericResult` lift from `Result<TSuccess>` to `Result<TSuccess, TError>` using `Error -> TError`. Preserve the success value and map only a failure. This enables `ValidationErrors.ToError()` to bridge validation results without unpacking them manually.
 - **S3 — capture synchronous exceptions.** Add `Error.FromException(Exception)` and `Result.Try` for value-returning delegates and unit actions. The default error is `ErrorType.Unexpected` with a stable exception-type code and the exception message; a mapper overload allows domain-specific translation. Null delegates throw `ArgumentNullException`. `OperationCanceledException` is rethrown, preserving .NET cancellation control flow. Do not add async capture methods.
 - **S4 — combine value-bearing results.** Add a binary `Combine` for `Result<TFirst>` and `Result<TSecond>` that returns `Result<(TFirst First, TSecond Second)>`, evaluates the first failure before the second, and preserves the first failure in argument order. It complements, and does not change, the existing `IEnumerable<Result>` unit overload.
-- **S5 — defer Ensure error creation and support projection.** Add `Ensure` overloads taking `Func<Error>` for `Result<T>` and unit `Result`; invoke the factory only when the predicate fails on a success, never for an existing failure or passing predicate. Add `ToUnitResult()` for direct value-to-unit projection and a `Bind` overload that returns unit `Result`, preserving failures and short-circuiting as the existing operators do. Do not add async variants.
+- **S5 — defer Ensure error creation and support projection.** Add `Ensure` overloads taking `Func<Error>` for `Result<T>` and unit `Result`, plus `Func<T, Error>` for `Result<T>`. Invoke the factory only when a successful result fails its predicate, pass the success value to the latter, and never invoke either factory for an existing failure or passing predicate. Add `ToUnitResult()` for direct value-to-unit projection and a `Bind` overload that returns unit `Result`, preserving failures and short-circuiting as the existing operators do. Do not add async variants.
 - **S6 — add framework-agnostic test assertions.** Add a `ResulTus.Testing` package targeting `net8.0`, with no dependency on a test framework. Its `ShouldSucceed` and `ShouldFail` helpers cover unit `Result`, `Result<T>`, and `Result<TSuccess, TError>`, return the success/error payload for further assertions, and throw a documented `ResultAssertionException` on an unexpected state. Test the package with the repository's existing xUnit test infrastructure; xUnit is not a production dependency.
 - **S7 — offer an AOT-safe System.Text.Json path.** Keep the existing factory-based convenience registration compatible for ordinary applications. Expose a closed generic `ResultJsonConverter<T>` that can be directly registered with a source-generated `JsonSerializerContext`; resolve the payload converter through the context's type metadata rather than reflection-based `GetConverter`. Document both paths and clearly state which is suitable for Native AOT. Prove a source-generated round trip in tests and run a Native AOT publish/run smoke check on the available host. No claim of AOT support without observed proof.
 - **S8 — scope and compatibility.** The owner subsequently authorized starting P2 after P1. P2's previously named gaps (`FailIf`, `Combine(Result<T>)`, query syntax, multi-error inside `Error`, and `StackResult`) will be specified in a separate feature document after P1 and before the remaining tasks in this feature; `Combine(Result<T>)` is implemented exactly once in P2. Existing async extensions are not duplicated. Existing overload resolution, JSON shape, and behavior remain unchanged.
+- **S9 — compose collections of the generic typed tier.** Add `Sequence`, `Traverse`, and `Fold` over `Result<TSuccess, TError>`, with `IEnumerable`, array, and `IReadOnlyList` sources. `Sequence` and `Traverse` preserve value order and return the first `TError` in source order; `Fold` stops at that first failure. Do not aggregate multiple `TError` values: a generic collection helper cannot combine arbitrary error types, and existing result collections are fail-fast. In particular, `ValidationErrors` remains the exact error object of the first failure; callers wanting aggregation must do it explicitly. Array/list non-materializing variants allocate 0 B; materializing variants allocate only their output arrays after pool warm-up.
 
 ## Tasks
 
@@ -29,6 +30,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T4 | S5 | inline | pending | — |
 | T5 | S6 | inline | pending | — |
 | T6 | S7, S8 | inline | pending | — |
+| T7 | S9 | inline | pending | — |
 
 ## Log
 
@@ -58,7 +60,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 - `ResultJsonConverter<T>` currently uses `JsonSerializerOptions.GetConverter(Type)`, and `ResultJsonConverterFactory.CreateConverter` closes it using `MakeGenericType` and `Activator.CreateInstance`. The current converter is internal.
 - Microsoft .NET documentation describes direct registration of a closed generic converter with source-generated metadata as the AOT-compatible alternative to reflective factory creation: https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/converters-how-to
 - Existing project convention: production projects target `net8.0`; test projects target `net10.0`, use xUnit v3 and FluentAssertions. The new `ResulTus.Testing` library will not depend on either test framework.
-- **Ordering:** P0 baselines, P1 allocation changes, P2, then the remaining API-completion tasks (T1, T2, T4–T6). T3/S4 is folded into P2 and must not be implemented twice. P3's final README examples depend on T1; its benchmark tables depend on P0 and P1.
+- **Ordering:** P0 baselines, P1 allocation changes, P2, then the remaining API-completion tasks (T1, T2, T4–T6), then T7. T3/S4 is folded into P2 and must not be implemented twice. P3's final README examples depend on T1 and T7; its benchmark tables depend on P0 and P1.
 
 ### L4 — test-first policy
 
@@ -73,3 +75,14 @@ All work stays inline; the owner asked for no writer delegation in this ODD stre
 > vale cuando acabes p1 comienzas p2
 
 This supersedes the earlier P2 exclusion in L2. Once P1 is closed, create a separate P2 task document and begin those gaps before resuming this feature's remaining tasks. The already-authorized `Combine(Result<T>)` is shared scope; P2 owns its single implementation through T3/S4.
+
+### L7 — generic collection and value-aware Ensure additions (verbatim)
+
+> Entonces esto lo metemos tambien?
+> Sí, pero no sumaría métodos por simetría nomás. El hueco que más defendería, después de terminar lo ya acordado, es componer colecciones del tier tipado: Sequence, Traverse y Fold para Result<TSuccess, TError>. Servirían para procesar lotes sin convertir ni perder el error de dominio.
+> Antes habría que fijar una regla: ¿cortamos ante el primer TError o permitimos agregar varios? Para ValidationErrors, esa diferencia importa.
+> Como mejora menor, consideraría Ensure(predicate, errorFactory) que recibe el valor —Func<T, Error)— para construir mensajes dependientes de él solo cuando falla. La sobrecarga perezosa Func<Error> que ya acordamos cubre el caso general; agregaría esta únicamente si aparece en usos reales.
+> Antes habría que fijar una regla: ¿cortamos ante el primer TError o permitimos agregar varios? Para ValidationErrors, esa diferencia importa.
+> Lo que tu consideres
+
+This authorizes S9, typed-result `Sequence`/`Traverse`/`Fold`, and extends S5 with `Ensure(Func<T, Error>)`. For S9, choose the existing library convention: fail fast with the first `TError` in source order; do not invent generic multi-error aggregation. This keeps a `ValidationErrors` instance intact and leaves explicit merging to the caller.
