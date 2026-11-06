@@ -4,7 +4,7 @@ Objective: finish the already-shipped `Result<TSuccess, TError>` tier and close 
 
 Test runner: `dotnet test ResulTus.slnx`; targeted commands are recorded per task. New public APIs require XML docs and focused public-interface tests.
 
-Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement, P1 allocation fixes, and the now-authorized P2 phase. P2 owns `Combine(Result<T>)`; implement it once there, not again in this feature. The generic typed-result collection operators follow the existing API completion tasks.
+Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement, P1 allocation fixes, and the now-authorized P2 phase. P2 owns `Combine(Result<T>)`; implement it once there, not again in this feature. The generic typed-result collection operators follow the existing API completion tasks; the separate `ResulTus.HttpClient` module follows them and precedes P3.
 
 Risk: none anticipated. New APIs are additive; existing behavior must remain unchanged and every new behavior is pinned by tests. Reassess if implementation touches a listed high-risk surface.
 
@@ -60,7 +60,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 - `ResultJsonConverter<T>` currently uses `JsonSerializerOptions.GetConverter(Type)`, and `ResultJsonConverterFactory.CreateConverter` closes it using `MakeGenericType` and `Activator.CreateInstance`. The current converter is internal.
 - Microsoft .NET documentation describes direct registration of a closed generic converter with source-generated metadata as the AOT-compatible alternative to reflective factory creation: https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/converters-how-to
 - Existing project convention: production projects target `net8.0`; test projects target `net10.0`, use xUnit v3 and FluentAssertions. The new `ResulTus.Testing` library will not depend on either test framework.
-- **Ordering:** P0 baselines, P1 allocation changes, P2, then the remaining API-completion tasks (T1, T2, T4–T6), then T7. T3/S4 is folded into P2 and must not be implemented twice. P3's final README examples depend on T1 and T7; its benchmark tables depend on P0 and P1.
+- **Ordering:** P0 baselines, P1 allocation changes, P2, remaining API-completion tasks (T1, T2, T4–T6), T7, the separate `ResulTus.HttpClient` feature, then P3. T3/S4 is folded into P2 and must not be implemented twice. P3 examples depend on the API tasks; its benchmark tables depend on P0 and P1.
 
 ### L4 — test-first policy
 
@@ -86,3 +86,10 @@ This supersedes the earlier P2 exclusion in L2. Once P1 is closed, create a sepa
 > Lo que tu consideres
 
 This authorizes S9, typed-result `Sequence`/`Traverse`/`Fold`, and extends S5 with `Ensure(Func<T, Error>)`. For S9, choose the existing library convention: fail fast with the first `TError` in source order; do not invent generic multi-error aggregation. This keeps a `ValidationErrors` instance intact and leaves explicit merging to the caller.
+
+### L8 — HttpClient module sequencing (verbatim)
+
+> Esto si se hace:El único candidato que investigaría más adelante es ResulTus.HttpClient: convertir respuestas HTTP, ProblemDetails y fallos de transporte en resultados. Pero el mapeo de status, errores y cuerpos JSON es una decisión de política; sin usos reales repetidos, sería una capa opinada de más.
+> el recomendado
+
+`ResulTus.HttpClient` is separately tracked in `odd/tasks/httpclient-integration.md`. It runs after this feature's API work and before P3; its selected error model is `Result<T,HttpClientError>`.
