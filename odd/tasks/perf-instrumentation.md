@@ -12,7 +12,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 
 - **S1 — the failure-path allocation benchmark exists.** `AllocationBenchmark` (or a sibling class) measures failure constructed from a **unique, uncached message per iteration** — for example `Error.NotFound("X", $"item {i}")` — for ResulTus, ErrorOr, ZeroResult, FluentResults and CSharpFunctionalExtensions. It reports mean and allocated bytes. It must not reuse a pre-built error: reusing one is exactly the flaw `docs/performance.md` §6 identifies in every existing failure row. The result is consumed (its `Code` or `Message` length accumulated) so the JIT cannot eliminate the work, and the accumulated value is asserted in the benchmark so the loop is provably live.
 - **S2 — the satellites get rows.** New benchmarks cover the surfaces that today have none:
-  - Collections: `Sequence`, `Traverse`, `Fold`, `Partition`, `FirstFailure`, `Combine` over `Result<T>[]` and `List<Result<T>>`, at **N = 1 000**, reporting mean and allocated. `Combine` is measured over `Result[]` and `List<Result>`, because no `Result<T>` overload exists — that absence is the P2 gap the audit named. See L7 for why this is one size and not three.
+  - Collections: `Sequence`, `Traverse`, `Fold`, `Partition`, `FirstFailure`, `Combine` over `Result<T>[]` and `List<Result<T>>`, at **N = 1 000**, reporting mean and allocated. `Combine` is measured over `Result[]` and `List<Result>` because the `Result<T>` overload did not exist at baseline; its addition is tracked separately in `odd/tasks/api-completion.md`. See L7 for why this is one size and not three.
   - Serialization: `JsonSerializer.Serialize` and `Deserialize` for `Result<int>` success and failure, for `Result<int>[]` (this row is what exposes the per-element `GetConverter` cost), for `Error`, and for `ErrorType`.
   - Logging: one failure logged with a capturing `ILogger`, at an enabled and at a disabled level, reporting allocated bytes for each.
   - Validation: `ValidationErrors.ToDictionary` and `ValidationErrors.ToError` over a populated issue list.
@@ -26,11 +26,11 @@ Risk: none. No file under `src/` is modified and no public API changes.
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S4, S1 | inline | done | `this commit` |
+| T1 | S4, S1 | inline | done | `9250a36` |
 | T2 | S2 (Collections) | inline | done | `0fbedd7` |
 | T3 | S2 (Serialization) | inline | done | `25e8b20` |
-| T4 | S2 (Logging, Validation) | inline | done | pending commit |
-| T5 | S3, S5, S6, S7 | inline | pending | — |
+| T4 | S2 (Logging, Validation) | inline | done | `9613529` |
+| T5 | S3, S5, S6, S7 | inline | done | this commit |
 
 ## Log
 
@@ -110,3 +110,11 @@ The first benchmark build failed with IL2026/IL3050 because the project treats A
 `LoggingOperationBenchmark` uses a capturing logger that stores the structured state reference without formatting. The disabled logging row allocates 0 B at 5.057 ns; enabled logging allocates 64 B at 26.054 ns. `ValidationOperationBenchmark` processes 1,000 issues across ten fields: `ToDictionary` 21.385 μs / 31,624 B and `ToError` 33.04 ns / 80 B. The four rows are in `docs/performance.md` §§4.9–4.10, measured 2026-11-06 with BenchmarkDotNet 0.15.8, `DefaultJob`, i7-6700, SDK 10.0.403 / runtime 10.0.14. Both filtered runs completed with exit 0, two rows each, and no benchmark issues.
 
 **Verification:** `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. The Logging and Validation filtered benchmark runs both exited 0; each produced two rows and zero `ERROR` or `Benchmarks with issues` sections.
+
+### L10 — T5 P0 closed
+
+All four satellite benchmark classes and their charter tables are complete. Each benchmark and its measured row landed in the same commit: T1 `9250a36`, T2 `0fbedd7`, T3 `25e8b20`, T4 `9613529`. The charter now summarizes the satellite baselines in §6 and retains the unresolved competitor comparisons in §7 without inventing verdicts for the new single-run rows.
+
+**Final verification:** `dotnet build ResulTus.slnx --nologo` -> 0 warnings, 0 errors. `dotnet test ResulTus.slnx --nologo` -> 449 passed, 0 failed, 0 skipped across 10 test projects. P0 measurements were all `Release`/`DefaultJob`, run sequentially on the same i7-6700 / Windows 10 22H2 / SDK 10.0.403 host. The serialization, logging, and validation runs each had zero benchmark issues; Collections completed all twelve rows after the cleanup fix.
+
+P0 is closed. Next is P1 — the measured allocation fixes — before the separately authorized API-completion feature and P3 README.

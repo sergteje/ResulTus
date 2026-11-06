@@ -367,6 +367,10 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | Array traversal — vs 16 B competitors | **Documented loss** | 1.25x–1.47x slower (success), 1.08x–1.26x (failure); the 32 B stride is the cause (§4.4) |
 | Array traversal — 32 B vs 40 B | **Marginal win for 40 B → 32 B** | ~3.5% at the 256 KiB L2 boundary, unresolved elsewhere (§4.3) |
 | Array traversal — vs FluentResults | **Win** | 25x–28x faster, and it allocates 96 KB–960 KB per traversal |
+| Collections — satellite baseline | **Measured, not compared** | N = 1,000; `Fold`, `FirstFailure` and unit `Combine` allocate 0 B; `Partition` allocates 12,480 B (§4.7) |
+| Serialization — satellite baseline | **Measured, not compared** | `Result<int>` success deserialization allocates 0 B; 1,000-result array deserialization allocates 97,680 B (§4.8) |
+| Logging — satellite baseline | **Measured, not compared** | Disabled failure logging allocates 0 B; enabled logging allocates 64 B (§4.9) |
+| Validation — satellite baseline | **Measured, not compared** | `ToDictionary` allocates 31,624 B over 1,000 issues; `ToError` allocates 80 B (§4.10) |
 
 **The north star is met on allocation, met on the generic tier's size, and not met on the default tier's size — that last one is now a written decision, not an open issue.** The allocation result now has its head-to-head: §4.6 measures the failure path from a unique, uncached message, and the answer is ResulTus **0 B**, `ZeroResult` **32 B**, `ErrorOr` **88 B**, `FluentResults` **272 B**, and `CSharpFunctionalExtensions` **0 B**. The pre-2026-11-06 claim that every competitor allocates one object per failure was **wrong for `CSharpFunctionalExtensions`**: its error is a plain `string`, so it allocates nothing once the message exists. ResulTus ties it on allocation and differentiates on payload — `Code`, `Message` and `Type` inline for the same 0 B. The default `Result<T>` is 2x the competitors' size on purpose: it is the ergonomic tier, and it is the only one of the five that keeps a rich error stored inline — and §4.4 is the price of that decision stated as a number.
 
