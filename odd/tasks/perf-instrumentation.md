@@ -27,7 +27,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S4, S1 | inline | done | `this commit` |
-| T2 | S2 (Collections) | inline | done | pending commit |
+| T2 | S2 (Collections) | inline | done | `0fbedd7` |
 | T3 | S2 (Serialization) | inline | pending | — |
 | T4 | S2 (Logging, Validation) | inline | pending | — |
 | T5 | S3, S5, S6, S7 | inline | pending | — |
@@ -83,7 +83,7 @@ Final numbers, two consecutive `DefaultJob` runs on 2026-11-06, i7-6700, SDK 10.
 
 **Verification.** `dotnet build tests/ResulTus.Benchmarks -c Release` -> 0 warnings, 0 errors. The filtered run exits 0. A filtered run leaves the other five `BenchmarkRunner.Run<T>` calls finding zero benchmarks, which prints "There are no benchmarks found" five times; that is noise in the log, not a failure.
 
-**Next.** T2 — Collections rows.
+**Next.** T3 — Serialization rows, including the `Result<int>[]` row that measures converter lookup per element.
 
 ### L7 — T2 Collections measured and closed
 
