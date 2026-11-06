@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>ResulTus.SourceGenerators</RootNamespace>
+    <AssemblyName>ResulTus.SourceGenerators</AssemblyName>
+    <!-- Directory.Build.props turns trimming and AOT compatibility on for every project. Neither
+         means anything for a netstandard2.0 assembly that runs inside the compiler, and both would
+         emit warnings about the Roslyn API surface. -->
+    <IsTrimmable>false</IsTrimmable>
+    <IsAotCompatible>false</IsAotCompatible>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <!-- The extended analyzer rules catch the mistakes that make a Roslyn component crash inside a
+         consumer's build. They are errors here, not advice. -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets keeps the compiler API out of a consumer's package graph: the generator runs
+         inside Roslyn, it does not hand Roslyn types to the project it generates code for. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The pipeline model and the emitter are the correctness core, and they are internal so
+         consumers never see them. The test project drives them directly. -->
+    <InternalsVisibleTo Include="ResulTus.SourceGenerators.Tests" />
+  </ItemGroup>
+
+</Project>
