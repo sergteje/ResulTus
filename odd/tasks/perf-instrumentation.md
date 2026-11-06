@@ -12,7 +12,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 
 - **S1 — the failure-path allocation benchmark exists.** `AllocationBenchmark` (or a sibling class) measures failure constructed from a **unique, uncached message per iteration** — for example `Error.NotFound("X", $"item {i}")` — for ResulTus, ErrorOr, ZeroResult, FluentResults and CSharpFunctionalExtensions. It reports mean and allocated bytes. It must not reuse a pre-built error: reusing one is exactly the flaw `docs/performance.md` §6 identifies in every existing failure row. The result is consumed (its `Code` or `Message` length accumulated) so the JIT cannot eliminate the work, and the accumulated value is asserted in the benchmark so the loop is provably live.
 - **S2 — the satellites get rows.** New benchmarks cover the surfaces that today have none:
-  - Collections: `Sequence`, `Traverse`, `Fold`, `Partition`, `FirstFailure`, `Combine` over `Result<T>[]` and `List<Result<T>>`, at N = 100, 1 000 and 10 000, reporting mean and allocated.
+  - Collections: `Sequence`, `Traverse`, `Fold`, `Partition`, `FirstFailure`, `Combine` over `Result<T>[]` and `List<Result<T>>`, at **N = 1 000**, reporting mean and allocated. `Combine` is measured over `Result[]` and `List<Result>`, because no `Result<T>` overload exists — that absence is the P2 gap the audit named. See L7 for why this is one size and not three.
   - Serialization: `JsonSerializer.Serialize` and `Deserialize` for `Result<int>` success and failure, for `Result<int>[]` (this row is what exposes the per-element `GetConverter` cost), for `Error`, and for `ErrorType`.
   - Logging: one failure logged with a capturing `ILogger`, at an enabled and at a disabled level, reporting allocated bytes for each.
   - Validation: `ValidationErrors.ToDictionary` and `ValidationErrors.ToError` over a populated issue list.
@@ -27,7 +27,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S4, S1 | inline | done | `this commit` |
-| T2 | S2 (Collections) | inline | pending | — |
+| T2 | S2 (Collections) | inline | done | pending commit |
 | T3 | S2 (Serialization) | inline | pending | — |
 | T4 | S2 (Logging, Validation) | inline | pending | — |
 | T5 | S3, S5, S6, S7 | inline | pending | — |
@@ -84,3 +84,13 @@ Final numbers, two consecutive `DefaultJob` runs on 2026-11-06, i7-6700, SDK 10.
 **Verification.** `dotnet build tests/ResulTus.Benchmarks -c Release` -> 0 warnings, 0 errors. The filtered run exits 0. A filtered run leaves the other five `BenchmarkRunner.Run<T>` calls finding zero benchmarks, which prints "There are no benchmarks found" five times; that is noise in the log, not a failure.
 
 **Next.** T2 — Collections rows.
+
+### L7 — T2 Collections measured and closed
+
+The user reduced the Collections benchmark to one source size: "un tercio va, y dejalo en el spec". S2 and the benchmark use **N = 1,000**, with both arrays and lists. One full `DefaultJob` run completed all twelve rows on 2026-11-06, Intel Core i7-6700, Windows 10 22H2, SDK 10.0.403 / runtime 10.0.14; the table is in `docs/performance.md` §4.7. `Fold`, `FirstFailure`, and unit `Combine` allocate 0 B for both source shapes. Lists are slower in all six rows, but one run is descriptive, not a precise-ratio claim. `Partition` allocates 12,480 B at this size.
+
+The first full run exposed a harness bug: BenchmarkDotNet calls `GlobalCleanup` once per parameter case, in a separate process, after only that case's one benchmark has run. Cleanup must therefore tolerate the five other sink fields still holding defaults. The initial null dereference made ten rows `NA`; cleanup was changed to handle default tuple arrays, the benchmark project rebuilt cleanly, and the next full run produced all twelve measurements with no `NA`.
+
+The Combine row measures only the existing unit `Result` overload; the absence of `Combine(Result<T>)` is a product gap, not a benchmark defect. That gap is now explicitly authorized for a separate implementation feature and must not be filled in P0.
+
+**Verification:** `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. `dotnet run -c Release --project tests/ResulTus.Benchmarks -- --filter "*CollectionOperationBenchmark*"` -> exit 0; all 12 rows measured.

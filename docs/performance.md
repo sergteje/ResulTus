@@ -260,6 +260,31 @@ The time column separates from `CSharpFunctionalExtensions` by 8% (2.81–2.83 n
 - **A consumer can allocate on a competitor's behalf.** `FluentResults.Result.IsFailed` is not a field: it derives from `Errors`, which runs `Reasons.OfType<IError>().ToList()` on every access. Consuming the result through `IsFailed` added 88 B to this row and `Errors` added 176 B — 448 B total in the first version, all of it the benchmark's cost rather than the library's. The row now reads `Reasons.Count`, which is a stored list, and lands on the 272 B that a standalone probe measures for `Result.Fail<int>(message)` alone.
 - **A `0 B` row for a class-typed error is not evidence of anything until the sink exists.** See above: `ZeroResult` reported `0 B` with no sink and 32 B with one, on the same hardware and SDK.
 
+### Collections — array versus list at N = 1,000 — measured 2026-11-06
+
+`CollectionOperationBenchmark` measures six operations over fully successful inputs, using the same 1,000 elements for each row. Each benchmark stores its result in an instance sink that `GlobalCleanup` reads. BenchmarkDotNet runs each parameter case in its own process, so cleanup tolerates the other five sinks remaining at their default values.
+
+BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14. One complete run:
+
+| Method | Source | Mean | Allocated |
+| --- | --- | ---: | ---: |
+| Sequence | Array | 4.121 μs | 4,056 B |
+| Traverse | Array | 2.060 μs | 4,024 B |
+| Fold | Array | 1.128 μs | 0 B |
+| FirstFailure | Array | 863.2 ns | 0 B |
+| Partition | Array | 3.095 μs | 12,480 B |
+| Combine (unit `Result`) | Array | 845.5 ns | 0 B |
+| Sequence | List | 7.800 μs | 4,088 B |
+| Traverse | List | 3.574 μs | 4,064 B |
+| Fold | List | 1.566 μs | 0 B |
+| FirstFailure | List | 1.155 μs | 0 B |
+| Partition | List | 3.326 μs | 12,480 B |
+| Combine (unit `Result`) | List | 1.221 μs | 0 B |
+
+**Readout:** `Fold`, `FirstFailure` and unit `Combine` allocate nothing for either source. `List<T>` is slower than `T[]` in all six rows; this is consistent with the interface-enumerator overhead, but the single run is descriptive rather than a claim about a precise ratio. `Partition` allocates the two output arrays plus its growing lists. `Combine` here is the existing unit-result operation; no `Result<T>` overload exists.
+
+**Scope:** one size only, as requested. The per-call allocations are not a scaling experiment; deterministic allocation tests in P1 cover the collection-size question.
+
 ## 5. Reproduction
 
 ```bash
