@@ -1,6 +1,7 @@
 // Copyright (c) ResulTus. All rights reserved.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ResulTus.Serialization.Tests;
 
@@ -134,6 +135,58 @@ public class RegistrationAndRoundTripTests
     }
 
     /// <summary>
+    /// GIVEN a shared <see cref="JsonSerializerOptions"/> instance and an array of results
+    /// WHEN the same array is serialized and deserialized repeatedly
+    /// THEN the JSON and both result outcomes MUST remain unchanged.
+    /// </summary>
+    [Fact]
+    public void ResultArray_WithSharedOptions_ShouldKeepStableOutput()
+    {
+        var results = new[]
+        {
+            Result<int>.Success(1),
+            Result<int>.Failure(Error.NotFound("missing")),
+            Result<int>.Success(3),
+        };
+
+        var firstJson = JsonSerializer.Serialize(results, Options);
+        var secondJson = JsonSerializer.Serialize(results, Options);
+        var roundTripped = JsonSerializer.Deserialize<Result<int>[]>(secondJson, Options);
+
+        secondJson.Should().Be(firstJson);
+        roundTripped.Should().NotBeNull();
+        roundTripped.Should().BeEquivalentTo(results);
+    }
+
+    /// <summary>
+    /// GIVEN one result converter used with two options instances that have different value converters
+    /// WHEN each options instance writes and reads a result
+    /// THEN the result converter MUST resolve the value converter for the active options instance.
+    /// </summary>
+    [Fact]
+    public void ResultConverter_ShouldResolveValueConverterPerOptionsInstance()
+    {
+        var resultConverter = (JsonConverter<Result<int>>)new ResultJsonConverterFactory()
+            .CreateConverter(typeof(Result<int>), new JsonSerializerOptions());
+        var firstOptions = new JsonSerializerOptions();
+        firstOptions.Converters.Add(new OffsetIntJsonConverter(10));
+        firstOptions.Converters.Add(resultConverter);
+        var secondOptions = new JsonSerializerOptions();
+        secondOptions.Converters.Add(new OffsetIntJsonConverter(20));
+        secondOptions.Converters.Add(resultConverter);
+
+        var firstJson = JsonSerializer.Serialize(Result<int>.Success(5), firstOptions);
+        var secondJson = JsonSerializer.Serialize(Result<int>.Success(5), secondOptions);
+        var firstResult = JsonSerializer.Deserialize<Result<int>>(firstJson, firstOptions);
+        var secondResult = JsonSerializer.Deserialize<Result<int>>(secondJson, secondOptions);
+
+        firstJson.Should().Be("{\"isSuccess\":true,\"value\":15}");
+        secondJson.Should().Be("{\"isSuccess\":true,\"value\":25}");
+        firstResult.GetValueOrDefault().Should().Be(5);
+        secondResult.GetValueOrDefault().Should().Be(5);
+    }
+
+    /// <summary>
     /// GIVEN an error object whose type is <c>None</c> but which carries a code
     /// WHEN it is deserialized
     /// THEN it MUST throw <see cref="JsonException"/> instead of silently dropping the code.
@@ -189,5 +242,14 @@ public class RegistrationAndRoundTripTests
         factory.CanConvert(typeof(int)).Should().BeFalse();
         factory.CanConvert(typeof(Result)).Should().BeFalse();
         factory.CanConvert(typeof(Result<int>)).Should().BeTrue();
+    }
+
+    private sealed class OffsetIntJsonConverter(int offset) : JsonConverter<int>
+    {
+        public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            => reader.GetInt32() - offset;
+
+        public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
+            => writer.WriteNumberValue(value + offset);
     }
 }

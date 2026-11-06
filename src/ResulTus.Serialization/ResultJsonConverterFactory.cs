@@ -66,6 +66,8 @@ public sealed class ResultJsonConverterFactory : JsonConverterFactory
 /// <typeparam name="T">The type of the success value.</typeparam>
 internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
 {
+    private ConverterCache? _cachedConverter;
+
     /// <inheritdoc />
     /// <remarks>
     /// Resolving the converter for <typeparamref name="T"/> goes through
@@ -75,14 +77,6 @@ internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
     /// <see cref="JsonConverter{T}"/>. Normal and trimmed applications are unaffected; Native AOT
     /// callers must ensure the value type is reachable through a <c>JsonSerializerContext</c>.
     /// </remarks>
-    [UnconditionalSuppressMessage(
-        "Aot",
-        "IL3050:RequiresDynamicCode",
-        Justification = "GetConverter is the only public route to the converter for an arbitrary T inside a JsonConverter<T>; the limitation is documented on this member.")]
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:RequiresUnreferencedCode",
-        Justification = "GetConverter is the only public route to the converter for an arbitrary T inside a JsonConverter<T>; the limitation is documented on this member.")]
     public override void Write(Utf8JsonWriter writer, Result<T> value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);
@@ -100,7 +94,7 @@ internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
             }
             else
             {
-                var valueConverter = (JsonConverter<T>)options.GetConverter(typeof(T));
+                var valueConverter = GetValueConverter(options);
                 valueConverter.Write(writer, inner, options);
             }
         }
@@ -118,14 +112,6 @@ internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
     /// Same AOT limitation as <see cref="Write"/>: resolving the converter for
     /// <typeparamref name="T"/> uses <see cref="JsonSerializerOptions.GetConverter(Type)"/>.
     /// </remarks>
-    [UnconditionalSuppressMessage(
-        "Aot",
-        "IL3050:RequiresDynamicCode",
-        Justification = "GetConverter is the only public route to the converter for an arbitrary T inside a JsonConverter<T>; the limitation is documented on this member.")]
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:RequiresUnreferencedCode",
-        Justification = "GetConverter is the only public route to the converter for an arbitrary T inside a JsonConverter<T>; the limitation is documented on this member.")]
     public override Result<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -167,7 +153,7 @@ internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
             else if (reader.ValueTextEquals("value"))
             {
                 reader.Read();
-                var valueConverter = (JsonConverter<T>)options.GetConverter(typeof(T));
+                var valueConverter = GetValueConverter(options);
                 value = valueConverter.Read(ref reader, typeof(T), options);
                 hasValue = true;
             }
@@ -184,5 +170,33 @@ internal sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>
         }
 
         throw new JsonException("Unexpected end of JSON while reading a Result.");
+    }
+
+    [UnconditionalSuppressMessage(
+        "Aot",
+        "IL3050:RequiresDynamicCode",
+        Justification = "The factory-based converter resolves an arbitrary T through JsonSerializerOptions.GetConverter; the AOT-specific direct-registration path is tracked separately.")]
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:RequiresUnreferencedCode",
+        Justification = "The factory-based converter resolves an arbitrary T through JsonSerializerOptions.GetConverter; the AOT-specific direct-registration path is tracked separately.")]
+    private JsonConverter<T> GetValueConverter(JsonSerializerOptions options)
+    {
+        var cached = _cachedConverter;
+        if (cached is not null && ReferenceEquals(cached.Options, options))
+        {
+            return cached.Converter;
+        }
+
+        var converter = (JsonConverter<T>)options.GetConverter(typeof(T));
+        _cachedConverter = new ConverterCache(options, converter);
+        return converter;
+    }
+
+    private sealed class ConverterCache(JsonSerializerOptions options, JsonConverter<T> converter)
+    {
+        public JsonSerializerOptions Options { get; } = options;
+
+        public JsonConverter<T> Converter { get; } = converter;
     }
 }

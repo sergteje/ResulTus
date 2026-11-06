@@ -289,7 +289,7 @@ BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET 
 
 `SerializationOperationBenchmark` measures the factory-based `AddResulTusConverters()` path with `DefaultJob`. The `Result<int>[]` rows use 1,000 successful values and expose the per-element converter lookup. Input JSON and serializer options are prepared in `GlobalSetup`; benchmark outputs escape through instance sinks read in `GlobalCleanup`.
 
-P0's pre-change baseline and the P1/T1 remeasurement both used BenchmarkDotNet 0.15.8, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14, `DefaultJob`. The initial run produced all ten rows; P1/T1 re-ran the same benchmark after changing `ErrorType` parsing. Rows not affected by T1 retain their P0 baseline values below.
+P0's pre-change baseline and the P1 remeasurements all used BenchmarkDotNet 0.15.8, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14, `DefaultJob`. The initial run produced all ten rows. P1/T1 updated the three rows affected by `ErrorType` parsing; P1/T2's repeated cache remeasurements are shown separately below.
 
 | Method | Mean | Allocated |
 | --- | ---: | ---: |
@@ -307,6 +307,19 @@ P0's pre-change baseline and the P1/T1 remeasurement both used BenchmarkDotNet 0
 **P1/T1 remeasurement:** unescaped `ErrorType` deserialization now allocates 0 B instead of 40 B. Deserializing a failed `Result<int>` and an `Error` each allocate 40 B less than P0 because their nested `ErrorType` name no longer becomes a string. Their observed means were 500.20 ns (P0 513.9 ns), 343.33 ns (P0 367.2 ns), and 81.57 ns (P0 115.3 ns) for `Result<int>` failure, `Error`, and `ErrorType`, respectively; single-run time deltas are descriptive, not a ranking. P1/T2 will remeasure the result converter rows and update them in its own commit.
 
 **Readout:** this is a serialization baseline, not a comparison against other libraries. `Result<int>` success deserialization allocates 0 B. Array rows include the JSON string or materialized result array and all per-element work; they are not an isolated allocation measure of converter lookup.
+
+#### P1/T2 — cache the payload converter per options instance
+
+The pre-cache column is the P1/T1 serialization run, immediately before T2. The two post-cache columns are independent full runs with the same `DefaultJob`. All four affected operations allocate the same bytes as before; these rows isolate the repeated converter-lookup time from the output/result-array allocations.
+
+| Operation | Before cache | P1/T2 run A | P1/T2 run B | Allocated after cache |
+| --- | ---: | ---: | ---: | ---: |
+| Serialize `Result<int>` success | 175.21 ns | 164.39 ns | 165.38 ns | 80 B |
+| Deserialize `Result<int>` success | 217.81 ns | 196.34 ns | 193.25 ns | 0 B |
+| Serialize `Result<int>[1000]` | 90.827 μs | 69.322 μs | 73.011 μs | 61,808 B |
+| Deserialize `Result<int>[1000]` | 166.339 μs | 149.720 μs | 144.984 μs | 97,680 B |
+
+Both post-cache runs are faster than the pre-cache run for all four rows, while allocations are unchanged. This is consistent with avoiding repeated `JsonSerializerOptions.GetConverter` calls; the measurements remain specific to this machine and are not a cross-library ranking. Each run produced ten rows and no benchmark issues.
 
 ### Logging — enabled versus disabled failure logging — measured 2026-11-06
 

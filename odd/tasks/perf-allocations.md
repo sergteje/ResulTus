@@ -31,7 +31,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S1 | inline | done | this commit |
-| T2 | S2 | inline | pending | — |
+| T2 | S2 | inline | done | this commit |
 | T3 | S3 (non-unit collections) | inline | pending | — |
 | T4 | S3 (unit collections) | inline | pending | — |
 | T5 | S4 | inline | pending | — |
@@ -103,3 +103,9 @@ P0 is closed. The pre-change serialization baseline is recorded in `docs/perform
 The allocation test observed RED before implementation: 100 unescaped `"NotFound"` reads allocated 4,000 B through `GetString()`. The converter now compares unescaped `ValueSpan` and segmented `ValueSequence` bytes with `System.Text.Ascii.EqualsIgnoreCase`; escaped values and unknown names retain the existing `GetString()`/dictionary path and error behavior. Tests cover case-insensitive, escaped, unescaped zero-allocation, and segmented zero-allocation input.
 
 **Verification:** the 62-test Serialization project passed. Focused ErrorType tests passed 29/29, including both allocation paths. Release benchmark build had 0 warnings and 0 errors; the Serialization benchmark run exited 0, produced all 10 rows, and reported no benchmark issues. P1/T1 remeasurement in `docs/performance.md` §4.8: `DeserializeResultFailure` 513.9 ns / 152 B → 500.20 ns / 112 B; `DeserializeError` 367.2 ns / 160 B → 343.33 ns / 120 B; `DeserializeErrorType` 115.3 ns / 40 B → 81.57 ns / 0 B. The other seven rows remain the P0 values because T1 does not affect them.
+
+### L11 — T2 converter cache completed
+
+The cache is one immutable holder containing the `JsonSerializerOptions` identity and `JsonConverter<T>`; a reference match returns it, while another options instance resolves and replaces it. The holder keeps the pair coherent under concurrent use. `GetConverter` suppressions now sit on the helper that contains that call, because analyzer suppressions on callers do not flow into a helper.
+
+The output-stability test passed before the implementation and again after it. A second test reuses one result converter instance with two options instances containing different integer converters and verifies both writing and reading use the active options. The full Serialization project passed 64/64 tests. Release benchmark build had 0 warnings and 0 errors; two full Serialization benchmark runs each produced ten rows and no issues. The four affected rows and both post-cache means are in `docs/performance.md` §4.8; all four show the same direction versus the pre-cache run, with unchanged allocation counts.
