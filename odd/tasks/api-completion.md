@@ -4,7 +4,7 @@ Objective: finish the already-shipped `Result<TSuccess, TError>` tier and close 
 
 Test runner: `dotnet test ResulTus.slnx`; targeted commands are recorded per task. New public APIs require XML docs and focused public-interface tests.
 
-Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement and P1 allocation fixes, so baselines are recorded before implementation changes.
+Delivery strategy: `auto-chain`. Forecast exceeds 400 authored lines; work units remain independent commits on `feature-1`. Push, PR creation, and merge remain the owner's decisions. Start implementation after P0 measurement, P1 allocation fixes, and the now-authorized P2 phase. P2 owns `Combine(Result<T>)`; implement it once there, not again in this feature.
 
 Risk: none anticipated. New APIs are additive; existing behavior must remain unchanged and every new behavior is pinned by tests. Reassess if implementation touches a listed high-risk surface.
 
@@ -17,7 +17,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 - **S5 — defer Ensure error creation and support projection.** Add `Ensure` overloads taking `Func<Error>` for `Result<T>` and unit `Result`; invoke the factory only when the predicate fails on a success, never for an existing failure or passing predicate. Add `ToUnitResult()` for direct value-to-unit projection and a `Bind` overload that returns unit `Result`, preserving failures and short-circuiting as the existing operators do. Do not add async variants.
 - **S6 — add framework-agnostic test assertions.** Add a `ResulTus.Testing` package targeting `net8.0`, with no dependency on a test framework. Its `ShouldSucceed` and `ShouldFail` helpers cover unit `Result`, `Result<T>`, and `Result<TSuccess, TError>`, return the success/error payload for further assertions, and throw a documented `ResultAssertionException` on an unexpected state. Test the package with the repository's existing xUnit test infrastructure; xUnit is not a production dependency.
 - **S7 — offer an AOT-safe System.Text.Json path.** Keep the existing factory-based convenience registration compatible for ordinary applications. Expose a closed generic `ResultJsonConverter<T>` that can be directly registered with a source-generated `JsonSerializerContext`; resolve the payload converter through the context's type metadata rather than reflection-based `GetConverter`. Document both paths and clearly state which is suitable for Native AOT. Prove a source-generated round trip in tests and run a Native AOT publish/run smoke check on the available host. No claim of AOT support without observed proof.
-- **S8 — scope and compatibility.** The owner explicitly excluded P2: `FailIf`, query syntax, multi-error inside `Error`, and `StackResult` remain unimplemented and undocumented. Existing async extensions are not duplicated. Existing overload resolution, JSON shape, and behavior remain unchanged.
+- **S8 — scope and compatibility.** The owner subsequently authorized starting P2 after P1. P2's previously named gaps (`FailIf`, `Combine(Result<T>)`, query syntax, multi-error inside `Error`, and `StackResult`) will be specified in a separate feature document after P1 and before the remaining tasks in this feature; `Combine(Result<T>)` is implemented exactly once in P2. Existing async extensions are not duplicated. Existing overload resolution, JSON shape, and behavior remain unchanged.
 
 ## Tasks
 
@@ -25,7 +25,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | --- | --- | --- | --- | --- |
 | T1 | S1, S2 | inline | pending | — |
 | T2 | S3 | inline | pending | — |
-| T3 | S4 | inline | pending | — |
+| T3 | S4 | inline | deferred to P2 | — |
 | T4 | S5 | inline | pending | — |
 | T5 | S6 | inline | pending | — |
 | T6 | S7, S8 | inline | pending | — |
@@ -58,7 +58,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 - `ResultJsonConverter<T>` currently uses `JsonSerializerOptions.GetConverter(Type)`, and `ResultJsonConverterFactory.CreateConverter` closes it using `MakeGenericType` and `Activator.CreateInstance`. The current converter is internal.
 - Microsoft .NET documentation describes direct registration of a closed generic converter with source-generated metadata as the AOT-compatible alternative to reflective factory creation: https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/converters-how-to
 - Existing project convention: production projects target `net8.0`; test projects target `net10.0`, use xUnit v3 and FluentAssertions. The new `ResulTus.Testing` library will not depend on either test framework.
-- **Ordering:** finish P0 baselines and P1 allocation changes first. Then T1–T6. P3's final README examples depend on T1; its benchmark tables depend on P0 and P1.
+- **Ordering:** P0 baselines, P1 allocation changes, P2, then the remaining API-completion tasks (T1, T2, T4–T6). T3/S4 is folded into P2 and must not be implemented twice. P3's final README examples depend on T1; its benchmark tables depend on P0 and P1.
 
 ### L4 — test-first policy
 
@@ -67,3 +67,9 @@ For each behavior task, add one public-interface test per rule and observe the f
 ### L5 — delivery and risk
 
 All work stays inline; the owner asked for no writer delegation in this ODD stream and no delegation trigger is being invoked. Keep each behavior and its tests/docs in one work-unit commit. No push, PR, or merge is authorized. Reassess the risk line if a change modifies an existing public contract or another high-risk surface.
+
+### L6 — P2 sequencing authorization (verbatim)
+
+> vale cuando acabes p1 comienzas p2
+
+This supersedes the earlier P2 exclusion in L2. Once P1 is closed, create a separate P2 task document and begin those gaps before resuming this feature's remaining tasks. The already-authorized `Combine(Result<T>)` is shared scope; P2 owns its single implementation through T3/S4.
