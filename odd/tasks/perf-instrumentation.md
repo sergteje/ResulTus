@@ -26,7 +26,7 @@ Risk: none. No file under `src/` is modified and no public API changes.
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S4, S1 | inline | pending | — |
+| T1 | S4, S1 | inline | done | `this commit` |
 | T2 | S2 (Collections) | inline | pending | — |
 | T3 | S2 (Serialization) | inline | pending | — |
 | T4 | S2 (Logging, Validation) | inline | pending | — |
@@ -59,3 +59,28 @@ Benchmarks are not behavior tests, so the RED/GREEN discipline does not apply in
 ### L5 — scope boundary
 
 This phase does not fix anything it measures. Findings go into the charter's §7 table and, when they are already named in `odd/tasks/perf-allocations.md`, become that document's evidence. Adding a fix here would make the measurement and the change land in one commit, which is precisely what makes a regression unattributable later.
+
+### L6 — T1 done, and what it found
+
+Delivered: `ResulTus.Benchmarks.csproj` references the five projects (S4), `FailurePathAllocationBenchmark` with five rows (S1), registered in `Program.cs`, and a new §4.6 in `docs/performance.md` (S3).
+
+Final numbers, two consecutive `DefaultJob` runs on 2026-11-06, i7-6700, SDK 10.0.403:
+
+| Row | Run A | Run B | Allocated |
+| --- | ---: | ---: | ---: |
+| ResulTus | 2.807 ns | 2.830 ns | 0 B |
+| ErrorOr | 15.159 ns | 14.955 ns | 88 B |
+| ZeroResult | 8.859 ns | 8.268 ns | 32 B |
+| FluentResults | 50.266 ns | 51.690 ns | 272 B |
+| CSharpFunctionalExtensions | 3.033 ns | 3.053 ns | 0 B |
+
+**Deviation from S1, recorded rather than hidden.** S1 asked for the accumulated value to be *asserted* inside the benchmark. That is not how the loop was proven live. The proof is a per-library **sink field**: every row stores its result in an instance field, and `GlobalCleanup` reads all five back. The sink is strictly stronger than an assert for the purpose S1 names — an assert proves the loop ran, the field store proves the object **escaped**, which is what stops the JIT from stack-allocating a class-typed error. The evidence is empirical: with no sink `ZeroResult` reported `0 B`, and with the sink it reports 32 B on the same hardware and SDK. A standalone probe confirms `SingleError.IsValueType == false` and 32 B/op in Debug and Release.
+
+**Two findings the charter now carries.**
+
+- **`CSharpFunctionalExtensions` is allocation-free on the failure path.** Its error is a plain `string`, so it costs 0 B once the message exists. This makes the §7 claim "one object for each of the other four" false, and §6 said so explicitly before this measurement. §4.6, §6 and §7 are corrected in the same commit.
+- **`FluentResults.Result.IsFailed` allocates.** It derives from `Errors`, which runs `Reasons.OfType<IError>().ToList()` on every access: 88 B for `IsFailed`, 176 B for `Errors`. The first version of this benchmark consumed the result through `Errors[0]` and reported 448 B instead of the library's true 272 B. The row now reads `Reasons.Count`. A benchmark must consume a competitor's result through an accessor that does not allocate, or it measures its own code.
+
+**Verification.** `dotnet build tests/ResulTus.Benchmarks -c Release` -> 0 warnings, 0 errors. The filtered run exits 0. A filtered run leaves the other five `BenchmarkRunner.Run<T>` calls finding zero benchmarks, which prints "There are no benchmarks found" five times; that is noise in the log, not a failure.
+
+**Next.** T2 — Collections rows.

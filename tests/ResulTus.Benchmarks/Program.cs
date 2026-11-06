@@ -24,6 +24,7 @@ var config = ManualConfig.Create(DefaultConfig.Instance)
 BenchmarkRunner.Run<ResultCreationBenchmark>(config);
 BenchmarkRunner.Run<ResultMatchBenchmark>(config);
 BenchmarkRunner.Run<AllocationBenchmark>(config);
+BenchmarkRunner.Run<FailurePathAllocationBenchmark>(config);
 ArrayTraversalBenchmark.PrintLayoutTable();
 BenchmarkRunner.Run<ArrayTraversalBenchmark>(config);
 BenchmarkRunner.Run<GenericTierTraversalBenchmark>(config);

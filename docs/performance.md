@@ -233,6 +233,33 @@ FluentResults is the exception that proves the point: at 8 B per element it shou
 
 The allocation rule itself holds: **ResulTus allocates 0 B on success and on failure.** Do not quote a speed ratio against `ZeroResult_Failure_Allocation` from this run: it measured `0.0000` for us, so there is no difference left to divide. The 2026-10-27 figure of `6.5x` is retired.
 
+### Failure path from a unique message — measured 2026-11-06
+
+Every row above reuses one pre-built error, so all of them answer only "build a result from an error that already exists". None of them can show what building the error itself costs, which is the whole question for a library whose competitor stores its error as a class. This section answers it: `FailurePathAllocationBenchmark` constructs the failure from a **distinct message on every invocation**, cycling a 1024-message pool materialized in `GlobalSetup`. The pool is built once, so the message string is paid identically by every row and excluded from the comparison, and no library can serve the call from a cache.
+
+Each result is stored in a per-library instance field and read back in `GlobalCleanup`. Without that store the JIT proves the error never escapes and stack-allocates it: the first version of this benchmark reported `0 B` for `ZeroResult`, whose `SingleError` is a class, while a standalone probe measured 32 B per call in both Debug and Release. The sink is what makes the row honest, and it is why this table's nanoseconds are **not** comparable to the creation rows above — every row here pays a field store those rows do not.
+
+Measured 2026-11-06, Intel Core i7-6700, .NET SDK 10.0.403, BenchmarkDotNet 0.15.8, `DefaultJob`, two consecutive runs:
+
+| Method | Mean run A | Mean run B | Allocated | Ratio |
+| --- | ---: | ---: | ---: | ---: |
+| **ResulTus_Failure_Unique_Message** | 2.807 ns | 2.830 ns | **0 B** | 1.00 |
+| ErrorOr_Failure_Unique_Message | 15.159 ns | 14.955 ns | **88 B** | 5.3x |
+| ZeroResult_Failure_Unique_Message | 8.859 ns | 8.268 ns | **32 B** | 3.0x |
+| FluentResults_Failure_Unique_Message | 50.266 ns | 51.690 ns | **272 B** | 18x |
+| CSharpFunctionalExtensions_Failure_Unique_Message | 3.033 ns | 3.053 ns | **0 B** | 1.08x |
+
+**Verdict: ResulTus wins on allocation against three of four and ties the fourth.** `ZeroResult` allocates a 32 B `SingleError` class, `ErrorOr` an 88 B `List<Error>`, and `FluentResults` 272 B spread across its result object, its reason list and its error. **`CSharpFunctionalExtensions` allocates nothing**, because its error is a plain `string` — the message the caller had already built. That is a real tie on this axis, not a measurement artifact, and it corrects the pre-2026-11-06 assumption in §7 that every competitor pays one object per failure.
+
+The time column separates from `CSharpFunctionalExtensions` by 8% (2.81–2.83 ns against 3.03–3.05 ns), which is only 0.22 ns. By the §2 rule it counts — the confidence intervals do not overlap in either run and the sign reproduces — but the margin is small enough that it should be read as "we are not behind", not as a selling point. Against the other three the win is 3.0x–18x and stable across both runs.
+
+**Fair-comparison note (§3).** `CSharpFunctionalExtensions.Result<T>` can hold a message and nothing else: no code, no category. ResulTus carries `Code`, `Message` and `Type` inline for the same 0 B, so this is not a comparison of equal payloads — it is the as-used reading, and ResulTus wins it on payload at equal allocation.
+
+**Two measurement traps, recorded so they are not repeated.**
+
+- **A consumer can allocate on a competitor's behalf.** `FluentResults.Result.IsFailed` is not a field: it derives from `Errors`, which runs `Reasons.OfType<IError>().ToList()` on every access. Consuming the result through `IsFailed` added 88 B to this row and `Errors` added 176 B — 448 B total in the first version, all of it the benchmark's cost rather than the library's. The row now reads `Reasons.Count`, which is a stored list, and lands on the 272 B that a standalone probe measures for `Result.Fail<int>(message)` alone.
+- **A `0 B` row for a class-typed error is not evidence of anything until the sink exists.** See above: `ZeroResult` reported `0 B` with no sink and 32 B with one, on the same hardware and SDK.
+
 ## 5. Reproduction
 
 ```bash
@@ -250,7 +277,7 @@ Rules for a valid run:
 
 ## 6. Current standing
 
-Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 B, `Result<int>` 32 B).
+Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 B, `Result<int>` 32 B). The failure-path row was measured 2026-11-06 on the same machine and SDK.
 
 | Benchmark area | Standing | Margin |
 | --- | --- | --- |
@@ -262,13 +289,14 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | Match — vs ErrorOr | **Unresolved, ErrorOr ahead** | ahead in every run, magnitude swung 33% → 250% |
 | Allocation — success | Tie (noise floor) | 0 B, ZeroMeasurement |
 | Allocation — failure | **0 B** | the speed column is eliminated code, not a ranking |
+| Failure path from a unique message | **Win on allocation vs 3 of 4, tie vs CSharpFunctionalExtensions** | 0 B vs 32 B / 88 B / 272 B / 0 B; 3.0x–18x faster, 1.08x ahead of the 0 B competitor (§4.6) |
 | Struct size — generic tier | **Win** | `Result<int, 8-byte error>` = **13 B**, measured against the aligned 16 B alternative with no resolvable performance gain (§4.5); every competitor is 16 B |
 | Struct size — default tier | **Documented loss** | `Result<int>` 32 B vs 16 B; deliberate trade for zero allocation on both paths |
 | Array traversal — vs 16 B competitors | **Documented loss** | 1.25x–1.47x slower (success), 1.08x–1.26x (failure); the 32 B stride is the cause (§4.4) |
 | Array traversal — 32 B vs 40 B | **Marginal win for 40 B → 32 B** | ~3.5% at the 256 KiB L2 boundary, unresolved elsewhere (§4.3) |
 | Array traversal — vs FluentResults | **Win** | 25x–28x faster, and it allocates 96 KB–960 KB per traversal |
 
-**The north star is met on allocation, met on the generic tier's size, and not met on the default tier's size — that last one is now a written decision, not an open issue.** The allocation result needs one precision: the benchmarked failure rows reuse a pre-built error object, so what they prove is "constructing a result from an already-built error allocates nothing on either side". They do **not** show that a competitor's failure path is allocation-free — `ZeroResult` must allocate a `SingleError` class, `ErrorOr` a `List<Error>`, and `CSharpFunctionalExtensions` and `FluentResults` a class, the first time each distinct error is built. ResulTus builds an inline struct `Error` and allocates nothing, ever. That is the real allocation claim, and the benchmark that would prove it head-to-head (failure from a unique message, no caching) does not exist yet. The default `Result<T>` is 2x the competitors' size on purpose: it is the ergonomic tier, and it is the only one of the five that keeps a rich error stored inline — and §4.4 is the price of that decision stated as a number.
+**The north star is met on allocation, met on the generic tier's size, and not met on the default tier's size — that last one is now a written decision, not an open issue.** The allocation result now has its head-to-head: §4.6 measures the failure path from a unique, uncached message, and the answer is ResulTus **0 B**, `ZeroResult` **32 B**, `ErrorOr` **88 B**, `FluentResults` **272 B**, and `CSharpFunctionalExtensions` **0 B**. The pre-2026-11-06 claim that every competitor allocates one object per failure was **wrong for `CSharpFunctionalExtensions`**: its error is a plain `string`, so it allocates nothing once the message exists. ResulTus ties it on allocation and differentiates on payload — `Code`, `Message` and `Type` inline for the same 0 B. The default `Result<T>` is 2x the competitors' size on purpose: it is the ergonomic tier, and it is the only one of the five that keeps a rich error stored inline — and §4.4 is the price of that decision stated as a number.
 
 ## 7. Known open gaps
 
@@ -280,7 +308,7 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | `Result<int>` was 40 B instead of 16 B | **Fixed 2026-10-28.** `Error` lost its untyped `Metadata` dictionary (32 → 24 B) and `Result<int>` is now **32 B**, zero allocation on both paths. The 16 B target was rejected: incompatible with the allocation contract. See **[Decision 001](decisions/001-result-struct-size.md)**. |
 | `[StructLayout(Pack = 1)]` | **Fixed 2026-10-29.** Removed from `Error` (runtime realigns: 40 B either way) and from `Result<T>` (its inline `Error` holds references, so the same realignment applies: 32 B either way). Kept only on `Result<TSuccess, TError>`, where it is honored when the error type holds no references and yields the measured 13 B. The attribute now exists only where it is measured to do something. |
 | Alignment of the generic tier | **Closed 2026-10-29 — no resolvable difference, 13 B kept.** Measured in §4.5: the aligned 16 B stride was 2.5% faster in one cell and 1.5%–5.0% slower in three, with a within-layout spread larger than the effect. |
-| **Failure-path allocation vs competitors** | **Open, high value.** Every existing failure row reuses a pre-built error object, which hides the allocation a class-based error costs. The honest comparison is *failure from a unique message with no caching*: ResulTus 0 B, and one object for each of the other four. No benchmark measures it yet. |
+| **Failure-path allocation vs competitors** | **Fixed 2026-11-06.** Measured in §4.6 with a unique, uncached message per invocation: ResulTus **0 B**, `ZeroResult` 32 B, `ErrorOr` 88 B, `FluentResults` 272 B, `CSharpFunctionalExtensions` **0 B**. The original claim "one object for each of the other four" was wrong for `CSharpFunctionalExtensions`, whose error is a plain `string`; ResulTus ties it on allocation and wins on payload. |
 | **Array traversal vs competitors** | **Fixed 2026-10-29 — it is a loss.** Measured in §4.4: 1.25x–1.47x slower than every 16-byte competitor on the success path. The 32 B inline error is the cause and the trade is deliberate. Kept here as a standing fact, not an open question. |
 
 Every gap in this table must eventually resolve to one of: **fixed**, **noise-floor tie**, or **documented structural difference**. "We are close enough" is not a resolution.
