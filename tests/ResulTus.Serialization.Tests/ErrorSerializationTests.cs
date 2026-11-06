@@ -1,5 +1,6 @@
 // Copyright (c) ResulTus. All rights reserved.
 
+using System.Buffers;
 using System.Text.Json;
 
 namespace ResulTus.Serialization.Tests;
@@ -48,6 +49,77 @@ public class ErrorSerializationTests
         var type = JsonSerializer.Deserialize<ErrorType>("\"notfound\"", Options);
 
         type.Should().Be(ErrorType.NotFound);
+    }
+
+    /// <summary>
+    /// GIVEN the JSON name <c>"Not\u0046ound"</c> with an escaped character
+    /// WHEN it is deserialized as an <see cref="ErrorType"/>
+    /// THEN it MUST still yield <c>ErrorType.NotFound</c>.
+    /// </summary>
+    [Fact]
+    public void ErrorType_ShouldDeserializeEscapedName()
+    {
+        var type = JsonSerializer.Deserialize<ErrorType>("\"Not\\u0046ound\"", Options);
+
+        type.Should().Be(ErrorType.NotFound);
+    }
+
+    /// <summary>
+    /// GIVEN an unescaped known <see cref="ErrorType"/> name
+    /// WHEN the converter reads it repeatedly
+    /// THEN the common path MUST allocate no string.
+    /// </summary>
+    [Fact]
+    public void ErrorType_ShouldNotAllocateForUnescapedName()
+    {
+        ReadOnlySpan<byte> json = "\"NotFound\""u8;
+        var converter = new ErrorTypeJsonConverter();
+
+        var warmupReader = new Utf8JsonReader(json);
+        warmupReader.Read();
+        converter.Read(ref warmupReader, typeof(ErrorType), Options).Should().Be(ErrorType.NotFound);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < 100; index++)
+        {
+            var reader = new Utf8JsonReader(json);
+            reader.Read();
+            _ = converter.Read(ref reader, typeof(ErrorType), Options);
+        }
+
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        allocated.Should().Be(0);
+    }
+
+    /// <summary>
+    /// GIVEN an unescaped known <see cref="ErrorType"/> name split across JSON sequence segments
+    /// WHEN the converter reads it repeatedly
+    /// THEN the segmented common path MUST allocate no string.
+    /// </summary>
+    [Fact]
+    public void ErrorType_ShouldNotAllocateForSegmentedUnescapedName()
+    {
+        var first = new JsonByteSegment("\"Not"u8.ToArray());
+        var last = first.Append("Found\""u8.ToArray());
+        var json = new ReadOnlySequence<byte>(first, 0, last, last.Memory.Length);
+        var converter = new ErrorTypeJsonConverter();
+
+        var warmupReader = new Utf8JsonReader(json);
+        warmupReader.Read();
+        converter.Read(ref warmupReader, typeof(ErrorType), Options).Should().Be(ErrorType.NotFound);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < 100; index++)
+        {
+            var reader = new Utf8JsonReader(json);
+            reader.Read();
+            _ = converter.Read(ref reader, typeof(ErrorType), Options);
+        }
+
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        allocated.Should().Be(0);
     }
 
     /// <summary>
@@ -213,5 +285,23 @@ public class ErrorSerializationTests
 
         back.Should().Be(error);
         back.Type.Should().Be(error.Type);
+    }
+
+    private sealed class JsonByteSegment : ReadOnlySequenceSegment<byte>
+    {
+        public JsonByteSegment(ReadOnlyMemory<byte> memory)
+        {
+            Memory = memory;
+        }
+
+        public JsonByteSegment Append(ReadOnlyMemory<byte> nextMemory)
+        {
+            var next = new JsonByteSegment(nextMemory)
+            {
+                RunningIndex = RunningIndex + Memory.Length,
+            };
+            Next = next;
+            return next;
+        }
     }
 }

@@ -1,7 +1,9 @@
 // Copyright (c) ResulTus. All rights reserved.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -17,6 +19,8 @@ namespace ResulTus.Serialization;
 /// </remarks>
 public sealed class ErrorTypeJsonConverter : JsonConverter<ErrorType>
 {
+    private const int MaximumNameLength = 12;
+
     private static readonly Dictionary<ErrorType, string> Names = BuildNames();
     private static readonly Dictionary<string, ErrorType> Values = BuildValues();
 
@@ -74,6 +78,27 @@ public sealed class ErrorTypeJsonConverter : JsonConverter<ErrorType>
                 $"Expected a {nameof(ErrorType)} name string, found {reader.TokenType}. Numbers are rejected on purpose.");
         }
 
+        if (!reader.ValueIsEscaped)
+        {
+            if (reader.HasValueSequence)
+            {
+                var length = reader.ValueSequence.Length;
+                if (length <= MaximumNameLength)
+                {
+                    Span<byte> nameBuffer = stackalloc byte[MaximumNameLength];
+                    reader.ValueSequence.CopyTo(nameBuffer);
+                    if (TryGetValue(nameBuffer[..(int)length], out var sequenceValue))
+                    {
+                        return sequenceValue;
+                    }
+                }
+            }
+            else if (TryGetValue(reader.ValueSpan, out var spanValue))
+            {
+                return spanValue;
+            }
+        }
+
         var name = reader.GetString();
         if (name is null || !Values.TryGetValue(name, out var value))
         {
@@ -81,6 +106,57 @@ public sealed class ErrorTypeJsonConverter : JsonConverter<ErrorType>
         }
 
         return value;
+    }
+
+    private static bool TryGetValue(ReadOnlySpan<byte> name, out ErrorType value)
+    {
+        if (Ascii.EqualsIgnoreCase(name, "None"u8))
+        {
+            value = ErrorType.None;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Failure"u8))
+        {
+            value = ErrorType.Failure;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Validation"u8))
+        {
+            value = ErrorType.Validation;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "NotFound"u8))
+        {
+            value = ErrorType.NotFound;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Conflict"u8))
+        {
+            value = ErrorType.Conflict;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Unauthorized"u8))
+        {
+            value = ErrorType.Unauthorized;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Forbidden"u8))
+        {
+            value = ErrorType.Forbidden;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Timeout"u8))
+        {
+            value = ErrorType.Timeout;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Cancelled"u8))
+        {
+            value = ErrorType.Cancelled;
+        }
+        else if (Ascii.EqualsIgnoreCase(name, "Unexpected"u8))
+        {
+            value = ErrorType.Unexpected;
+        }
+        else
+        {
+            value = default;
+            return false;
+        }
+
+        return true;
     }
 
     private static Dictionary<ErrorType, string> BuildNames()

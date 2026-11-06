@@ -15,6 +15,8 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
   - **Escaped input.** When `reader.ValueIsEscaped` is true the raw span holds escape sequences, so the byte comparison cannot succeed. That path falls back to `reader.GetString()` and the existing dictionary. A JSON document containing `"Not\u0046ound"` must still read as `ErrorType.NotFound`.
   - An unknown or non-string value still throws `JsonException` with the same messages that exist today.
 - **S2 — the `T` converter is resolved once per converter instance.** `ResultJsonConverter<T>` calls `options.GetConverter(typeof(T))` on every element in both `Write` (`ResultJsonConverterFactory.cs:103`) and `Read` (`:170`). It must resolve once, store the result in a private field, and reuse it. A benign race is acceptable: two threads may resolve the same instance, and the field assignment is idempotent. No observable behavior changes.
+  - The cache is keyed by the **options instance**, not by the converter alone. `ResultJsonConverter<T>` is built by `Activator.CreateInstance` in `CreateConverter` (`:58`) with no access to the options, so it cannot capture them at construction, and `GetConverter` is an instance method on a specific `JsonSerializerOptions`. System.Text.Json caches converters per options instance today, so one field would hold; storing the options reference beside the converter and re-resolving when it differs makes the invariant hold by construction, for one reference comparison on the hit path.
+  - `Write` only reaches `GetConverter` when the value is non-null (`:97` guards it), so the write-side cost is paid on the value path and never on a failure. The read side has no such guard: `Result<int>[]` pays one resolution per element.
 - **S3 — collection operations stop allocating an enumerator.** Every method that today `foreach`es over `IEnumerable<T>` gains an index-based overload for `T[]` and for `IReadOnlyList<T>`:
   - `ResultCollectionExtensions`: `Sequence`, `Traverse`, `Fold`, `FirstFailure`, `FirstSuccess`, `Partition`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`.
   - `UnitResultCollectionExtensions`: `Combine`, `Fold`, `FirstFailure`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`.
@@ -28,7 +30,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | inline | pending | — |
+| T1 | S1 | inline | done | this commit |
 | T2 | S2 | inline | pending | — |
 | T3 | S3 (non-unit collections) | inline | pending | — |
 | T4 | S3 (unit collections) | inline | pending | — |
@@ -57,7 +59,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 
 Each task observes RED before its implementation:
 
-- **T1** — a test asserting that `"Not\u0046ound"` reads as `ErrorType.NotFound` and that `"notfound"` reads as `ErrorType.NotFound` passes today and must keep passing after the change; a test asserting zero string allocation on the unescaped path fails today.
+- **T1** — existing lowercase input and the escaped `"Not\u0046ound"` case must keep reading as `ErrorType.NotFound`; the unescaped `ValueSpan` allocation test fails before the fix, and segmented `ValueSequence` input is tested on the same zero-allocation path.
 - **T2** — a test that serializes a `Result<int>[]` and asserts the converter instance is resolved once per converter. This is not directly observable from the public API, so the RED evidence is the benchmark row from P0 plus a test that a shared `JsonSerializerOptions` produces identical output across repeated calls. Stated here rather than dressed up as a failing behavior test.
 - **T3/T4** — the allocation test described in S3 fails today with a non-zero delta and passes after the overloads exist.
 - **T5** — the same allocation test for `Partition` fails today.
@@ -81,3 +83,23 @@ Each task observes RED before its implementation:
 - `dotnet build ResulTus.slnx` — 0 warnings, 0 errors.
 - `dotnet test ResulTus.slnx` — the whole suite green, including the 449 tests that exist today plus the new ones.
 - `dotnet run -c Release --project tests/ResulTus.Benchmarks` — the P0 rows re-measured; any row outside the noise floor of `docs/performance.md` §5 is recorded, not hidden.
+
+### L8 — S2 refined after reading the factory (2026-11-06)
+
+Read the two P1 targets before implementing. The line numbers in S1 and S2 are correct: `GetString()` at `ErrorTypeJsonConverter.cs:77`, the case-insensitive map at `:101`, and both `GetConverter` calls at `ResultJsonConverterFactory.cs:103` and `:170`. The labels codegraph prints for `Write` and `Read` point at the declaration with its AOT attributes, not at the call site.
+
+One thing the spec did not cover, now written into S2: `ResultJsonConverter<T>` is created by `Activator.CreateInstance` in `CreateConverter` (`:58`) and therefore never sees the `JsonSerializerOptions` at construction, while `GetConverter` is an instance method on a specific options object. Caching one converter in a plain field relies on System.Text.Json caching converters per options instance — true today, but an invariant the type does not state. The cache stores the options reference and re-resolves when it differs, which costs one comparison and makes the invariant structural.
+
+Also recorded: `Write` only resolves when the value is non-null (`:97`), so the write-side cost never lands on a failure; `Read` has no such guard, which is why `Result<int>[]` pays per element.
+
+No code touched. P1 waits for the P0 benchmark process to finish before the first build.
+
+### L9 — P0 baselines completed (2026-11-06)
+
+P0 is closed. The pre-change serialization baseline is recorded in `docs/performance.md` §4.8: deserializing `Result<int>[1000]` is 159.317 μs / 97,680 B, serializing it is 85.444 μs / 61,808 B, and `ErrorType` deserialize is 115.3 ns / 40 B. P1/T1 must remeasure and update its affected rows in the same commit as the UTF-8 comparison. P1/T2 must remeasure the `Result<int>` and array rows in its caching commit. Collections rows are in §4.7 and will be remeasured by T3–T5. The full baseline suite verified 449 tests passed across 10 projects; solution build was 0 warnings and 0 errors.
+
+### L10 — T1 UTF-8 `ErrorType` parsing completed
+
+The allocation test observed RED before implementation: 100 unescaped `"NotFound"` reads allocated 4,000 B through `GetString()`. The converter now compares unescaped `ValueSpan` and segmented `ValueSequence` bytes with `System.Text.Ascii.EqualsIgnoreCase`; escaped values and unknown names retain the existing `GetString()`/dictionary path and error behavior. Tests cover case-insensitive, escaped, unescaped zero-allocation, and segmented zero-allocation input.
+
+**Verification:** the 62-test Serialization project passed. Focused ErrorType tests passed 29/29, including both allocation paths. Release benchmark build had 0 warnings and 0 errors; the Serialization benchmark run exited 0, produced all 10 rows, and reported no benchmark issues. P1/T1 remeasurement in `docs/performance.md` §4.8: `DeserializeResultFailure` 513.9 ns / 152 B → 500.20 ns / 112 B; `DeserializeError` 367.2 ns / 160 B → 343.33 ns / 120 B; `DeserializeErrorType` 115.3 ns / 40 B → 81.57 ns / 0 B. The other seven rows remain the P0 values because T1 does not affect them.
