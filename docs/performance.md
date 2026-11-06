@@ -306,6 +306,32 @@ BenchmarkDotNet 0.15.8, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 /
 
 **Readout:** this is a serialization baseline, not a comparison against other libraries. The success-result deserialization row allocates 0 B. The array rows include the JSON string or materialized result array and all per-element work; they are not an isolated allocation measure of converter lookup. P1 will remeasure the same rows after caching and record any change in the same commit as the fix.
 
+### Logging — enabled versus disabled failure logging — measured 2026-11-06
+
+`LoggingOperationBenchmark` logs one prebuilt failed `Result<int>` through a capturing `ILogger`. The logger captures the structured state reference and event count but does not format a message, so the enabled row measures the logging state and dispatch rather than a formatted string. `Enabled` is varied between false and true.
+
+BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14. One complete run:
+
+| Method | Enabled | Mean | Allocated |
+| --- | --- | ---: | ---: |
+| LogFailure | false | 5.057 ns | 0 B |
+| LogFailure | true | 26.054 ns | 64 B |
+
+**Readout:** the disabled-level path allocates 0 B. The enabled path allocates the 64 B structured logging state; no rendered-message allocation is included because the capture logger keeps the state structured.
+
+### Validation conversions — 1,000 issues — measured 2026-11-06
+
+`ValidationOperationBenchmark` measures `ValidationErrors.ToDictionary()` and `ToError()` over 1,000 preconstructed issues across ten fields. The issue list is created in `GlobalSetup`, outside the measured methods.
+
+BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14. One complete run:
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| ToDictionary | 21.385 μs | 31,624 B |
+| ToError | 33.04 ns | 80 B |
+
+**Readout:** `ToDictionary` materializes the grouped dictionary and per-field message arrays. `ToError` creates the summary message string and a value-type `Error`.
+
 ## 5. Reproduction
 
 ```bash

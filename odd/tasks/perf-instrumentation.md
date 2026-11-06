@@ -28,8 +28,8 @@ Risk: none. No file under `src/` is modified and no public API changes.
 | --- | --- | --- | --- | --- |
 | T1 | S4, S1 | inline | done | `this commit` |
 | T2 | S2 (Collections) | inline | done | `0fbedd7` |
-| T3 | S2 (Serialization) | inline | done | pending commit |
-| T4 | S2 (Logging, Validation) | inline | pending | — |
+| T3 | S2 (Serialization) | inline | done | `25e8b20` |
+| T4 | S2 (Logging, Validation) | inline | done | pending commit |
 | T5 | S3, S5, S6, S7 | inline | pending | — |
 
 ## Log
@@ -83,7 +83,7 @@ Final numbers, two consecutive `DefaultJob` runs on 2026-11-06, i7-6700, SDK 10.
 
 **Verification.** `dotnet build tests/ResulTus.Benchmarks -c Release` -> 0 warnings, 0 errors. The filtered run exits 0. A filtered run leaves the other five `BenchmarkRunner.Run<T>` calls finding zero benchmarks, which prints "There are no benchmarks found" five times; that is noise in the log, not a failure.
 
-**Next.** T3 — Serialization rows, including the `Result<int>[]` row that measures converter lookup per element.
+**Next.** T5 — final P0 verification and closure.
 
 ### L7 — T2 Collections measured and closed
 
@@ -104,3 +104,9 @@ Key baseline: deserializing the 1,000-result array takes 159.317 μs and allocat
 The first benchmark build failed with IL2026/IL3050 because the project treats AOT/trimming warnings as errors. These calls intentionally exercise the existing reflection-based converter path; a file-scoped suppression now documents that measurement, while AOT compatibility is tested separately in API-completion T6. No production serialization code changed.
 
 **Verification:** initial Release build observed RED (30 IL2026/IL3050 errors); after the benchmark-scoped suppression, `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. `dotnet run -c Release --project tests/ResulTus.Benchmarks -- --filter "*SerializationOperationBenchmark*"` -> exit 0; 10 rows, 0 `ERROR` sections, 0 `Benchmarks with issues` sections.
+
+### L9 — T4 Logging and Validation measured
+
+`LoggingOperationBenchmark` uses a capturing logger that stores the structured state reference without formatting. The disabled logging row allocates 0 B at 5.057 ns; enabled logging allocates 64 B at 26.054 ns. `ValidationOperationBenchmark` processes 1,000 issues across ten fields: `ToDictionary` 21.385 μs / 31,624 B and `ToError` 33.04 ns / 80 B. The four rows are in `docs/performance.md` §§4.9–4.10, measured 2026-11-06 with BenchmarkDotNet 0.15.8, `DefaultJob`, i7-6700, SDK 10.0.403 / runtime 10.0.14. Both filtered runs completed with exit 0, two rows each, and no benchmark issues.
+
+**Verification:** `dotnet build tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj -c Release --nologo` -> 0 warnings, 0 errors. The Logging and Validation filtered benchmark runs both exited 0; each produced two rows and zero `ERROR` or `Benchmarks with issues` sections.
