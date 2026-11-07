@@ -41,6 +41,7 @@ Risk: none. No code, no public API, no behavior.
 | T4 | S8 | inline | pending | — |
 | T5 | S9 | inline | pending | — |
 | T6 | S5, S6, S10 | inline | pending | — |
+| T7 | S11 | inline | pending | — |
 
 ## Log
 
@@ -104,3 +105,11 @@ This phase changes no behavior, so there is no RED/GREEN. The verification is: e
 > el recomendado
 
 The final README depends on the P2, API-completion and HttpClient tasks closing before T1–T6 begin. `ResulTus.HttpClient` is a separate optional package with a typed `HttpClientError`; its package-table row and examples are included only after the module ships.
+
+### L10 — owner adds the AGENTS.md refresh to P3 (verbatim)
+
+> Pero hagamos ahora los readme por cierto Agents.md no se ha creado y/o actualizado nunca??
+
+`AGENTS.md` exists — created in an early SDD/openspec phase — and is stale: it describes an `sdd-*` agent roster and an OpenSpec artifact store, while the project now runs ODD with `odd/tasks/*.md` documents and the runtime's actual agents. It also predates the two newest packages and several behavior rules. Authorized as **S11** below and routed T7.
+
+- **S11 — refresh `AGENTS.md` to describe the project as it actually runs.** Keep what is still true (net8.0/net10.0, nullable, warnings as errors, Conventional Commits, MIT, XML documentation required) and rewrite what is not: the ODD workflow with `odd/tasks/*.md` feature documents as the specification artifact, the runtime agents actually used (`gentle-orchestrator` orchestrating, with read-only explore/verify and bounded writer roles), the current package list (the 13 projects in the README's package table, including `ResulTus.Testing`), and the behavior rules that decide how code is written here: 0 B on the success **and** failure path for core operations, cancellation as control flow (`OperationCanceledException` rethrown, never converted into an error), typing via `readonly record struct` for the inline tiers with the documented exception (`HttpClientError`/`HttpProblemDetails` are classes because they own references), and test discipline (public-interface `Given/When/Then` tests, one per rule, plus the compile-the-snippet gate for docs). No process narrative beyond what helps a fresh agent work correctly tomorrow.
