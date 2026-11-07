@@ -281,7 +281,7 @@ BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET 
 | Partition | List | 3.326 μs | 12,480 B |
 | Combine (unit `Result`) | List | 1.221 μs | 0 B |
 
-**Readout:** `Fold`, `FirstFailure` and unit `Combine` allocate nothing for either source. `List<T>` is slower than `T[]` in all six rows; this is consistent with the interface-enumerator overhead, but the single run is descriptive rather than a claim about a precise ratio. `Partition` allocates the two output arrays plus its growing lists. `Combine` here is the existing unit-result operation; no `Result<T>` overload exists.
+**Readout:** `Fold`, `FirstFailure` and unit `Combine` allocate nothing for either source. `List<T>` is slower than `T[]` in all six rows; this is consistent with the interface-enumerator overhead, but the single run is descriptive rather than a claim about a precise ratio. `Partition` allocates the two output arrays plus its growing lists. `Combine` in this table is the element-wise unit-result operation measured during P0. The binary value-bearing overload was added later, in P2/T1, and is not a row here: it returns a struct, so its zero-allocation floor on the success and both failure paths is pinned by tests in `tests/ResulTus.Extensions.Tests/CombineContractTests.cs` rather than by a benchmark.
 
 **Scope:** one size only, as requested. The per-call allocations are not a scaling experiment; deterministic allocation tests in P1 cover the collection-size question.
 

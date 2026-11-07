@@ -52,3 +52,16 @@ P1 is closed: `docs/performance.md` records the allocation work and its two trac
 
 **Risk:** item 3 (contracts others consume). The member is additive and nothing else in the library is named `Combine` for `Result<T>`, but a new extension can still change overload resolution at a call site that today binds elsewhere, so this unit goes to independent verification.
 
+### L5 — independent verification of T1, and the promoted probes
+
+A separate verifier reviewed `git diff fab4e08..9e1c66c` in a scratch tree outside the workspace, built and tested both trees there, and reproduced the RED by adding the new test file to the baseline: four `CS1061` errors, exactly the evidence L4 records. Verdicts: **S1 pass, build requirement pass, no blockers**. Beyond the spec it confirmed the zero-allocation floor on the success path and on both failure paths, that the named tuple elements survive as metadata (`First`/`Second` usable at the call site), that every existing `Combine` call site still binds to the same member on `IEnumerable<Result>`, `Result[]` and `IReadOnlyList<Result>`, and that the default `Result<T>` (a failure carrying `Error.None`) combines without throwing.
+
+Three non-blocking advisories came out of it:
+
+1. **The charter had gone stale.** `docs/performance.md` still said "no `Result<T>` overload exists" next to the P0 `CollectionOperationBenchmark` table. That was true when the table was measured and false as soon as T1 landed. The row is the element-wise unit operation, so the readout now says so and points at the allocation tests that pin the binary overload instead.
+2. **System.Text.Json cannot see `ValueTuple` fields.** A `Result<(int, string)>` serializes its success payload as `{}`, because the default contract ignores fields and a tuple has no properties. This is not caused by T1 — any `Result<T>` whose `T` is a tuple already behaved that way — but `Combine` makes that shape easy to produce. Left as an advisory, recorded here, and it belongs in the P3 README's serialization caveats rather than in a behavior change to the serializer.
+3. **`Combine` now exists twice under the same name in two packages.** The binary overload lives in `ResulTus.Extensions` and the element-wise unit overloads in `ResulTus.Collections`. Arity keeps ordinary call sites unambiguous, but a caller that imports both namespaces sees two `Combine` families. Unavoidable given the spec, and the overload-resolution guards now pin it.
+
+Nine of the verifier's contract probes and four overload-resolution guards were promoted to permanent tests: `tests/ResulTus.Extensions.Tests/CombineContractTests.cs` (tuple shape and named elements, argument order with distinct types, both-fail precedence, second-failure-only-when-first-succeeded, default results, null success value, and the three allocation paths) and `tests/ResulTus.Collections.Tests/CombineOverloadResolutionTests.cs` (sequence, array, read-only-list and binary binding). The Collections test project gained a reference to `ResulTus.Extensions` so both families are in scope for the binding guards. After promotion the suite is **493/493** (Extensions 93, Collections 64) with a 0-warning, 0-error build.
+
+

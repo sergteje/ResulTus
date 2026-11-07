@@ -15,6 +15,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ResulTus\ResulTus.csproj" />
     <ProjectReference Include="..\..\src\ResulTus.Collections\ResulTus.Collections.csproj" />
+    <!-- The overload-resolution guards have to see both Combine families at once: the element-wise
+         sequence overloads from ResulTus.Collections and the binary Result<TFirst>/Result<TSecond>
+         overload from ResulTus.Extensions. -->
+    <ProjectReference Include="..\..\src\ResulTus.Extensions\ResulTus.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
