@@ -12,7 +12,7 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 
 - **S1 — binary `Combine` for value-bearing results.** Verbatim from `odd/tasks/api-completion.md` S4: "Add a binary `Combine` for `Result<TFirst>` and `Result<TSecond>` that returns `Result<(TFirst First, TSecond Second)>`, evaluates the first failure before the second, and preserves the first failure in argument order. It complements, and does not change, the existing `IEnumerable<Result>` unit overload." Acceptance: both success returns the tuple in argument order; a failure in either argument returns that error; when both fail, the first argument's error wins; each failure short-circuits the other argument's evaluation path that S1 defines. Full XML documentation on the new member. This spec supersedes `api-completion.md` T3/S4 — it is implemented exactly once, here.
 
-- **S2 — `FailIf`.** **Assumption pending owner definition.** No semantics are recorded anywhere in the repository beyond the name. Open questions that must be answered before this spec can be written: the receiver (`Result`, `Result<T>`, `Result<TSuccess,TError>`, or all three); whether the condition is a predicate over the success value or a bare flag; whether the error is passed eagerly (`Error`) or lazily (`Func<Error>`), where the lazy form would match the accepted `Ensure` direction; and whether the method returns the receiver or a new result. Do not implement from the name alone.
+- **S2 — `FailIf`. REJECTED by the owner 2026-11-07 (L6).** `Ensure(predicate, error)` already fails when the predicate does not hold, so a `FailIf` that fails when the predicate holds is `Ensure(value => !predicate(value), error)` and nothing more. Adding it would publish a second way to write the same guard, force a choice at every validation site, and add no capability. No member is added; the name stays out of the API.
 
 - **S3 — query syntax.** **Assumption pending owner definition.** No semantics recorded beyond the name. Open questions: whether this means C# LINQ query-expression support (`Select`/`SelectMany`/`Where`/`Join`, with `Result<T>` as a monad) or a fluent query builder; which tier it covers (`Result<T>` only, or also `Result<TSuccess,TError>`); and whether it introduces a new package. This is the largest item and may be rejected in favour of plain fluent pipelines.
 
@@ -25,7 +25,7 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S1, S0 | inline | done | this commit |
-| T2 | S2 | — | blocked — spec undefined | — |
+| T2 | S2 | — | closed — rejected by the owner | — |
 | T3 | S3 | — | blocked — spec undefined | — |
 | T4 | S4 | — | blocked — spec undefined and risk assessment required | — |
 | T5 | S5 | — | blocked — spec undefined | — |
@@ -63,5 +63,15 @@ Three non-blocking advisories came out of it:
 3. **`Combine` now exists twice under the same name in two packages.** The binary overload lives in `ResulTus.Extensions` and the element-wise unit overloads in `ResulTus.Collections`. Arity keeps ordinary call sites unambiguous, but a caller that imports both namespaces sees two `Combine` families. Unavoidable given the spec, and the overload-resolution guards now pin it.
 
 Nine of the verifier's contract probes and four overload-resolution guards were promoted to permanent tests: `tests/ResulTus.Extensions.Tests/CombineContractTests.cs` (tuple shape and named elements, argument order with distinct types, both-fail precedence, second-failure-only-when-first-succeeded, default results, null success value, and the three allocation paths) and `tests/ResulTus.Collections.Tests/CombineOverloadResolutionTests.cs` (sequence, array, read-only-list and binary binding). The Collections test project gained a reference to `ResulTus.Extensions` so both families are in scope for the binding guards. After promotion the suite is **493/493** (Extensions 93, Collections 64) with a 0-warning, 0-error build.
+
+### L6 — `FailIf` rejected by the owner
+
+The owner was asked how to define `FailIf`, given that `Ensure(predicate, error)` already fails when the predicate does not hold, so a `FailIf` failing when it does hold is `Ensure(value => !predicate(value), error)` and nothing more. The answer, verbatim:
+
+> No agregarlo (Recomendado)
+
+So S2 is closed without a member. This is not a deferral: no `FailIf` exists in the API, and `Ensure` is the only guard operator. Anything that reads as "fail if" is written as the negated predicate, which keeps one spelling per behavior.
+
+Three P2 items remain undefined — `query syntax`, multi-error inside `Error`, and `StackResult`. Each still needs an owner decision before a spec exists.
 
 
