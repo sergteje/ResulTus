@@ -29,7 +29,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T3 | S4 | inline | deferred to P2 | — |
 | T4 | S5 | inline | done | see L12 |
 | T5 | S6 | inline | done | see L14 |
-| T6 | S7, S8 | inline | pending | — |
+| T6 | S7, S8 | inline | done | see L15 |
 | T7 | S9 | inline | pending | — |
 
 ## Log
@@ -184,6 +184,34 @@ Two of the package's own constraints are pinned by tests rather than trusted: th
 **RED → GREEN:** the two csproj files and their solution entries were created first as scaffolding, then the 16 tests were written and the project failed with 46 errors (`CS1061` for the missing helpers, `CS0246` for the missing exception type). After the implementation `tests/ResulTus.Testing.Tests` is 16/16, the solution build is 0 warnings and 0 errors, and the suite is **578/578**.
 
 **Risk:** none of items 1-6. Nothing references the new project, so no existing behavior can move; the work is a new directory plus two solution lines, and undoing it is deleting them. Worth stating explicitly rather than hiding: the project is packable by default, so a future `dotnet pack` over the solution will produce a `ResulTus.Testing` package. The repository has no CI, pack script or publishing configuration at all, so this change publishes nothing, and whether that package ships is the owner's decision under ordinary policy — which is why it is not counted as a release-surface risk here, and is noted for the P3 README instead.
+
+### L15 — T6 completed: the public AOT-safe JSON converter
+
+S7 landed as a new public type, `src/ResulTus.Serialization/ResultJsonConverter.cs`. The closed generic moved out of `ResultJsonConverterFactory.cs` and became `public sealed class ResultJsonConverter<T> : JsonConverter<Result<T>>` with two construction paths:
+
+- **Ambient options (pre-existing behavior, unchanged).** `new ResultJsonConverter<T>()` resolves the payload converter from the `JsonSerializerOptions` in effect at each call, exactly as before, still behind the two `[UnconditionalSuppressMessage]`s on `GetValueConverter`. `ResultJsonConverterFactory` and `AddResulTusConverters()` are untouched and still instantiate it.
+- **Source-generated metadata (the AOT-suitable path).** `new ResultJsonConverter<T>(JsonTypeInfo<T> valueTypeInfo)` stores the metadata a source-generated `JsonSerializerContext` emitted for `T`, and both `Write` and `Read` use it: `JsonSerializer.Serialize(writer, value, typeInfo)` and `JsonSerializer.Deserialize(ref reader, typeInfo)`. Neither touches `options.GetConverter`, and the path carries no suppression attributes — the 0-warning build of the library, whose `IsAotCompatible` analyzers run on every project, is the compile-level evidence that this path asks no dynamic code.
+
+The XML remarks on both `ResultJsonConverter<T>` and `ResultJsonConverterFactory` now state which path is AOT-suitable; the factory remarks no longer say the direct-registration path is "tracked separately".
+
+**Two observed System.Text.Json constraints, now pinned by tests rather than guessed.**
+
+1. Registering the converter in `options.Converters` resolves a root-level `Result<T>` only when no explicit `TypeInfoResolver` is configured. With a source-generated resolver configured, `JsonSerializer.Serialize(result, options)` for a root `Result<T>` throws `NotSupportedException: JsonTypeInfo metadata for type 'Result<T>' was not provided by TypeInfoResolver ...` — the root type must be in the context; a result nested inside a payload the context knows resolves from `options.Converters`. So the AOT-realistic shape is a carrier payload annotated with `[JsonSerializable(typeof(Payload))]`. `SourceGeneratedContext_ShouldRoundTripACarrierPayload` and `SourceGeneratedContext_ShouldIgnoreTheAmbientPayloadConverter` pin that shape, and the tests' remarks document it.
+2. The source generator emits `SYSLIB1030` for `Result<int>` and `Result<string>` members of a payload — it produces no metadata for them on purpose, and they are resolved at runtime through the registered converters. That is the expected pattern, documented in the tests' remarks; the probe app reproduces both warnings.
+
+Behavior proof: both construction paths emit the same JSON. `ContextBoundConverter_ShouldProduceTheSameJsonAsTheFactory` compares them byte for byte for a success and a failure, and the carrier test does the same against the factory path plus an exact-wire assertion (`{"Name":"Ada","Age":{"isSuccess":true,"value":36}}`). `ContextBoundConverter_ShouldIgnoreTheAmbientPayloadConverter` is the sharpest proof of "through context metadata, not reflection": an `OffsetIntJsonConverter(100)` sits in the ambient options, and the bound converter still writes a plain `5` and reads it back as `5` on both the root and the carrier shape. The parameterless constructor keeps resolving the ambient converter (`105` under the same probe), so both paths' semantics are pinned side by side. Round trips cover success, failure, a `null` reference value, and a `null` metadata argument throwing `ArgumentNullException`.
+
+**RED → GREEN:** the 10 tests were written first and the build failed with 12 `CS0122` errors (`ResultJsonConverter<T>` is inaccessible). After the implementation `tests/ResulTus.Serialization.Tests` is 74/74 (10 new), the build is 0 warnings and 0 errors, and the suite is **588/588** (baseline 578).
+
+**The Native AOT publish smoke check is still not available on this host, observed twice.** `dotnet publish -c Release -r win-x64 -p:PublishAot=true` on a fresh console app fails with `error : Platform linker not found. Ensure you have all the required prerequisites documented at https://aka.ms/nativeaot-prerequisites, in particular the Desktop Development for C++ workload in Visual Studio.` The host has no `VC\Tools\MSVC` directory and no Windows Kits; installing the C++ workload is the owner's machine decision, so the clause stays pending and **no claim of Native AOT support is made**.
+
+What *is* observed on this host, in a probe app outside the workspace that references the library and publishes a native win-x64 binary: `PublishTrimmed=true` with `JsonSerializerIsReflectionEnabledByDefault=false` (reflection-based serialization disabled for the whole application) and `TrimMode=full`. The published trimmed binary ran end to end: success and failure round-trips printed the byte-identical shapes the factory emits, and the process exited 0. The same run also proves the constraint behind the new constructor: the parameterless converter under reflection-disabled options failed with `InvalidOperationException: Reflection-based serialization has been disabled for this application...`, so the ambient path is *not* the AOT path, and the metadata path is the one that survives. Trace summary:
+
+- `FALLBACK-PATH blocked as expected: InvalidOperationException: Reflection-based serialization has been disabled for this application. Either use the source generator APIs or explicitly configure the 'JsonSerializerOptions.TypeInfoResolver' property.`
+- `SUCCESS-JSON: {"Name":"Ada","Age":{"isSuccess":true,"value":36},"Nickname":{"isSuccess":true,"value":null}}`
+- `FAILURE-JSON: {"Name":"Bob","Age":{"isSuccess":false,"error":{"code":"user.missing","message":"no such user","type":"NotFound"}},"Nickname":{"isSuccess":false,"error":{"code":"nickname","message":"not allowed","type":"Validation"}}}` followed by `AOT-PATH OK`, exit 0.
+
+**Risk:** item 3 (contracts others consume). A previously internal type of a shipped package is now public, and a public type changed file; the wire format is a contract and stays byte-identical, but a published package's API surface changed. Verification is delegated.
 
 
 
