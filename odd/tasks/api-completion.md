@@ -25,7 +25,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S1, S2 | inline | done | see L9 |
-| T2 | S3 | inline | pending | — |
+| T2 | S3 | inline | done | see L11 |
 | T3 | S4 | inline | deferred to P2 | — |
 | T4 | S5 | inline | pending | — |
 | T5 | S6 | inline | pending | — |
@@ -121,5 +121,18 @@ Two advisories, both accepted:
 2. **The RED count in L9 was imprecise**, now stated exactly above. The evidence was real; only the arithmetic in the narrative was ambiguous.
 
 Seven of the verifier's probes were promoted to `tests/ResulTus.Extensions.Tests/TypedResultPipelineVerifierTests.cs`: per-operator allocation on both paths (the author's probe only covered a chain), a chained pipeline, `default`-error preservation, `Finally` sentinels for value and reference payloads, the parameterless bridge binding, both bridge mappers skipped on success, and callback counting. After promotion the Extensions project is 128/128 and the suite is **528/528**.
+
+### L11 — T2 completed: synchronous exception capture
+
+S3 landed in the core package. `Error.FromException(Exception)` produces an `ErrorType.Unexpected` error whose code is the exception's **runtime** type full name and whose message is the exception's message; the code is taken from the type rather than a fixed string so two different failures stay distinguishable, and it does not depend on culture. No stack trace is captured, which is what keeps `Error` at its two-reference layout and `Result<T>` at 32 B.
+
+`Result.Try` has four overloads: value-producing and unit delegates, each with a default capture and a mapper that translates the exception into a domain error. The four behaviors the spec fixes are all pinned: the delegate runs exactly once, a thrown exception becomes a failure, the mapper runs only when an exception was thrown, and `OperationCanceledException` — including derived types such as `TaskCanceledException` — is **rethrown before the mapper**, so cancellation keeps its normal control flow. `null` delegates and `null` mappers throw `ArgumentNullException`.
+
+One boundary is worth stating rather than leaving implicit: `catch (Exception)` also captures `OutOfMemoryException`, because the spec says to capture synchronous exceptions and names cancellation as the only exclusion. Filtering more would be a product decision the spec does not authorize, and in practice the capture fails again while building the error, so the caller still observes the original condition. `Error.FromException` documents that it captures whatever it is given, cancellation included, and points at `Result.Try` for the control-flow-aware path.
+
+**RED → GREEN:** the tests were written first and the project failed with 50 errors (`CS0117`: neither `Result.Try` nor `Error.FromException` existed). After the implementation `tests/ResulTus.Tests` is 60/60 (13 new), the solution build is 0 warnings and 0 errors, and the suite is **541/541**. The success path is pinned at 0 B by an allocation probe; the failure path necessarily touches the exception's message string, so no 0 B claim is made for it.
+
+**Risk:** none of items 1-6. Both members are additive statics — `Result.Try` on the static `Result` class and `Error.FromException` on the struct — so no existing call site can change binding, and the two behaviors that could silently regress (cancellation control flow and mapper short-circuiting) are covered by tests that would fail loudly.
+
 
 

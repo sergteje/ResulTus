@@ -147,6 +147,33 @@ public readonly record struct Error
         => new Error(code, message, ErrorType.Cancelled);
 
     /// <summary>
+    /// Creates a <see cref="ErrorType.Unexpected"/> error from an exception.
+    /// </summary>
+    /// <param name="exception">The exception to capture.</param>
+    /// <returns>
+    /// An error whose <see cref="Code"/> is the exception's full type name, whose <see cref="Message"/>
+    /// is the exception's message, and whose <see cref="Type"/> is <see cref="ErrorType.Unexpected"/>.
+    /// </returns>
+    /// <remarks>
+    /// The code follows the runtime type, so an exception type is a stable identifier across runs and
+    /// cultures while the message stays human-facing. No stack trace is captured: the error keeps its
+    /// two-reference layout, which is what allows <c>Result&lt;T&gt;</c> to stay 32 B.
+    /// <para>
+    /// This method captures whatever it is given, cancellation included, because it cannot know the
+    /// caller's control flow. Use <see cref="Result.Try{T}(Func{T})"/> when cancellation must keep
+    /// propagating.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <c>null</c>.</exception>
+    public static Error FromException(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var type = exception.GetType();
+        return new Error(type.FullName ?? type.Name, exception.Message, ErrorType.Unexpected);
+    }
+
+    /// <summary>
     /// Creates a <see cref="ErrorType.Unexpected"/> error.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

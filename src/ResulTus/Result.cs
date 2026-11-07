@@ -97,4 +97,128 @@ public readonly record struct Result
         error = _error;
         return _isSuccess == 0;
     }
+
+    /// <summary>
+    /// Runs a value-producing delegate and captures a synchronous exception as a failed result.
+    /// </summary>
+    /// <typeparam name="T">The type of the value produced by <paramref name="action"/>.</typeparam>
+    /// <param name="action">The delegate to run.</param>
+    /// <returns>A success holding the produced value, or a failure holding <see cref="Error.FromException"/> of the thrown exception.</returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of captured, so
+    /// cancellation keeps its normal control flow. No stack trace is captured.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The delegate threw a cancellation exception.</exception>
+    public static Result<T> Try<T>(Func<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        try
+        {
+            return Result<T>.Success(action());
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Result<T>.Failure(Error.FromException(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs a value-producing delegate and translates a synchronous exception into a failed result.
+    /// </summary>
+    /// <typeparam name="T">The type of the value produced by <paramref name="action"/>.</typeparam>
+    /// <param name="action">The delegate to run.</param>
+    /// <param name="map">Function translating the thrown exception into the error. Never invoked on success.</param>
+    /// <returns>A success holding the produced value, or a failure holding the mapped error.</returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of mapped, so
+    /// cancellation keeps its normal control flow.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> or <paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The delegate threw a cancellation exception.</exception>
+    public static Result<T> Try<T>(Func<T> action, Func<Exception, Error> map)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(map);
+
+        try
+        {
+            return Result<T>.Success(action());
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Result<T>.Failure(map(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs a unit delegate and captures a synchronous exception as a failed result.
+    /// </summary>
+    /// <param name="action">The delegate to run.</param>
+    /// <returns>A successful unit result, or a failure holding <see cref="Error.FromException"/> of the thrown exception.</returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of captured, so
+    /// cancellation keeps its normal control flow. No stack trace is captured.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The delegate threw a cancellation exception.</exception>
+    public static Result Try(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        try
+        {
+            action();
+            return Success();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Failure(Error.FromException(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs a unit delegate and translates a synchronous exception into a failed result.
+    /// </summary>
+    /// <param name="action">The delegate to run.</param>
+    /// <param name="map">Function translating the thrown exception into the error. Never invoked on success.</param>
+    /// <returns>A successful unit result, or a failure holding the mapped error.</returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of mapped, so
+    /// cancellation keeps its normal control flow.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> or <paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The delegate threw a cancellation exception.</exception>
+    public static Result Try(Action action, Func<Exception, Error> map)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(map);
+
+        try
+        {
+            action();
+            return Success();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Failure(map(exception));
+        }
+    }
 }
