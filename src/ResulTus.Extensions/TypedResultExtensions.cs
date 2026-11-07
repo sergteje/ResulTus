@@ -221,9 +221,9 @@ public static class TypedResultExtensions
     /// <returns>The original success, or a success holding the recovered value.</returns>
     /// <remarks>
     /// Overloaded with <see cref="Recover{TSuccess, TError}(Result{TSuccess, TError}, Func{TError, Result{TSuccess, TError}})"/>.
-    /// They differ only in the delegate's return type, so a call whose lambda returns a value convertible
-    /// to both is ambiguous — which includes a success value with an implicit conversion to the receiver,
-    /// such as an <c>int</c> for <c>Result&lt;int, TError&gt;</c>. Pass an explicitly typed delegate in that case.
+    /// The two never collide: a lambda that returns a <typeparamref name="TSuccess"/> binds here because the
+    /// identity conversion beats the user-defined conversion into <see cref="Result{TSuccess, TError}"/>,
+    /// and a lambda that returns the result struct binds the other overload.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -247,8 +247,8 @@ public static class TypedResultExtensions
     /// <returns>The original success, or the result produced by <paramref name="recover"/>.</returns>
     /// <remarks>
     /// Overloaded with <see cref="Recover{TSuccess, TError}(Result{TSuccess, TError}, Func{TError, TSuccess})"/>.
-    /// They differ only in the delegate's return type, so a call whose lambda returns a value convertible
-    /// to both is ambiguous; pass an explicitly typed delegate in that case.
+    /// The two never collide: a lambda that returns the result struct binds here, and one that returns a
+    /// <typeparamref name="TSuccess"/> binds the other overload by conversion betterness.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

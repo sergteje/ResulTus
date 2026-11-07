@@ -205,9 +205,10 @@ public static class ResultExtensions
     /// <param name="recover">Function producing the recovery value. Never invoked on success.</param>
     /// <returns>The original success, or a success holding the recovered value.</returns>
     /// <remarks>
-    /// Overloaded with <see cref="Recover{T}(Result{T}, Func{Error, Result{T}})"/>. They differ only in the
-    /// delegate's return type, so a call whose lambda returns a value convertible to both is ambiguous;
-    /// pass an explicitly typed delegate in that case.
+    /// Overloaded with <see cref="Recover{T}(Result{T}, Func{Error, Result{T}})"/>. The two never collide:
+    /// a lambda that returns a <typeparamref name="T"/> binds here because the identity conversion beats
+    /// the user-defined conversion into <see cref="Result{T}"/>, and a lambda that returns the result
+    /// struct binds the other overload.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -228,9 +229,9 @@ public static class ResultExtensions
     /// <param name="recover">Function producing the recovery result. Never invoked on success.</param>
     /// <returns>The original success, or the result produced by <paramref name="recover"/>.</returns>
     /// <remarks>
-    /// Overloaded with <see cref="Recover{T}(Result{T}, Func{Error, T})"/>. They differ only in the
-    /// delegate's return type, so a call whose lambda returns a value convertible to both is ambiguous;
-    /// pass an explicitly typed delegate in that case.
+    /// Overloaded with <see cref="Recover{T}(Result{T}, Func{Error, T})"/>. The two never collide: a lambda
+    /// that returns the result struct binds here, and one that returns a <typeparamref name="T"/> binds the
+    /// other overload by conversion betterness.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

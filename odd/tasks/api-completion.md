@@ -100,7 +100,7 @@ S1 landed in `src/ResulTus.Extensions/TypedResultExtensions.cs`: eleven synchron
 
 Two behaviors are worth recording because a reader will hit them:
 
-- `Recover` inherits the documented overload overlap of the `Error` tier: `Func<TError, TSuccess>` and `Func<TError, Result<TSuccess, TError>>` differ only in the delegate's return type, and a success value converts implicitly to the struct, so a lambda such as `error => error.Code` is ambiguous for `Result<int, TError>`. Both XML documents say so and point at the explicitly typed delegate.
+- `Recover` is overloaded twice, once with `Func<TError, TSuccess>` and once with `Func<TError, Result<TSuccess, TError>>`. The two do not collide: a lambda returning a `TSuccess` binds the value overload because the identity conversion beats the user-defined conversion into the struct, and a lambda returning the struct binds the other. The author wrote the opposite in the first draft of the XML docs; independent verification disproved it and the docs were corrected (see L10).
 - The typed tier has no error sentinel, so `Finally` passes `default` for the error on a success and `default` for the value on a failure. The alternative — inventing something like `Error.None` for an arbitrary `TError` — was rejected.
 
 S2 landed in `src/ResulTus.Extensions/ResultConversions.cs`: `ToErrorResult(Func<TError, Error>)`, the direct `ToErrorResult()` for `Result<TSuccess, Error>`, and `ToGenericResult(Func<Error, TError>)`. All three preserve the success value and map only a failure, and the two mappers are null-checked.
@@ -108,4 +108,18 @@ S2 landed in `src/ResulTus.Extensions/ResultConversions.cs`: `ToErrorResult(Func
 **RED → GREEN:** the tests were written first. S1 produced 68 compile errors (`CS0411`/`CS1929`: the operators did not exist on `Result<int, string>`) and S2 produced 16 (`CS1061`). After the implementations the Extensions project is 120/120 (19 pipeline tests, one allocation probe and 7 bridge tests added to the 93 from P2/T1), the solution build is 0 warnings and 0 errors, and the suite is 520/520.
 
 **Risk:** item 3 (contracts others consume) — new public extension surface in a shipped package. The verifier's overload-resolution concern from P2/T1 does not extend here: every typed operator's receiver is `Result<TSuccess, TError>`, which no existing overload accepts, so no current call site can move. The allocation behavior is the property a verifier should probe hardest.
+
+### L10 — independent verification of T1 and the corrections it forced
+
+A separate verifier reviewed `git diff ad889be..ac24bfc` in a scratch tree outside the workspace. It rebuilt the RED from the baseline source plus both test files (88 errors: `CS0411`×10, `CS1061`×42, `CS1929`×36 — L9's 68 and 16 are the two files measured on their own, in the order they were written), and then confirmed the reviewed tree: build 0 warnings / 0 errors, suite 520/520, baseline 493/493.
+
+**Verdicts: S1 pass, S2 pass, build pass. No blockers.** Evidence beyond the change's own tests: an independent allocation harness with a sensitivity control (`new byte[64]` per call reads 880,000 B, so the 0 B readings are not a dead sensor) measured every operator on both paths and the chain at **0 B**, equal to hand-written `IsSuccess` branches; a custom `readonly record struct` error survived the whole pipeline including a `default` error; counters proved each callback fires zero times when inapplicable and exactly once when applicable; every public method throws on a `null` delegate; `ToErrorResult()` was confirmed to bind the parameterless overload; the public API dump showed 15 additions and no removals, renames or re-types; bridged results serialize byte-identically to hand-built ones.
+
+Two advisories, both accepted:
+
+1. **The `Recover` ambiguity note was false** — and it was false in the pre-existing `Result<T>` docs too, not only in the new file. C# overload betterness prefers the identity conversion into `TSuccess` over the user-defined conversion into the struct, so `failure.Recover(error => error.Code)` compiles without a cast. Both XML documents were corrected and a test now proves the binding (`Recover_WithANaturallyTypedLambda_ShouldBindTheValueOverload`); the pre-existing remarks in `ResultExtensions.cs` were corrected in the same edit because a false statement in public docs is a defect regardless of when it shipped.
+2. **The RED count in L9 was imprecise**, now stated exactly above. The evidence was real; only the arithmetic in the narrative was ambiguous.
+
+Seven of the verifier's probes were promoted to `tests/ResulTus.Extensions.Tests/TypedResultPipelineVerifierTests.cs`: per-operator allocation on both paths (the author's probe only covered a chain), a chained pipeline, `default`-error preservation, `Finally` sentinels for value and reference payloads, the parameterless bridge binding, both bridge mappers skipped on success, and callback counting. After promotion the Extensions project is 128/128 and the suite is **528/528**.
+
 

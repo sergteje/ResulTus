@@ -396,6 +396,23 @@ public class TypedResultExtensionsTests
     }
 
     /// <summary>
+    /// GIVEN a naturally typed lambda that returns the success value
+    /// WHEN both <c>Recover</c> overloads are applicable in principle
+    /// THEN the value overload MUST win by conversion betterness, without a cast.
+    /// </summary>
+    [Fact]
+    public void Recover_WithANaturallyTypedLambda_ShouldBindTheValueOverload()
+    {
+        var failure = Result<int, DomainError>.Failure(new DomainError(9, "boom"));
+
+        // No cast: the identity conversion into TSuccess beats the user-defined conversion into
+        // Result<TSuccess, TError>, so this call binds the value overload.
+        var recovered = failure.Recover(error => error.Code);
+
+        recovered.Match(static value => value, static _ => -1).Should().Be(9);
+    }
+
+    /// <summary>
     /// GIVEN both outcomes
     /// WHEN a pipeline built from non-capturing delegates runs over a warm loop
     /// THEN it MUST allocate nothing on the heap.
