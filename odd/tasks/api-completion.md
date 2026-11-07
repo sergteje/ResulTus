@@ -30,7 +30,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T4 | S5 | inline | done | see L12 |
 | T5 | S6 | inline | done | see L14 |
 | T6 | S7, S8 | inline | done | see L15 |
-| T7 | S9 | inline | pending | — |
+| T7 | S9 | inline | done | see L17 |
 
 ## Log
 
@@ -239,6 +239,26 @@ What *is* observed on this host, in a probe app outside the workspace that refer
 4. `ResultJsonConverterFactory.cs` gained a UTF-8 BOM in the doc-only edit. Noted only: the repository's `.editorconfig` declares `charset = utf-8-bom`, so the file now matches the declared convention.
 
 **Promoted to `tests/ResulTus.Serialization.Tests/ResultJsonConverterVerifierTests.cs` (12 tests):** the two extra checks — a shared converter instance caching per `JsonSerializerOptions`, sentinel errors (`Error.None`, `default(Error)`) staying failures, a poisoned ambient converter being ignored on both paths, null/default payload round-trips, both-paths byte-equality, the net-agnostic camelCase context proving the passed metadata is the one used, exact read-error texts, and the two reachability halves. After promotion the Serialization project is **86/86** and the suite is **600/600**, 0-warning build. `ScalarOnlyContext` — a context with no result member anywhere in its reachable graph — is the pin's companion: annotating only `int` still rejects a root `Result<int>` with the same text.
+
+### L17 — T7 completed: collection composition for the generic typed tier
+
+S9 landed as a new file, `src/ResulTus.Collections/TypedResultCollectionExtensions.cs`. **Route: new file, not an extension of `ResultCollectionExtensions.cs`.** The directory already follows one file per result tier (`ResultCollectionExtensions` for `Result<T>`, `UnitResultCollectionExtensions` for unit `Result`, `ResultCollectionAsyncExtensions` for async), and the sibling `ResulTus.Extensions` package established the same convention for the typed tier by giving it `TypedResultExtensions.cs` rather than appending to `ResultExtensions.cs`. A dedicated file keeps the typed tier's two-type-parameter signatures out of the single-parameter family and mirrors both conventions exactly.
+
+Nine public extension methods, each with `IEnumerable`, array and `IReadOnlyList` sources:
+
+- `Sequence<TSuccess, TError>` ×3 → `Result<IReadOnlyList<TSuccess>, TError>`.
+- `Traverse<TSource, TSuccess, TError>` ×3 → `Result<IReadOnlyList<TSuccess>, TError>`.
+- `Fold<TSuccess, TError, TAcc>` ×3 → `Result<TAcc, TError>`.
+
+All failure detection reads the receiver through `Deconstruct` — the only value/error accessor the typed struct actually exposes (it has no `TryGetValue`/`TryGetError`; nothing was invented) — and every method returns `Failure(error!)` on the first failed element in source order, so the caller receives the exact `TError` of the first failure, never an aggregate. `ValidationErrors` is just a `TError` here: a generic collection helper cannot combine arbitrary error types, so a `Result<TSuccess, ValidationErrors>` sequence fails with the first `ValidationErrors` object and leaves explicit merging to the caller. `null` sources, selectors and accumulators all throw `ArgumentNullException` before any work.
+
+**Allocation.** The array and read-only-list `Fold` overloads allocate 0 B (no buffer, static accumulator), pinned beside a live sensitivity control — a `new byte[64]` probe reads a non-zero byte count, so a dead sensor cannot explain the 0 B reading. The materializing `Sequence`/`Traverse` overloads allocate only their output arrays, matched byte-for-byte against hand-written indexed loops, mirroring the sibling's allocation harness.
+
+**Overload resolution.** The new methods share three names with the existing single-parameter family, but the receivers are disjoint (`Result<T>` vs `Result<TSuccess, TError>`), so no existing call site can move. Two consumer-shaped pins hold both sides: `Result<int>[]` still binds the generic-tier `Sequence<T>` and `Result<int, string>[]` binds the typed-tier one.
+
+**RED → GREEN:** the tests were written first. The Collections test project failed with 39 errors — `CS0411`×28 (type inference failed because no typed-tier overload exists) and `CS1929`×11 (no `Fold` accepts a typed-result receiver). After the implementation `tests/ResulTus.Collections.Tests` is 84/84 (20 new), the solution build is 0 warnings and 0 errors, and the suite is **620/620** (baseline 600). No async variants and no LINQ-query syntax were added, per the owner's P2 rejection.
+
+**Risk:** item 3 (contracts others consume) — nine new public extension members in a shipped package. The overload-resolution concern from L12/L13 does not extend here because the typed receivers are disjoint from every existing overload, but the two binding pins above exist precisely so a future change that did overlap would fail loudly.
 
 
 
