@@ -12,6 +12,7 @@
     <Project Path="src/ResulTus.Testing/ResulTus.Testing.csproj" />
     <Project Path="src/ResulTus.Analyzers/ResulTus.Analyzers.csproj" />
     <Project Path="src/ResulTus.SourceGenerators/ResulTus.SourceGenerators.csproj" />
+    <Project Path="src/ResulTus.HttpClient/ResulTus.HttpClient.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
@@ -26,5 +27,6 @@
     <Project Path="tests/ResulTus.Testing.Tests/ResulTus.Testing.Tests.csproj" />
     <Project Path="tests/ResulTus.Analyzers.Tests/ResulTus.Analyzers.Tests.csproj" />
     <Project Path="tests/ResulTus.SourceGenerators.Tests/ResulTus.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/ResulTus.HttpClient.Tests/ResulTus.HttpClient.Tests.csproj" />
   </Folder>
 </Solution>

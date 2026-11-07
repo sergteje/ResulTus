@@ -22,7 +22,7 @@ Risk: none anticipated. APIs are additive and HTTP outcomes, cancellation and ow
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S4 | inline | pending | — |
+| T1 | S1, S4 | inline | done | — |
 | T2 | S2 | inline | pending | — |
 | T3 | S3 | inline | pending | — |
 | T4 | S5–S7 | inline | pending | — |
@@ -55,3 +55,7 @@ Use a fake handler and add one public-interface test per S# behavior before impl
 ### L5 — delivery
 
 All work stays inline. Keep code, tests and documentation for each behavior in the same work-unit commit. The module performs no outbound work by itself; every request uses a caller-supplied client and request message.
+
+### L6 — T1 layout decision (struct vs class)
+
+S1/S4 implemented. `HttpClientFailureKind`, `HttpClientError` and `HttpProblemDetails` are all `sealed class`, not structs. The library's inline struct convention (`Error`) is justified by a tiny, reference-free, zero-allocation layout; `HttpClientError` owns an optional `Exception` and an optional `HttpProblemDetails` (which itself owns a `Dictionary<string, JsonElement>` of extension members), so that convention does not apply. `HttpProblemDetails` stores extension values as `JsonElement` (built-in, faithful, no ASP.NET Core reference) and normalizes a null/empty extensions dictionary to null. Cancellation is deliberately absent from `HttpClientFailureKind` (closed set: transport, timeout, status error, invalid response): S3 rethrows `OperationCanceledException` rather than capturing it as an error. File layout: one file per type, matching `Error.cs`/`ErrorType.cs`.
