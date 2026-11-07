@@ -20,7 +20,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 - **S3 — collection operations stop allocating an enumerator.** Every method that today `foreach`es over `IEnumerable<T>` gains an index-based overload for `T[]` and for `IReadOnlyList<T>`:
   - `ResultCollectionExtensions`: `Sequence`, `Traverse`, `Fold`, `FirstFailure`, `FirstSuccess`, `Partition`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`.
   - `UnitResultCollectionExtensions`: `Combine`, `Fold`, `FirstFailure`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`.
-  The `IEnumerable<T>` overloads stay, unchanged. The new overloads preserve every observable behavior: `ArgumentNullException` on a null source, short-circuit order, enumeration order, and the exact result. Verified by a deterministic allocation test using `GC.GetAllocatedBytesForCurrentThread()`: the non-materializing methods (`Fold`, `FirstFailure`, `FirstSuccess`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`, `Combine`) must measure exactly **0 B** across repeated calls; the materializing ones (`Sequence`, `Traverse`, `Partition`) must measure the same bytes as a hand-written `for` loop over the same array that allocates only the output array.
+  The `IEnumerable<T>` overloads stay, unchanged. The new overloads preserve every observable behavior: `ArgumentNullException` on a null source, short-circuit order, enumeration order, and the exact result. Verified by deterministic `GC.GetAllocatedBytesForCurrentThread()` tests: the non-materializing methods (`Fold`, `FirstFailure`, `FirstSuccess`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`, `Combine`) must measure exactly **0 B** across repeated calls; `Sequence` and `Traverse` must match a hand-written `for` loop that allocates only the output array. `Partition` has the separate pooled-buffer allocation contract in S4/T5 and is checked there.
 - **S4 — `Partition` stops churning `List<T>`.** `ResultCollectionExtensions.Partition` rents both buffers from `ArrayPool`, grows them by doubling exactly as `Sequence` does, copies to exactly sized arrays, and returns both buffers in a `finally` with `RuntimeHelpers.IsReferenceOrContainsReferences<T>()` as the clear flag. The returned tuple is byte-for-byte the same value the current implementation produces, and no rented buffer is ever returned to the caller.
 - **S5 — the charter records the change.** The rows that `odd/tasks/perf-instrumentation.md` created are re-measured and updated in `docs/performance.md` in the same commit that changes the behavior, per §8.
 - **S6 — no behavior regression.** The whole suite stays green, and new tests cover each new overload with: an array source, a `List<T>` source, an empty source, a null source, a first-element failure and a last-element failure.
@@ -30,9 +30,9 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | inline | done | this commit |
-| T2 | S2 | inline | done | this commit |
-| T3 | S3 (non-unit collections) | inline | pending | — |
+| T1 | S1 | inline | done | `5b66341` |
+| T2 | S2 | inline | done | `95eccbe` |
+| T3 | S3 (non-unit collections) | inline | done | this commit |
 | T4 | S3 (unit collections) | inline | pending | — |
 | T5 | S4 | inline | pending | — |
 | T6 | S5, S6, S7 | inline | pending | — |
@@ -109,3 +109,17 @@ The allocation test observed RED before implementation: 100 unescaped `"NotFound
 The cache is one immutable holder containing the `JsonSerializerOptions` identity and `JsonConverter<T>`; a reference match returns it, while another options instance resolves and replaces it. The holder keeps the pair coherent under concurrent use. `GetConverter` suppressions now sit on the helper that contains that call, because analyzer suppressions on callers do not flow into a helper.
 
 The output-stability test passed before the implementation and again after it. A second test reuses one result converter instance with two options instances containing different integer converters and verifies both writing and reading use the active options. The full Serialization project passed 64/64 tests. Release benchmark build had 0 warnings and 0 errors; two full Serialization benchmark runs each produced ten rows and no issues. The four affected rows and both post-cache means are in `docs/performance.md` §4.8; all four show the same direction versus the pre-cache run, with unchanged allocation counts.
+
+### L12 — T3/T5 allocation-test boundary
+
+T3 adds the array and read-only-list `Partition` overloads as part of the S3 surface and tests their behavior for ordering, failures, empty inputs and null guards. Its allocation assertion covers the non-materializing methods plus `Sequence`/`Traverse`. The separate `List<T>` churn in `Partition` is S4/T5's root cause, so the output-only allocation comparison for every `Partition` source is completed with T5's pooled-buffer change rather than making T3 depend on a later fix.
+
+### L13 — T3 array/list overloads completed; array Traverse time deferred
+
+Ten indexed overloads were added to `ResultCollectionExtensions` (`Sequence`, `Traverse`, `Fold`, `FirstFailure`, `FirstSuccess`, `Partition`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`) for `Result<T>[]` and `IReadOnlyList<Result<T>>`, plus `Traverse` over `TSource[]` and `IReadOnlyList<TSource>`. The existing `IEnumerable<T>` overloads are unchanged. `Sequence`/`Traverse` materializers write directly into the output array; a pooled intermediate buffer plus copy measured slower and was replaced.
+
+The new test file `tests/ResulTus.Collections.Tests/ResultCollectionOverloadTests.cs` covers both sources with: first and last failure, all-success, empty, null guards, and deterministic `GC.GetAllocatedBytesForCurrentThread` allocation checks (0 B for non-materializing methods; output-array parity for `Sequence`/`Traverse`).
+
+**Verification:** `dotnet test tests\ResulTus.Collections.Tests\ResulTus.Collections.Tests.csproj --no-restore --nologo` → 46/46 passed. Release benchmark build → 0 warnings, 0 errors. One full `DefaultJob` run (14 rows including an `IEnumerable` control) completed with zero issues; results are recorded in `docs/performance.md` §4.7.
+
+**Deferred follow-up (owner decision, verbatim: "lo dejaremos para otra ocascion, y continuamos con el resto").** The array-specific `Traverse` overload measured 7.447 μs / 4,024 B while the `IEnumerable` control in the same run measured 3.055 μs / 4,056 B, reproduced in two consecutive runs. It saves 32 B but is ~2.4x slower; the cause is not yet diagnosed. The discrepancy is recorded in §4.7 and §7 of the charter with a do-not-claim-speedup note; the investigation is postponed to a later session. The list overloads improve both time and allocation.

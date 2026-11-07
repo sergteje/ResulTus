@@ -285,6 +285,29 @@ BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET 
 
 **Scope:** one size only, as requested. The per-call allocations are not a scaling experiment; deterministic allocation tests in P1 cover the collection-size question.
 
+#### P1/T3 — array and read-only-list overloads — remeasured 2026-11-06
+
+The new indexed overloads were measured with the same BenchmarkDotNet 0.15.8 `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14. One complete run produced 14 rows, including an explicit `TraverseEnumerable` control that forces the unchanged `IEnumerable<T>` path.
+
+| Method | Source | P0 mean / allocated | P1/T3 mean / allocated |
+| --- | --- | ---: | ---: |
+| Sequence | Array | 4.121 μs / 4,056 B | 1.289 μs / 4,024 B |
+| Traverse | Array | 2.060 μs / 4,024 B | 7.447 μs / 4,024 B |
+| Fold | Array | 1.128 μs / 0 B | 833.8 ns / 0 B |
+| FirstFailure | Array | 863.2 ns / 0 B | 668.9 ns / 0 B |
+| Partition | Array | 3.095 μs / 12,480 B | 2.858 μs / 12,480 B |
+| Combine (unit `Result`) | Array | 845.5 ns / 0 B | 867.5 ns / 0 B |
+| Sequence | List | 7.800 μs / 4,088 B | 1.824 μs / 4,024 B |
+| Traverse | List | 3.574 μs / 4,064 B | 1.342 μs / 4,024 B |
+| Fold | List | 1.566 μs / 0 B | 1.527 μs / 0 B |
+| FirstFailure | List | 1.155 μs / 0 B | 1.184 μs / 0 B |
+| Partition | List | 3.326 μs / 12,480 B | 3.150 μs / 12,480 B |
+| Combine (unit `Result`) | List | 1.221 μs / 0 B | 1.161 μs / 0 B |
+| TraverseEnumerable control | Array | — | 3.055 μs / 4,056 B |
+| TraverseEnumerable control | List | — | 3.726 μs / 4,064 B |
+
+**Deferred performance follow-up:** the array-specific `Traverse` overload is 7.447 μs in this run versus 3.055 μs for the `IEnumerable` control in the same run, while saving 32 B. The direct overload meets the output-array-only allocation test but loses on time. The owner explicitly asked to leave this investigation for another occasion and continue the remaining P1 tasks. Do not claim a speedup; keep this discrepancy visible in §7. The list overload improves both time and allocation. All non-materializing array/list operations measured 0 B; `Partition` remains at 12,480 B until P1/T5.
+
 ### Serialization — P0 baseline and P1 remeasurements — measured 2026-11-06
 
 `SerializationOperationBenchmark` measures the factory-based `AddResulTusConverters()` path with `DefaultJob`. The `Result<int>[]` rows use 1,000 successful values and expose the per-element converter lookup. Input JSON and serializer options are prepared in `GlobalSetup`; benchmark outputs escape through instance sinks read in `GlobalCleanup`.
@@ -382,7 +405,7 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | Array traversal — vs 16 B competitors | **Documented loss** | 1.25x–1.47x slower (success), 1.08x–1.26x (failure); the 32 B stride is the cause (§4.4) |
 | Array traversal — 32 B vs 40 B | **Marginal win for 40 B → 32 B** | ~3.5% at the 256 KiB L2 boundary, unresolved elsewhere (§4.3) |
 | Array traversal — vs FluentResults | **Win** | 25x–28x faster, and it allocates 96 KB–960 KB per traversal |
-| Collections — satellite baseline | **Measured, not compared** | N = 1,000; `Fold`, `FirstFailure` and unit `Combine` allocate 0 B; `Partition` allocates 12,480 B (§4.7) |
+| Collections — P1/T3 | **Measured, not compared** | Indexed array/list overloads: non-materializers 0 B; Sequence/Traverse output-only 4,024 B. Array Traverse time follow-up deferred; Partition remains 12,480 B (§4.7) |
 | Serialization — satellite baseline | **Measured, not compared** | `Result<int>` success deserialization allocates 0 B; 1,000-result array deserialization allocates 97,680 B (§4.8) |
 | Logging — satellite baseline | **Measured, not compared** | Disabled failure logging allocates 0 B; enabled logging allocates 64 B (§4.9) |
 | Validation — satellite baseline | **Measured, not compared** | `ToDictionary` allocates 31,624 B over 1,000 issues; `ToError` allocates 80 B (§4.10) |
@@ -401,6 +424,7 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | Alignment of the generic tier | **Closed 2026-10-29 — no resolvable difference, 13 B kept.** Measured in §4.5: the aligned 16 B stride was 2.5% faster in one cell and 1.5%–5.0% slower in three, with a within-layout spread larger than the effect. |
 | **Failure-path allocation vs competitors** | **Fixed 2026-11-06.** Measured in §4.6 with a unique, uncached message per invocation: ResulTus **0 B**, `ZeroResult` 32 B, `ErrorOr` 88 B, `FluentResults` 272 B, `CSharpFunctionalExtensions` **0 B**. The original claim "one object for each of the other four" was wrong for `CSharpFunctionalExtensions`, whose error is a plain `string`; ResulTus ties it on allocation and wins on payload. |
 | **Array traversal vs competitors** | **Fixed 2026-10-29 — it is a loss.** Measured in §4.4: 1.25x–1.47x slower than every 16-byte competitor on the success path. The 32 B inline error is the cause and the trade is deliberate. Kept here as a standing fact, not an open question. |
+| **Array-specific collection Traverse vs its IEnumerable path** | **Performance follow-up deferred by the owner 2026-11-06.** P1/T3 measured 7.447 μs / 4,024 B for the indexed array overload and 3.055 μs / 4,056 B for the IEnumerable control in one run. The indexed overload saves 32 B but is slower; do not claim a speed win. |
 
 Every gap in this table must eventually resolve to one of: **fixed**, **noise-floor tie**, or **documented structural difference**. "We are close enough" is not a resolution.
 

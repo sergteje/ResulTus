@@ -23,12 +23,10 @@ public enum CollectionSourceShape
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every method in <c>ResultCollectionExtensions</c> and <c>UnitResultCollectionExtensions</c>
-/// iterates through <c>IEnumerable&lt;T&gt;</c>. With an array source the runtime hands back
-/// <c>SZGenericArrayEnumerator&lt;T&gt;</c>, a class; with a <c>List&lt;T&gt;</c> source it boxes the
-/// struct enumerator. Either way that is one heap allocation per call, on top of whatever the
-/// operation allocates for its result. This benchmark exists to put a number on it, and the
-/// allocation column is the point — the nanosecond column is secondary.
+/// The original IEnumerable-based methods allocated an enumerator for these sources. P1 added
+/// indexed array and IReadOnlyList overloads; <see cref="TraverseEnumerable"/> retains the original
+/// path as a control for the new array and list implementations. The allocation column is the point
+/// of this benchmark, and the nanosecond column remains secondary.
 /// </para>
 /// <para>
 /// Every input is all-success, which is the worst case for the materializing operations: nothing
@@ -155,6 +153,19 @@ public class CollectionOperationBenchmark
         _sinkTraverse = Source == CollectionSourceShape.Array
             ? _intArray.Traverse(_selector)
             : _intList.Traverse(_selector);
+
+        return _sinkTraverse.IsSuccess ? _sinkTraverse.GetValueOrDefault()!.Count : 0;
+    }
+
+    /// <summary>
+    /// Runs Traverse through the existing IEnumerable overload as a control for the array/list overloads.
+    /// </summary>
+    /// <returns>The number of mapped values, consumed by the harness.</returns>
+    [Benchmark]
+    public int TraverseEnumerable()
+    {
+        IEnumerable<int> source = Source == CollectionSourceShape.Array ? _intArray : _intList;
+        _sinkTraverse = source.Traverse(_selector);
 
         return _sinkTraverse.IsSuccess ? _sinkTraverse.GetValueOrDefault()!.Count : 0;
     }
