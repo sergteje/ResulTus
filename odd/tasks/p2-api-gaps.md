@@ -14,9 +14,9 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 
 - **S2 — `FailIf`. REJECTED by the owner 2026-11-07 (L6).** `Ensure(predicate, error)` already fails when the predicate does not hold, so a `FailIf` that fails when the predicate holds is `Ensure(value => !predicate(value), error)` and nothing more. Adding it would publish a second way to write the same guard, force a choice at every validation site, and add no capability. No member is added; the name stays out of the API.
 
-- **S3 — query syntax.** **Assumption pending owner definition.** No semantics recorded beyond the name. Open questions: whether this means C# LINQ query-expression support (`Select`/`SelectMany`/`Where`/`Join`, with `Result<T>` as a monad) or a fluent query builder; which tier it covers (`Result<T>` only, or also `Result<TSuccess,TError>`); and whether it introduces a new package. This is the largest item and may be rejected in favour of plain fluent pipelines.
+- **S3 — query syntax. REJECTED by the owner 2026-11-07 (L7).** Interpreting the name as C# query-expression support over `Result<T>` (`Select`/`SelectMany`/`Where`), the owner chose not to add it. `Bind` and `Map` already compose the same pipelines and make the short-circuit point explicit, while query syntax would read like LINQ-to-objects over a container that holds at most one value, and `Where` cannot exist without an `Error` to produce when the filter rejects. The repository has no LINQ surface today and keeps none.
 
-- **S4 — multi-error inside `Error`.** **Assumption pending owner definition, and the highest-risk item.** No semantics recorded beyond the name. Open questions: whether an error aggregates several failures or only one; the rendering and equality rules for an aggregate; whether the aggregate lives in `Error` itself (which currently holds two references and is the reason `Result<T>` is 32 B, see `docs/decisions/001-result-struct-size.md`) or in a separate type that does not change the struct layout. Any change to the `Error` layout is a break of the size decision and the 0 B failure-path claim, and must be measured and re-decided, not assumed.
+- **S4 — multi-error inside `Error`. REJECTED by the owner 2026-11-07 (L8).** Aggregation already exists outside `Error`: `ValidationErrors` holds N `ValidationIssue` values and `ToError()` collapses them into one `Error`, and the typed tier already carries any error type, so `Result<TSuccess, ValidationErrors>` expresses multiple failures without losing any. Putting a collection inside `Error` would require a third reference field, growing `Error` from 24 B to 32 B and `Result<int>` from 32 B to 40 B, which reverses decision 001 — the decision that removed the `Metadata` dictionary for exactly this reason — and would reintroduce an allocation on the failure path that P1 measured at 0 B. No member is added and `Error` keeps its layout.
 
 - **S5 — `StackResult`.** **Assumption pending owner definition.** No semantics recorded beyond the name. Open questions: whether it is a stack-only result (a `ref struct` with `ISpanFormattable`-style zero-allocation behavior), a result that carries a captured stack trace, or a result type usable as a stack frame for nested error propagation. Each of those is a different feature with different constraints; the name alone does not select one.
 
@@ -26,8 +26,8 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 | --- | --- | --- | --- | --- |
 | T1 | S1, S0 | inline | done | this commit |
 | T2 | S2 | — | closed — rejected by the owner | — |
-| T3 | S3 | — | blocked — spec undefined | — |
-| T4 | S4 | — | blocked — spec undefined and risk assessment required | — |
+| T3 | S3 | — | closed — rejected by the owner | — |
+| T4 | S4 | — | closed — rejected by the owner | — |
 | T5 | S5 | — | blocked — spec undefined | — |
 
 ## Log
@@ -73,5 +73,25 @@ The owner was asked how to define `FailIf`, given that `Ensure(predicate, error)
 So S2 is closed without a member. This is not a deferral: no `FailIf` exists in the API, and `Ensure` is the only guard operator. Anything that reads as "fail if" is written as the negated predicate, which keeps one spelling per behavior.
 
 Three P2 items remain undefined — `query syntax`, multi-error inside `Error`, and `StackResult`. Each still needs an owner decision before a spec exists.
+
+### L7 — query syntax rejected by the owner
+
+Asked how to interpret the name, with the two-plausible-readings flagged (`from`/`select` query expressions versus a fluent query builder), and with the observation that the repository has no `Select`, `SelectMany` or `Where` anywhere, the owner answered verbatim:
+
+> No agregarlo (Recomendado)
+
+So S3 is closed without a member and the library keeps zero LINQ surface. `Bind` and `Map` remain the only composition operators, and they say explicitly where the failure short-circuits instead of hiding it behind query-form translation.
+
+Two P2 items remain undefined — multi-error inside `Error` and `StackResult`.
+
+### L8 — multi-error inside `Error` rejected by the owner
+
+The owner was shown the measured constraint rather than a preference: `Error` is a `readonly record struct` holding `string _code`, `string? _message` and `ErrorType _type`, for 24 B, and `Result<int>` is 32 B because decision 001 removed the untyped `Metadata` dictionary for exactly this reason. Holding several failures inside `Error` needs a third reference field, which takes `Error` to 32 B and `Result<T>` to 40 B and puts a real allocation back on the failure path that P1 closed at 0 B. The owner answered verbatim:
+
+> No agregarlo (Recomendado)
+
+S4 is closed. Aggregation stays where it already works: `ValidationErrors` for validation issues, and `Result<TSuccess, TError>` with any error type the caller chooses, `ValidationErrors` included, when several failures must survive together. `Error` keeps its layout, decision 001 stands unchanged, and P1's measurements remain valid.
+
+One P2 item remains undefined — `StackResult`.
 
 
