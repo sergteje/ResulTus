@@ -55,4 +55,58 @@ public static class ResultConversions
         exception.Data["Code"] = error.Code;
         return exception;
     }
+
+    /// <summary>
+    /// Converts a typed result into a <see cref="Result{T}"/> by mapping its error.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the typed error value.</typeparam>
+    /// <param name="result">The typed result to convert.</param>
+    /// <param name="map">Function applied to the typed error. Never invoked on success.</param>
+    /// <returns>The success value preserved in a <see cref="Result{T}"/>, or a failure holding the mapped <see cref="Error"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="map"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<TSuccess> ToErrorResult<TSuccess, TError>(
+        this Result<TSuccess, TError> result,
+        Func<TError, Error> map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+
+        result.Deconstruct(out var isSuccess, out var value, out var error);
+        return isSuccess ? Result<TSuccess>.Success(value!) : Result<TSuccess>.Failure(map(error!));
+    }
+
+    /// <summary>
+    /// Converts a typed result whose error is already an <see cref="Error"/> into a <see cref="Result{T}"/>.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <param name="result">The typed result to convert.</param>
+    /// <returns>The success value preserved in a <see cref="Result{T}"/>, or the same error.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<TSuccess> ToErrorResult<TSuccess>(this Result<TSuccess, Error> result)
+    {
+        result.Deconstruct(out var isSuccess, out var value, out var error);
+        return isSuccess ? Result<TSuccess>.Success(value!) : Result<TSuccess>.Failure(error!);
+    }
+
+    /// <summary>
+    /// Lifts a <see cref="Result{T}"/> into the typed tier by mapping its <see cref="Error"/>.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the typed error value.</typeparam>
+    /// <param name="result">The result to lift.</param>
+    /// <param name="map">Function applied to the error. Never invoked on success.</param>
+    /// <returns>The success value preserved in a typed result, or a failure holding the mapped error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="map"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<TSuccess, TError> ToGenericResult<TSuccess, TError>(
+        this Result<TSuccess> result,
+        Func<Error, TError> map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+
+        return result.TryGetValue(out var value, out var error)
+            ? Result<TSuccess, TError>.Success(value!)
+            : Result<TSuccess, TError>.Failure(map(error));
+    }
 }

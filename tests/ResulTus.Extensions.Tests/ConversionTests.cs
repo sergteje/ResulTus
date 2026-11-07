@@ -78,4 +78,137 @@ public class ConversionTests
         exception.Message.Should().Be("slow");
         exception.Data["Code"].Should().Be("slow");
     }
+
+    /// <summary>
+    /// GIVEN a successful typed result
+    /// WHEN <c>ToErrorResult()</c> runs with a mapper
+    /// THEN the value MUST survive and the mapper MUST NOT run.
+    /// </summary>
+    [Fact]
+    public void ToErrorResult_OnSuccess_ShouldPreserveTheValueWithoutMapping()
+    {
+        var result = Result<int, string>.Success(7);
+        var invoked = false;
+
+        var converted = result.ToErrorResult(error =>
+        {
+            invoked = true;
+            return Error.NotFound(error);
+        });
+
+        converted.IsSuccess.Should().BeTrue();
+        converted.GetValueOrDefault().Should().Be(7);
+        invoked.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// GIVEN a failed typed result
+    /// WHEN <c>ToErrorResult()</c> runs with a mapper
+    /// THEN the failure MUST hold the mapped <c>Error</c>.
+    /// </summary>
+    [Fact]
+    public void ToErrorResult_OnFailure_ShouldMapTheTypedError()
+    {
+        var result = Result<int, string>.Failure("bad");
+
+        var converted = result.ToErrorResult(error => Error.Conflict(error));
+
+        converted.TryGetValue(out _, out var error).Should().BeFalse();
+        error.Code.Should().Be("bad");
+        error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    /// <summary>
+    /// GIVEN a typed result whose error is already an <c>Error</c>
+    /// WHEN the direct <c>ToErrorResult()</c> overload runs
+    /// THEN the success value MUST survive.
+    /// </summary>
+    [Fact]
+    public void ToErrorResult_DirectOverloadOnSuccess_ShouldPreserveTheValue()
+    {
+        var result = Result<int, Error>.Success(7);
+
+        var converted = result.ToErrorResult();
+
+        converted.IsSuccess.Should().BeTrue();
+        converted.GetValueOrDefault().Should().Be(7);
+    }
+
+    /// <summary>
+    /// GIVEN a typed result whose error is already an <c>Error</c>
+    /// WHEN the direct <c>ToErrorResult()</c> overload runs on a failure
+    /// THEN the exact error value MUST survive.
+    /// </summary>
+    [Fact]
+    public void ToErrorResult_DirectOverloadOnFailure_ShouldKeepTheSameError()
+    {
+        var error = Error.NotFound("missing");
+        var result = Result<int, Error>.Failure(error);
+
+        var converted = result.ToErrorResult();
+
+        converted.TryGetValue(out _, out var propagated).Should().BeFalse();
+        propagated.Should().Be(error);
+    }
+
+    /// <summary>
+    /// GIVEN a successful <c>Result&lt;T&gt;</c>
+    /// WHEN <c>ToGenericResult()</c> runs with a mapper
+    /// THEN the value MUST survive and the mapper MUST NOT run.
+    /// </summary>
+    [Fact]
+    public void ToGenericResult_OnSuccess_ShouldPreserveTheValueWithoutMapping()
+    {
+        Result<int> result = 7;
+        var invoked = false;
+
+        var converted = result.ToGenericResult(error =>
+        {
+            invoked = true;
+            return error.Code;
+        });
+
+        converted.IsSuccess.Should().BeTrue();
+        converted.Match(static value => value, static _ => -1).Should().Be(7);
+        invoked.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// GIVEN a failed <c>Result&lt;T&gt;</c>
+    /// WHEN <c>ToGenericResult()</c> runs with a mapper
+    /// THEN the failure MUST hold the mapped typed error.
+    /// </summary>
+    [Fact]
+    public void ToGenericResult_OnFailure_ShouldMapTheError()
+    {
+        var result = Result<int>.Failure(Error.NotFound("missing"));
+
+        var converted = result.ToGenericResult(static error => error.Code);
+
+        converted.IsFailure.Should().BeTrue();
+        converted.Match(static _ => "unexpected", static error => error).Should().Be("missing");
+    }
+
+    /// <summary>
+    /// GIVEN both conversions
+    /// WHEN a <c>null</c> mapper is supplied
+    /// THEN they MUST throw <see cref="ArgumentNullException"/>.
+    /// </summary>
+    [Fact]
+    public void BridgeConversions_WithNullMapper_ShouldThrow()
+    {
+        var typed = Result<int, string>.Success(1);
+        Result<int> plain = 1;
+
+        var calls = new Action[]
+        {
+            () => typed.ToErrorResult(null!),
+            () => plain.ToGenericResult<int, string>(null!),
+        };
+
+        foreach (var call in calls)
+        {
+            call.Should().Throw<ArgumentNullException>();
+        }
+    }
 }

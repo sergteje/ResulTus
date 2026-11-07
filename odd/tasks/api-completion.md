@@ -24,7 +24,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S2 | inline | pending | — |
+| T1 | S1, S2 | inline | done | see L9 |
 | T2 | S3 | inline | pending | — |
 | T3 | S4 | inline | deferred to P2 | — |
 | T4 | S5 | inline | pending | — |
@@ -93,3 +93,19 @@ This authorizes S9, typed-result `Sequence`/`Traverse`/`Fold`, and extends S5 wi
 > el recomendado
 
 `ResulTus.HttpClient` is separately tracked in `odd/tasks/httpclient-integration.md`. It runs after this feature's API work and before P3; its selected error model is `Result<T,HttpClientError>`.
+
+### L9 — T1 completed: the typed tier and its bridges
+
+S1 landed in `src/ResulTus.Extensions/TypedResultExtensions.cs`: eleven synchronous operators mirroring the `Result<T>` pipeline without dropping the typed error — `Map`, `Bind`, `MapError`, `Tap`, `OnSuccess`, `OnFailure`, `Switch`, `Ensure`, two `Recover` overloads and `Finally`. Every failure path carries the receiver's `TError` unchanged, every inapplicable callback is skipped, and a `null` delegate throws `ArgumentNullException` (all twelve call shapes are pinned by one test). Reading the receiver goes through `Deconstruct` rather than `Match`, so no closure is created inside the operator and a pipeline built from non-capturing delegates allocates 0 B on the success and failure paths — pinned by a test, because §2 of the performance charter makes that a hard rule.
+
+Two behaviors are worth recording because a reader will hit them:
+
+- `Recover` inherits the documented overload overlap of the `Error` tier: `Func<TError, TSuccess>` and `Func<TError, Result<TSuccess, TError>>` differ only in the delegate's return type, and a success value converts implicitly to the struct, so a lambda such as `error => error.Code` is ambiguous for `Result<int, TError>`. Both XML documents say so and point at the explicitly typed delegate.
+- The typed tier has no error sentinel, so `Finally` passes `default` for the error on a success and `default` for the value on a failure. The alternative — inventing something like `Error.None` for an arbitrary `TError` — was rejected.
+
+S2 landed in `src/ResulTus.Extensions/ResultConversions.cs`: `ToErrorResult(Func<TError, Error>)`, the direct `ToErrorResult()` for `Result<TSuccess, Error>`, and `ToGenericResult(Func<Error, TError>)`. All three preserve the success value and map only a failure, and the two mappers are null-checked.
+
+**RED → GREEN:** the tests were written first. S1 produced 68 compile errors (`CS0411`/`CS1929`: the operators did not exist on `Result<int, string>`) and S2 produced 16 (`CS1061`). After the implementations the Extensions project is 120/120 (19 pipeline tests, one allocation probe and 7 bridge tests added to the 93 from P2/T1), the solution build is 0 warnings and 0 errors, and the suite is 520/520.
+
+**Risk:** item 3 (contracts others consume) — new public extension surface in a shipped package. The verifier's overload-resolution concern from P2/T1 does not extend here: every typed operator's receiver is `Result<TSuccess, TError>`, which no existing overload accepts, so no current call site can move. The allocation behavior is the property a verifier should probe hardest.
+
