@@ -35,7 +35,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 | T3 | S3 (non-unit collections) | inline | done | `548db66` |
 | T4 | S3 (unit collections) | inline | done | this commit |
 | T5 | S4 | inline | done | this commit |
-| T6 | S5, S6, S7 | inline | pending | — |
+| T6 | S5, S6, S7 | inline | done | this commit |
 
 ## Log
 
@@ -155,6 +155,19 @@ All three `Partition` overloads now rent a `T[]` and an `Error[]` from `ArrayPoo
 **Out of scope, by design:** the `IEnumerable<Result<T>>` overload still uses `foreach` and therefore still pays the enumerator. S3 keeps that overload unchanged, and L6 requires it.
 
 **Charter:** `docs/performance.md` §4.7 records two post-change samples. Allocation drops 67% on both sources, 12,480 B → the two exactly sized output arrays. Time does not follow: the array rows show no resolvable difference, and the list rows are a reproduced ~30% loss (4.456 and 4.557 µs against 3.150 and 3.409 µs pre-change, intervals not overlapping). Per §5 that is a **loss, tracked and explained, not hidden**: the pooled path buys the mandatory allocation floor with ~1.1 ns per element on a 1,000-element list. §8 now also requires benchmark runs to be filtered to the affected rows unless the owner asks for a full run.
+
+### L17 — independent verification of T5 and P1 closure
+
+A separate verifier reviewed `git diff 38b2e26..2f15e92` in a scratch tree outside the workspace. Verdicts: S4 pass, S6 pass, S7 pass, **no blockers**.
+
+Evidence beyond the author's own tests: 89 non-header probe lines identical to the baseline across 10 shapes and 6 dispatch paths, including a source that implements only `IReadOnlyList<T>` so `InitialCapacity` falls back to 4 and the doubling path actually runs; returned tuples are fresh exactly sized arrays on every shape, proven by mutating them and re-partitioning; reflection dump of the public API identical; exception behavior on a throwing source identical; an 8-thread × 1,500-iteration stress with zero corruptions; and an independent reproduction of both the RED (688,920 B) and GREEN (224,792 B) allocation numbers against a hand-written two-array loop. The suite was 472/472 and the build 0 warnings / 0 errors.
+
+Advisories, all non-defects: the `IEnumerable<Result<T>>` overload still pays one enumerator, unchanged and out of scope by S3/L6; the ~30% list time loss is the owner decision recorded in §7, not something the verifier can measure without running benchmarks; and empty sources return a fresh array in both baseline and change, so `ReferenceEquals` against `Array.Empty<T>()` is not a valid parity assertion.
+
+Four probes were promoted to permanent tests in `tests/ResulTus.Collections.Tests/PartitionPoolingTests.cs`: exact sizes on the doubling path, no pooled buffer exposed to the caller, no buffer returned twice (32 same-bucket rents must be distinct instances), and value/order/length parity for every shape across all four call paths. The Collections project is now 60/60.
+
+**P1 closure:** `dotnet build ResulTus.slnx` → 0 warnings, 0 errors. `dotnet test ResulTus.slnx` → 476/476 passed, 0 failed, 0 skipped. Four tasks remain unblocked by evidence: the open failure-path allocation question in `docs/performance.md` §7, and the postponed array `Traverse` timing investigation.
+
 
 
 
