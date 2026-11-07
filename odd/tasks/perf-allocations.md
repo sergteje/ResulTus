@@ -32,8 +32,8 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 | --- | --- | --- | --- | --- |
 | T1 | S1 | inline | done | `5b66341` |
 | T2 | S2 | inline | done | `95eccbe` |
-| T3 | S3 (non-unit collections) | inline | done | this commit |
-| T4 | S3 (unit collections) | inline | pending | — |
+| T3 | S3 (non-unit collections) | inline | done | `548db66` |
+| T4 | S3 (unit collections) | inline | done | this commit |
 | T5 | S4 | inline | pending | — |
 | T6 | S5, S6, S7 | inline | pending | — |
 
@@ -123,3 +123,24 @@ The new test file `tests/ResulTus.Collections.Tests/ResultCollectionOverloadTest
 **Verification:** `dotnet test tests\ResulTus.Collections.Tests\ResulTus.Collections.Tests.csproj --no-restore --nologo` → 46/46 passed. Release benchmark build → 0 warnings, 0 errors. One full `DefaultJob` run (14 rows including an `IEnumerable` control) completed with zero issues; results are recorded in `docs/performance.md` §4.7.
 
 **Deferred follow-up (owner decision, verbatim: "lo dejaremos para otra ocascion, y continuamos con el resto").** The array-specific `Traverse` overload measured 7.447 μs / 4,024 B while the `IEnumerable` control in the same run measured 3.055 μs / 4,056 B, reproduced in two consecutive runs. It saves 32 B but is ~2.4x slower; the cause is not yet diagnosed. The discrepancy is recorded in §4.7 and §7 of the charter with a do-not-claim-speedup note; the investigation is postponed to a later session. The list overloads improve both time and allocation.
+
+### L14 — T4 unit-result overloads completed
+
+Fourteen indexed overloads were added to `UnitResultCollectionExtensions` for `Result[]` and `IReadOnlyList<Result>`: `Combine`, `Fold`, `FirstFailure`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded`. The `IEnumerable<Result>` overloads are unchanged. The class summary and its `<remarks>` were updated because the type no longer covers only sequences, and the `Combine` cref was disambiguated after CS0419 surfaced on the first build.
+
+The new test file `tests/ResulTus.Collections.Tests/UnitResultCollectionOverloadTests.cs` covers both sources with first and last failure, all-failure and all-success inspection, empty sources, null guards, value order and deterministic `GC.GetAllocatedBytesForCurrentThread` checks.
+
+**RED → GREEN:** before the overloads, the allocation test measured **57,344 B** (7 operations × 32 B enumerator × 256 iterations); after them, **0 B** for both sources. `dotnet test tests\ResulTus.Collections.Tests\...` → 53/53 passed.
+
+**Charter:** the `Combine` rows were remeasured in `docs/performance.md` §4.7 (array 682.0 ns / 0 B, list 1,208.2 ns / 0 B). No speed claim: one run, and §2 requires a reproducing second run.
+
+### L15 — independent verification of T3 and T4 (2026-11-07)
+
+A separate verifier reviewed `git diff 00a5ff9` in a scratch copy outside the workspace. Verdicts: S3 pass, S6 pass, S7 pass, **no blockers**. Evidence: 34 new public signatures and zero removed; a single 498-line probe source compiled against both baseline and change produced no differences, which proves overload selection kept every existing call site behaving the same; independent allocation probes measured 0 B for the new paths against a 57,344 B `IEnumerable` control, so the new tests genuinely bind to the new overloads instead of falling back; full suite 469/469 green against 454/454 at baseline; build 0 warnings, 0 errors with CS1591 enforced.
+
+Three advisories were recorded:
+
+1. **Fixed in this commit.** The `ResultCollectionExtensions` class summary still claimed to cover only `IEnumerable<T>`.
+2. **Open in `docs/performance.md` §7 — owner decision needed.** The indexed `Sequence`/`Traverse` allocate the output array before the first failure is known: 4,024 B for a 1,000-element source failing at index 0, against 32 B for the `IEnumerable<T>` path. This contradicts the §2 rule that allocation is 0 B on the failure path. Options: pre-scan for `Sequence` only (impossible for `Traverse`, whose selector must run), rent and copy, or accept and track.
+3. **Pre-existing, unchanged.** `List<T>.ForEach` instance method shadows the `ForEach` extension for a statically typed `List<T>` receiver and does not short-circuit. It reproduces identically at `00a5ff9`; the list overloads are exercised through `IReadOnlyList<T>`-typed variables, which is the documented usage.
+

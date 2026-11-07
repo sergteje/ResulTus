@@ -8,12 +8,14 @@ using System.Runtime.CompilerServices;
 namespace ResulTus.Collections;
 
 /// <summary>
-/// Collection-level operations over <see cref="IEnumerable{T}"/> of <see cref="Result{T}"/>.
+/// Collection-level operations over sequences, arrays and read-only lists of
+/// <see cref="Result{T}"/>.
 /// </summary>
 /// <remarks>
-/// Every method short-circuits on the first failure and stops enumerating there. Sequencing
-/// accumulates into a rented <see cref="ArrayPool{T}"/> buffer that is always returned, and the
-/// returned collection is an exactly sized array — never the rented buffer.
+/// Every method short-circuits on the first failure and stops enumerating there. The
+/// materializing operations return an exactly sized array; the internal buffering used to build
+/// it is either an indexed write straight into that array or a rented
+/// <see cref="ArrayPool{T}"/> buffer that is always returned.
 /// </remarks>
 public static class ResultCollectionExtensions
 {

@@ -308,6 +308,17 @@ The new indexed overloads were measured with the same BenchmarkDotNet 0.15.8 `De
 
 **Deferred performance follow-up:** the array-specific `Traverse` overload is 7.447 μs in this run versus 3.055 μs for the `IEnumerable` control in the same run, while saving 32 B. The direct overload meets the output-array-only allocation test but loses on time. The owner explicitly asked to leave this investigation for another occasion and continue the remaining P1 tasks. Do not claim a speedup; keep this discrepancy visible in §7. The list overload improves both time and allocation. All non-materializing array/list operations measured 0 B; `Partition` remains at 12,480 B until P1/T5.
 
+#### P1/T4 — unit-result array and read-only-list overloads — remeasured 2026-11-07
+
+T4 adds the indexed overloads for `Result[]` and `IReadOnlyList<Result>`, so only the unit-row `Combine` changes behavior. The benchmark also re-ran the other six methods; their means stayed inside run-to-run variation and are not restated here. Same BenchmarkDotNet 0.15.8 `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14, one complete run:
+
+| Method | Source | P1/T3 mean / allocated | P1/T4 mean / allocated |
+| --- | --- | ---: | ---: |
+| Combine (unit `Result`) | Array | 867.5 ns / 0 B | 682.0 ns / 0 B |
+| Combine (unit `Result`) | List | 1.161 μs / 0 B | 1,208.2 ns / 0 B |
+
+**Readout:** both sources stay at 0 B, which is the point of the change. The array row moved 21% faster and the list row 4% slower; both are single-run comparisons against a different run, and §2 requires a non-overlapping confidence interval plus a reproducing second run before a difference counts as a fact, so no speed claim is made here. The `IEnumerable<T>` overloads are untouched and remain the control.
+
 ### Serialization — P0 baseline and P1 remeasurements — measured 2026-11-06
 
 `SerializationOperationBenchmark` measures the factory-based `AddResulTusConverters()` path with `DefaultJob`. The `Result<int>[]` rows use 1,000 successful values and expose the per-element converter lookup. Input JSON and serializer options are prepared in `GlobalSetup`; benchmark outputs escape through instance sinks read in `GlobalCleanup`.
@@ -425,6 +436,7 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | **Failure-path allocation vs competitors** | **Fixed 2026-11-06.** Measured in §4.6 with a unique, uncached message per invocation: ResulTus **0 B**, `ZeroResult` 32 B, `ErrorOr` 88 B, `FluentResults` 272 B, `CSharpFunctionalExtensions` **0 B**. The original claim "one object for each of the other four" was wrong for `CSharpFunctionalExtensions`, whose error is a plain `string`; ResulTus ties it on allocation and wins on payload. |
 | **Array traversal vs competitors** | **Fixed 2026-10-29 — it is a loss.** Measured in §4.4: 1.25x–1.47x slower than every 16-byte competitor on the success path. The 32 B inline error is the cause and the trade is deliberate. Kept here as a standing fact, not an open question. |
 | **Array-specific collection Traverse vs its IEnumerable path** | **Performance follow-up deferred by the owner 2026-11-06.** P1/T3 measured 7.447 μs / 4,024 B for the indexed array overload and 3.055 μs / 4,056 B for the IEnumerable control in one run. The indexed overload saves 32 B but is slower; do not claim a speed win. |
+| **Indexed materializer allocation on the failure path** | **Open — introduced by P1/T3, found by independent verification 2026-11-07.** The array and read-only-list `Sequence`/`Traverse` overloads allocate their output array before the first failure is known. A 1,000-element source that fails at index 0 costs **4,024 B**, against **32 B** for the `IEnumerable<T>` path, which only allocates its enumerator. Success-path allocation is unchanged (the output array). This contradicts the §2 rule that allocation is 0 B on the failure path. Not a behavior change; needs an owner decision: pre-scan images for `Sequence`, rent a pooled buffer and copy, or accept and keep this row. |
 
 Every gap in this table must eventually resolve to one of: **fixed**, **noise-floor tie**, or **documented structural difference**. "We are close enough" is not a resolution.
 
