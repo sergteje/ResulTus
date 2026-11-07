@@ -194,14 +194,14 @@ S7 landed as a new public type, `src/ResulTus.Serialization/ResultJsonConverter.
 
 The XML remarks on both `ResultJsonConverter<T>` and `ResultJsonConverterFactory` now state which path is AOT-suitable; the factory remarks no longer say the direct-registration path is "tracked separately".
 
-**Two observed System.Text.Json constraints, now pinned by tests rather than guessed.**
+**Two observed System.Text.Json constraints, corrected after independent verification.**
 
-1. Registering the converter in `options.Converters` resolves a root-level `Result<T>` only when no explicit `TypeInfoResolver` is configured. With a source-generated resolver configured, `JsonSerializer.Serialize(result, options)` for a root `Result<T>` throws `NotSupportedException: JsonTypeInfo metadata for type 'Result<T>' was not provided by TypeInfoResolver ...` — the root type must be in the context; a result nested inside a payload the context knows resolves from `options.Converters`. So the AOT-realistic shape is a carrier payload annotated with `[JsonSerializable(typeof(Payload))]`. `SourceGeneratedContext_ShouldRoundTripACarrierPayload` and `SourceGeneratedContext_ShouldIgnoreTheAmbientPayloadConverter` pin that shape, and the tests' remarks document it.
-2. The source generator emits `SYSLIB1030` for `Result<int>` and `Result<string>` members of a payload — it produces no metadata for them on purpose, and they are resolved at runtime through the registered converters. That is the expected pattern, documented in the tests' remarks; the probe app reproduces both warnings.
+1. **Reachability rule for the root type.** When an explicit source-generated `TypeInfoResolver` is configured, a root-level `Result<T>` resolves only when the *closed* `Result<T>` is in the context's reachable graph — most naturally because an annotated carrier payload declares it as a member. It is enough that the carrier is annotated; `T` being annotated makes no difference, and options reuse makes no difference (a fresh `JsonSerializerOptions` resolves the root as well). When the closed type is not in the graph — the first shape the initial L15 draft observed — System.Text.Json throws `NotSupportedException: JsonTypeInfo metadata for type 'Result<T>' was not provided by TypeInfoResolver ...`, and the exception text names the exact closed type. The constraint is NOT "the root must be annotated" and NOT "a root result always throws": both halves are pinned by tests. `Reachability_InTheContextGraph_ShouldResolveARootResult` and `Reachability_OutsideTheContextGraph_ShouldThrowNotSupportedException` hold both halves, and the round-trip tests pin the carrier shape (`SourceGeneratedContext_ShouldRoundTripACarrierPayload`) where results nested in an annotated payload resolve from `options.Converters`.
+2. **Runtime metadata resolution for result members.** A generated context does not expand `Result<T>` members of a payload; they are resolved at runtime through the registered converters. No generator diagnostic was observed on any complete build — 0 warnings in the test project, in the verifier's independent net8.0 and net10.0 contexts, and in the reflection-disabled probe app. An earlier `SYSLIB1030` observation was recorded here and is retracted: it came from a probe app whose project reference was broken at the time, and the warning did not reproduce in either reflection mode afterward.
 
 Behavior proof: both construction paths emit the same JSON. `ContextBoundConverter_ShouldProduceTheSameJsonAsTheFactory` compares them byte for byte for a success and a failure, and the carrier test does the same against the factory path plus an exact-wire assertion (`{"Name":"Ada","Age":{"isSuccess":true,"value":36}}`). `ContextBoundConverter_ShouldIgnoreTheAmbientPayloadConverter` is the sharpest proof of "through context metadata, not reflection": an `OffsetIntJsonConverter(100)` sits in the ambient options, and the bound converter still writes a plain `5` and reads it back as `5` on both the root and the carrier shape. The parameterless constructor keeps resolving the ambient converter (`105` under the same probe), so both paths' semantics are pinned side by side. Round trips cover success, failure, a `null` reference value, and a `null` metadata argument throwing `ArgumentNullException`.
 
-**RED → GREEN:** the 10 tests were written first and the build failed with 12 `CS0122` errors (`ResultJsonConverter<T>` is inaccessible). After the implementation `tests/ResulTus.Serialization.Tests` is 74/74 (10 new), the build is 0 warnings and 0 errors, and the suite is **588/588** (baseline 578).
+**RED → GREEN:** the 10 tests were written first and the build failed with `CS0122` errors (`ResultJsonConverter<T>` is inaccessible; the verifier's RED replay against the baseline library counted 7 distinct error sites). After the implementation `tests/ResulTus.Serialization.Tests` is 74/74 (10 new), the build is 0 warnings and 0 errors, and the suite is **588/588** (baseline 578).
 
 **The Native AOT publish smoke check is still not available on this host, observed twice.** `dotnet publish -c Release -r win-x64 -p:PublishAot=true` on a fresh console app fails with `error : Platform linker not found. Ensure you have all the required prerequisites documented at https://aka.ms/nativeaot-prerequisites, in particular the Desktop Development for C++ workload in Visual Studio.` The host has no `VC\Tools\MSVC` directory and no Windows Kits; installing the C++ workload is the owner's machine decision, so the clause stays pending and **no claim of Native AOT support is made**.
 
@@ -212,6 +212,33 @@ What *is* observed on this host, in a probe app outside the workspace that refer
 - `FAILURE-JSON: {"Name":"Bob","Age":{"isSuccess":false,"error":{"code":"user.missing","message":"no such user","type":"NotFound"}},"Nickname":{"isSuccess":false,"error":{"code":"nickname","message":"not allowed","type":"Validation"}}}` followed by `AOT-PATH OK`, exit 0.
 
 **Risk:** item 3 (contracts others consume). A previously internal type of a shipped package is now public, and a public type changed file; the wire format is a contract and stays byte-identical, but a published package's API surface changed. Verification is delegated.
+
+### L16 — owner decision, delegated verification of T6, and promoted probes
+
+**Owner decision (2026-11-07, verbatim from the interactive answer):** asked whether to install the C++ workload to close the Native AOT clause, the owner chose **"Acepto la cláusula pendiente"**. The clause stays pending in this log with the exact host error above, and no AOT compatibility claim is made anywhere in the shipped docs.
+
+**Delegated verification of `93a7667` against `ab8835c` (independent tree outside the workspace, redirected HOME/TMP/NUGET_PACKAGES, no writes to the workspace).**
+
+| Clause | Verdict |
+| --- | --- |
+| S7.1 factory registration stays compatible | pass — diff is remarks-only for the factory; same probe source compiled against both builds: 62/62 wire lines byte-identical, both exit 0 |
+| S7.2 public closed generic | pass — API dump delta: 1 type + 4 members added, 1 internal→public, 0 removals/renames/re-types; core `ResulTus.dll` dump byte-identical |
+| S7.3 payload through context metadata, not `GetConverter` | pass — metadata path uses `JsonTypeInfo<T>` on both `Write` and `Read`; an ambient *poison* converter that throws on every call is never consulted on either path |
+| S7.4 both paths documented, suitability stated | pass — type and factory remarks; 0-warning build (CS1591/CS1573 are errors) |
+| S7.5 source-generated round trip proven | pass — writer's 74/74; independent net8.0 and net10.0 carriers round-trip success/failure/null, byte-equal to the factory; a camelCase context proves the passed metadata instance is the one consulted |
+| S7.6 Native AOT publish/run smoke check | not verifiable — pending owner-decided clause (`Platform linker not found`) |
+| S8 scope & compatibility | pass, in scope — 62 wire lines byte-identical incl. nested lists/arrays/dicts/nested/unit results and camelCase/indented variants; 13 malformed inputs throw the **same exception type and message** on both builds |
+
+**Blockers: none.** Ten `PASS` consumer checks, suite 588/588 on the change against 578/578 at baseline, and the trim + reflection-disabled run reproduced (exit 0, byte-identical JSON, parameterless path blocked with `InvalidOperationException`).
+
+**Advisories and their disposition:**
+
+1. The original L15 statement of the root-type constraint did not reproduce as written. Reconciled by reproduction in the workspace: with a resolver configured, a root result works when the closed `Result<T>` is in the context's reachable graph and throws when it is not — the reachability rule in L15 above is the corrected form, and both halves now have a pin each.
+2. `SYSLIB1030` did not reproduce under any complete build, in either reflection mode. Retracted from L15; see constraint 2 above.
+3. L15's RED count overcounted: the verifier's replay of the new test file against the baseline library yields 7 distinct `CS0122` sites, not 12. Corrected in L15.
+4. `ResultJsonConverterFactory.cs` gained a UTF-8 BOM in the doc-only edit. Noted only: the repository's `.editorconfig` declares `charset = utf-8-bom`, so the file now matches the declared convention.
+
+**Promoted to `tests/ResulTus.Serialization.Tests/ResultJsonConverterVerifierTests.cs` (12 tests):** the two extra checks — a shared converter instance caching per `JsonSerializerOptions`, sentinel errors (`Error.None`, `default(Error)`) staying failures, a poisoned ambient converter being ignored on both paths, null/default payload round-trips, both-paths byte-equality, the net-agnostic camelCase context proving the passed metadata is the one used, exact read-error texts, and the two reachability halves. After promotion the Serialization project is **86/86** and the suite is **600/600**, 0-warning build. `ScalarOnlyContext` — a context with no result member anywhere in its reachable graph — is the pin's companion: annotating only `int` still rejects a root `Result<int>` with the same text.
 
 
 

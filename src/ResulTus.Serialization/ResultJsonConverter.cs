@@ -37,7 +37,10 @@ namespace ResulTus.Serialization;
 /// <c>options.Converters.Add(new ResultJsonConverter&lt;MyDto&gt;(MyContext.Default.MyDto));</c> where
 /// <c>MyContext</c> is a <see cref="JsonSerializerContext"/> declaring
 /// <c>[JsonSerializable(typeof(MyDto))]</c>. This path needs no factory, no generic instantiation at
-/// runtime, and no reflection over the payload type.
+/// runtime, and no reflection over the payload type. Note that System.Text.Json resolves the type
+/// handed to <c>JsonSerializer.Serialize</c> through the context, so keep the closed
+/// <see cref="Result{T}"/> in the context's reachable graph: annotate a carrier payload carrying the
+/// result, exactly as the serializer does for any nested converter.
 /// </description>
 /// </item>
 /// </list>
