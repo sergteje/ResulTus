@@ -22,10 +22,10 @@ Risk: none anticipated. APIs are additive and HTTP outcomes, cancellation and ow
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S4 | inline | done | 7146baa |
-| T2 | S2 | inline | pending | — |
-| T3 | S3 | inline | pending | — |
-| T4 | S5–S7 | inline | pending | — |
+| T1 | S1, S4 | delegated direct | done | 7146baa |
+| T2 | S2 | delegated direct | done | f9700ad |
+| T3 | S3 | delegated direct | done | see L9 |
+| T4 | S5-S7 | delegated direct | pending | — |
 
 ## Log
 
@@ -63,3 +63,13 @@ S1/S4 implemented. `HttpClientFailureKind`, `HttpClientError` and `HttpProblemDe
 ### L7 — S2 implementation
 
 S2 implemented. `HttpResponseMessageResultExtensions` (one file, mirroring the repo's `*Extensions` naming) adds three conversions: the typed `JsonTypeInfo<TSuccess>` overload (AOT-safe), the options-based convenience overload (reflection path, with `[UnconditionalSuppressMessage]` kept only on the private helper and phrasing reused from `ResultJsonConverter`), and the raw overload. Reading is hand-rolled over `System.Text.Json` rather than `System.Net.Http.Json` for three reasons: null/absent content must map to `InvalidResponse` (not `ArgumentNullException`), only `JsonException`-family parse failures must map to `InvalidResponse` while `OperationCanceledException` propagates untouched, and the ProblemDetails body is read as raw bytes anyway for the module's own minimal RFC 9457 reader. That reader keeps unknown members (including `errors`) as extensions and `JsonElement.Clone()`s each extension so it stays detached from the disposed source `JsonDocument`. The caller-owned response is never disposed. Tests: 14 new public-interface tests (typed success, options success, raw success, exact-status theory, ProblemDetails with extension + `errors`, status-only non-problem, malformed-problem fallback, malformed success → `InvalidResponse`, no-dispose across the four paths, null arguments, cancellation-is-not-an-error); HttpClient.Tests 16 → 30, full suite 645 → 659.
+
+### L8 — S3 implementation
+
+S3 implemented. `HttpClientSendResultExtensions` (one file) adds three `SendResultAsync` extensions on a caller-owned `HttpClient`: the raw overload returning `Result<HttpResponseMessage, HttpClientError>`, and two typed overloads (`JsonTypeInfo<TSuccess>` AOT-safe + `JsonSerializerOptions` convenience) that send, then delegate to `HttpResponseMessageResultExtensions.ToResultAsync` (the public surface, never re-implemented) and dispose the received response exactly once via `using`. Neither form creates/disposes the client or disposes the request; there is no retry.
+
+**Namespace shadowing (resolved empirically).** The `ResulTus.HttpClient` namespace shadows `System.Net.Http.HttpClient`: inside it (and inside `ResulTus.HttpClient.Tests`), the simple name `HttpClient` binds to the namespace, producing CS0118 "is a namespace but is used like a type" (verified with a scratch build). The fix is a single alias `using HttpCli = System.Net.Http.HttpClient;` at the top of both `HttpClientSendResultExtensions.cs` and `SendResultTests.cs`. XML crefs stay IntelliSense-honest by using the fully qualified `System.Net.Http.HttpClient` / `System.Net.Http.HttpRequestMessage` / `System.Net.Http.HttpResponseMessage` (no CS1574/CS1580).
+
+**Timeout vs caller cancellation (measured, not assumed).** A scratch net8.0 console app with a fake handler observed the BCL behavior directly: (a) `HttpClient.Timeout` elapsing → `System.Threading.Tasks.TaskCanceledException` whose `InnerException` is `System.TimeoutException` (message "The request was canceled due to the configured HttpClient.Timeout of … seconds elapsing."); (b) a caller-cancelled token (pre-cancelled and mid-flight) → `TaskCanceledException` whose `InnerException` is a nested `TaskCanceledException` (NOT `TimeoutException`); (c) an `HttpRequestException` from the handler surfaces as `HttpRequestException` with null inner; (d) an arbitrary `InvalidOperationException` from the handler surfaces unchanged (the BCL does not wrap it). The discriminator is therefore `ex is OperationCanceledException && ex.InnerException is TimeoutException` → `Timeout` kind; `ex is OperationCanceledException` (no timeout inner) → caller cancellation → rethrow; `ex is HttpRequestException` → `Transport` kind; any other exception is not caught and propagates. This matches the L3 doc link ("distinguishing a timeout from caller cancellation through the inner `TimeoutException`").
+
+Tests: 11 new public-interface tests (raw success; typed success via both JSON paths; `HttpRequestException` → Transport on both raw and typed; client-timeout → Timeout with the inner `TimeoutException`; caller cancellation rethrown as `OperationCanceledException` on both raw and typed; exactly-one-send via a counting handler; arbitrary non-HTTP exception surfaced unchanged by reference; typed disposes the response once while request/client are untouched; raw disposes nothing; null client/request/jsonTypeInfo/options throw); HttpClient.Tests 30 → 41, full suite 659 → 670.
