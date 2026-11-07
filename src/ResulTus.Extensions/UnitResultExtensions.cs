@@ -175,6 +175,32 @@ public static class UnitResultExtensions
     }
 
     /// <summary>
+    /// Keeps a success only while <paramref name="predicate"/> holds, building the error from a factory
+    /// only when it does not. A failure is left untouched.
+    /// </summary>
+    /// <param name="result">The unit result to guard.</param>
+    /// <param name="predicate">Condition the successful result must satisfy. Never invoked on failure.</param>
+    /// <param name="errorFactory">
+    /// Factory producing the error. Invoked at most once, and only when a successful result fails
+    /// <paramref name="predicate"/>.
+    /// </param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Ensure(this Result result, Func<bool> predicate, Func<Error> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+
+        if (result.TryGetError(out _))
+        {
+            return result;
+        }
+
+        return predicate() ? result : Result.Failure(errorFactory());
+    }
+
+    /// <summary>
     /// Recovers a failed unit result with another result produced from its error.
     /// </summary>
     /// <param name="result">The result to recover.</param>

@@ -27,7 +27,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T1 | S1, S2 | inline | done | see L9 |
 | T2 | S3 | inline | done | see L11 |
 | T3 | S4 | inline | deferred to P2 | — |
-| T4 | S5 | inline | pending | — |
+| T4 | S5 | inline | done | see L12 |
 | T5 | S6 | inline | pending | — |
 | T6 | S7, S8 | inline | pending | — |
 | T7 | S9 | inline | pending | — |
@@ -133,6 +133,22 @@ One boundary is worth stating rather than leaving implicit: `catch (Exception)` 
 **RED → GREEN:** the tests were written first and the project failed with 50 errors (`CS0117`: neither `Result.Try` nor `Error.FromException` existed). After the implementation `tests/ResulTus.Tests` is 60/60 (13 new), the solution build is 0 warnings and 0 errors, and the suite is **541/541**. The success path is pinned at 0 B by an allocation probe; the failure path necessarily touches the exception's message string, so no 0 B claim is made for it.
 
 **Risk:** none of items 1-6. Both members are additive statics — `Result.Try` on the static `Result` class and `Error.FromException` on the struct — so no existing call site can change binding, and the two behaviors that could silently regress (cancellation control flow and mapper short-circuiting) are covered by tests that would fail loudly.
+
+### L12 — T4 completed: deferred `Ensure`, `ToUnitResult` and the unit `Bind`
+
+S5 added five public members across three files:
+
+- `ResultExtensions.Ensure<T>(this Result<T>, Func<T, bool>, Func<Error>)` and `Ensure<T>(this Result<T>, Func<T, bool>, Func<T, Error>)`. Both read the receiver first and return it unchanged on an existing failure, so neither the predicate nor the factory runs there. The factory is invoked at most once, and only when a successful result fails its predicate. The value-aware overload exists so a message can name the rejected value (`Ensure(v => v > 10, v => Error.Validation("too-small", $"got {v}"))`), which the zero-parameter form cannot do because it never sees the value.
+- `UnitResultExtensions.Ensure(this Result, Func<bool>, Func<Error>)`, the same contract on a unit result.
+- `ResultExtensions.Bind<T>(this Result<T>, Func<T, Result>)`, which projects a value-bearing pipeline onto the unit result without wrapping it in a dummy success value.
+- `ResultConversions.ToUnitResult<T>(this Result<T>)`, the inverse of the unit `Map`: it drops the value and keeps the error.
+
+Three overloads now share the name `Ensure`. They are separable by the third argument — an `Error` value binds the eager form, a zero-parameter lambda binds `Func<Error>`, a one-parameter lambda binds `Func<T, Error>` — and every pre-existing call site in the repository and its tests passes an `Error` value, so none moved. `Bind` gained a second family: the existing one returns `Result<TOut>` and the new one returns `Result`, and a call site that produced a unit result did not compile before, so nothing shifted there either.
+
+**RED → GREEN:** the tests were written first and the project failed with 54 `CS1660` errors (a lambda cannot convert to `Error`, because only the eager overload existed). After the implementation `tests/ResulTus.Extensions.Tests` is 143/143 (15 new), the solution build is 0 warnings and 0 errors, and the suite is **556/556**. The new file pins both outcomes of every member, the exact call counts of the predicates and factories, the value the value-aware factory receives, error preservation through `ToUnitResult` and the unit `Bind`, every null-delegate shape, and 0 B of allocation for seven call shapes built from `static` delegates and interned literals.
+
+**Risk:** item 3 (contracts others consume). The members are additive and the repository's own call sites are unaffected, but three `Ensure` overloads now sit beside the existing one and a caller outside this repository that passes something like a bare `default` for the error could find it ambiguous where it used to bind. That is exactly the class of risk P2/T1 carried, so this unit goes to independent verification.
+
 
 
 

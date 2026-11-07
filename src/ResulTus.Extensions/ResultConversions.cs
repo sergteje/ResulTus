@@ -42,6 +42,21 @@ public static class ResultConversions
         => result.TryGetValue(out var value, out _) ? value : null;
 
     /// <summary>
+    /// Drops the success value, projecting a <see cref="Result{T}"/> onto the unit <see cref="Result"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to project.</param>
+    /// <returns>A successful unit result, or the original failure with the same error.</returns>
+    /// <remarks>
+    /// The inverse of <see cref="UnitResultExtensions.Map{T}(Result, Func{T})"/>: use it when a pipeline
+    /// ends at an outcome and the value is no longer of interest. Both types are structs, so the
+    /// projection is a copy.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result ToUnitResult<T>(this Result<T> result)
+        => result.TryGetValue(out _, out var error) ? Result.Success() : Result.Failure(error);
+
+    /// <summary>
     /// Converts an <see cref="Error"/> into an <see cref="Exception"/>.
     /// </summary>
     /// <param name="error">The error to convert.</param>

@@ -54,6 +54,28 @@ public static class ResultExtensions
     }
 
     /// <summary>
+    /// Chains a unit result on the success value, leaving a failure untouched.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to bind.</param>
+    /// <param name="bind">Function producing the next unit result. Never invoked on failure.</param>
+    /// <returns>The unit result produced by <paramref name="bind"/>, or the original failure.</returns>
+    /// <remarks>
+    /// The value-bearing overload returns <see cref="Result{TOut}"/>, so a caller that only needs the
+    /// outcome does not have to wrap it in a dummy success value.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="bind"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result Bind<T>(this Result<T> result, Func<T, Result> bind)
+    {
+        ArgumentNullException.ThrowIfNull(bind);
+
+        return result.TryGetValue(out var value, out var error)
+            ? bind(value!)
+            : Result.Failure(error);
+    }
+
+    /// <summary>
     /// Combines two results into one holding both success values in argument order, or returns the
     /// first failure.
     /// </summary>
@@ -195,6 +217,70 @@ public static class ResultExtensions
         }
 
         return predicate(value!) ? result : Result<T>.Failure(error);
+    }
+
+    /// <summary>
+    /// Keeps a success only while <paramref name="predicate"/> holds, building the error from a factory
+    /// only when it does not. A failure is left untouched.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Condition the success value must satisfy. Never invoked on failure.</param>
+    /// <param name="errorFactory">
+    /// Factory producing the error. Invoked at most once, and only when a successful result fails
+    /// <paramref name="predicate"/>.
+    /// </param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <remarks>
+    /// Overloaded with <see cref="Ensure{T}(Result{T}, Func{T, bool}, Error)"/> and
+    /// <see cref="Ensure{T}(Result{T}, Func{T, bool}, Func{T, Error})"/>. A zero-parameter lambda binds
+    /// here, a value-aware one binds the other factory overload, and an <see cref="Error"/> value binds
+    /// the eager overload.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Ensure<T>(this Result<T> result, Func<T, bool> predicate, Func<Error> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+
+        if (!result.TryGetValue(out var value, out _))
+        {
+            return result;
+        }
+
+        return predicate(value!) ? result : Result<T>.Failure(errorFactory());
+    }
+
+    /// <summary>
+    /// Keeps a success only while <paramref name="predicate"/> holds, building the error from the success
+    /// value only when it does not. A failure is left untouched.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Condition the success value must satisfy. Never invoked on failure.</param>
+    /// <param name="errorFactory">
+    /// Factory producing the error from the success value. Invoked at most once, and only when a
+    /// successful result fails <paramref name="predicate"/>.
+    /// </param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <remarks>
+    /// Use this overload when the message must mention the rejected value; it is the only form that
+    /// receives the value after the predicate has already judged it.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<T> Ensure<T>(this Result<T> result, Func<T, bool> predicate, Func<T, Error> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+
+        if (!result.TryGetValue(out var value, out _))
+        {
+            return result;
+        }
+
+        return predicate(value!) ? result : Result<T>.Failure(errorFactory(value!));
     }
 
     /// <summary>
