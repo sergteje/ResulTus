@@ -235,7 +235,9 @@ public static class ResultExtensions
     /// Overloaded with <see cref="Ensure{T}(Result{T}, Func{T, bool}, Error)"/> and
     /// <see cref="Ensure{T}(Result{T}, Func{T, bool}, Func{T, Error})"/>. A zero-parameter lambda binds
     /// here, a value-aware one binds the other factory overload, and an <see cref="Error"/> value binds
-    /// the eager overload.
+    /// the eager overload. A bare <c>default</c> literal is the exception: it converts to both
+    /// <see cref="Error"/> and <c>Func&lt;Error&gt;</c> and is ambiguous, so write <c>default(Error)</c>
+    /// when the eager overload is the one you mean.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

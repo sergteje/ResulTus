@@ -149,6 +149,23 @@ Three overloads now share the name `Ensure`. They are separable by the third arg
 
 **Risk:** item 3 (contracts others consume). The members are additive and the repository's own call sites are unaffected, but three `Ensure` overloads now sit beside the existing one and a caller outside this repository that passes something like a bare `default` for the error could find it ambiguous where it used to bind. That is exactly the class of risk P2/T1 carried, so this unit goes to independent verification.
 
+### L13 — independent verification of T4 and the promoted probes
+
+A separate verifier reviewed `git diff d50cbb4..4bbd109` in a scratch tree outside the workspace, with `HOME`, `TMP`, `TEMP` and `TMPDIR` redirected into that tree. It confirmed both trees: build 0 warnings / 0 errors, suite **556/556** on the change against **541/541** at baseline.
+
+**Verdicts: S5 pass, build requirement pass. No blockers.** Evidence beyond the change's own tests:
+
+- **Overload resolution from a consumer's seat.** A probe project referencing only the built `ResulTus` and `ResulTus.Extensions` assemblies compiled 28 call shapes against both trees. Every shape that compiled at baseline still binds the same member — `Ensure(pred, errorVar)`, `Ensure(pred, Error.NotFound(...))`, `Ensure(pred, Error.None)`, `Ensure(pred, default(Error))`, `Ensure(pred, cond ? a : b)`, both unit forms with an `Error` argument, and the three value-returning `Bind` shapes. Every shape that compiles only now did not compile at baseline, so it cannot have shifted.
+- **Behavior.** 36 checks passed: counters showed 0/0 invocations on an existing failure, 1/0 when the predicate holds and 1/1 when a success fails it — for all three factory overloads including a method group; the value-aware factory received `987654321` and `default(int)` exactly.
+- **Allocation.** An independent harness with two live sensitivity controls (879,912 B for `new byte[64]` per call, 240,000 B for `new object()`) read **0 B** on every new member on every path, equal to hand-written equivalents.
+- **API and analyzer.** The public API dump moved from 74 to 79 members: exactly the 5 additions, nothing removed, renamed or re-typed. `ConstantEnsureAnalyzer` still reports only on constant predicates and produced no false diagnostic on either new overload, because it keys on the written argument count and `Arguments[0]`.
+- **Error preservation through the sentinels.** `ToUnitResult` and the unit `Bind` keep a failure a failure for `Error.None` and `default(Error)`, rather than reading the zero error as a success.
+
+One finding with real weight, now closed: **a bare `default` literal is ambiguous** between the eager `Error` parameter and `Func<Error>` (`CS0121`), where it compiled before. L12 predicted this risk in prose; the XML remarks of both deferred overloads now state it and point at `default(Error)` as the explicit form, and a test pins that `default(Error)` still binds the eager overload and stores that error. Three further advisories were recorded without code: an overloaded method-group factory (`Error Make()` beside `Error Make(int)`) needs a cast, but that shape did not compile at baseline either; `.Bind(v => Error.Forbidden("nope"))` compiles now through the implicit `Error`-to-`Result` conversion and returns a failure, which is new capability rather than a rebinding; and one never-compiling shape changed its compiler error code, which is not an output change for working code.
+
+Six probes were promoted to `tests/ResulTus.Extensions.Tests/EnsureFactoryAndProjectionVerifierTests.cs`: the method-group factory skipped on an existing failure, the explicitly typed `default(Error)` still binding eager, the value-aware factory receiving `default(int)`, sentinel-error preservation through `ToUnitResult` and the unit `Bind`, and a second allocation sweep over cached non-capturing delegates. After promotion the Extensions project is 149/149 and the suite is **562/562** with a 0-warning, 0-error build.
+
+
 
 
 

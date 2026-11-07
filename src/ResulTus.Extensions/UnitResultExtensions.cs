@@ -185,6 +185,11 @@ public static class UnitResultExtensions
     /// <paramref name="predicate"/>.
     /// </param>
     /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <remarks>
+    /// Overloaded with <see cref="Ensure(Result, Func{bool}, Error)"/>. A zero-parameter lambda binds
+    /// here and an <see cref="Error"/> value binds the eager overload, but a bare <c>default</c> literal
+    /// converts to both and is ambiguous; write <c>default(Error)</c> to select the eager one.
+    /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result Ensure(this Result result, Func<bool> predicate, Func<Error> errorFactory)
