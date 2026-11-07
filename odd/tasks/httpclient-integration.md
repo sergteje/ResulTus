@@ -24,7 +24,7 @@ Risk: none anticipated. APIs are additive and HTTP outcomes, cancellation and ow
 | --- | --- | --- | --- | --- |
 | T1 | S1, S4 | delegated direct | done | 7146baa |
 | T2 | S2 | delegated direct | done | f9700ad |
-| T3 | S3 | delegated direct | done | see L9 |
+| T3 | S3 | delegated direct | done | a4c7c32 |
 | T4 | S5-S7 | delegated direct | pending | — |
 
 ## Log
