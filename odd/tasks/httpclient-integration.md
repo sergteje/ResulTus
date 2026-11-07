@@ -25,7 +25,7 @@ Risk: none anticipated. APIs are additive and HTTP outcomes, cancellation and ow
 | T1 | S1, S4 | delegated direct | done | 7146baa |
 | T2 | S2 | delegated direct | done | f9700ad |
 | T3 | S3 | delegated direct | done | a4c7c32 |
-| T4 | S5-S7 | delegated direct | pending | — |
+| T4 | S5-S7 | delegated direct | done | — |
 
 ## Log
 
@@ -73,3 +73,24 @@ S3 implemented. `HttpClientSendResultExtensions` (one file) adds three `SendResu
 **Timeout vs caller cancellation (measured, not assumed).** A scratch net8.0 console app with a fake handler observed the BCL behavior directly: (a) `HttpClient.Timeout` elapsing → `System.Threading.Tasks.TaskCanceledException` whose `InnerException` is `System.TimeoutException` (message "The request was canceled due to the configured HttpClient.Timeout of … seconds elapsing."); (b) a caller-cancelled token (pre-cancelled and mid-flight) → `TaskCanceledException` whose `InnerException` is a nested `TaskCanceledException` (NOT `TimeoutException`); (c) an `HttpRequestException` from the handler surfaces as `HttpRequestException` with null inner; (d) an arbitrary `InvalidOperationException` from the handler surfaces unchanged (the BCL does not wrap it). The discriminator is therefore `ex is OperationCanceledException && ex.InnerException is TimeoutException` → `Timeout` kind; `ex is OperationCanceledException` (no timeout inner) → caller cancellation → rethrow; `ex is HttpRequestException` → `Transport` kind; any other exception is not caught and propagates. This matches the L3 doc link ("distinguishing a timeout from caller cancellation through the inner `TimeoutException`").
 
 Tests: 11 new public-interface tests (raw success; typed success via both JSON paths; `HttpRequestException` → Transport on both raw and typed; client-timeout → Timeout with the inner `TimeoutException`; caller cancellation rethrown as `OperationCanceledException` on both raw and typed; exactly-one-send via a counting handler; arbitrary non-HTTP exception surfaced unchanged by reference; typed disposes the response once while request/client are untouched; raw disposes nothing; null client/request/jsonTypeInfo/options throw); HttpClient.Tests 30 → 41, full suite 659 → 670.
+
+### L9 — S5 coverage audit, S6 documentation, S7 gate
+
+**S5 — every pinned behavior already maps to an existing public-interface test; no new tests were required.** Mapping (clause → pinning test):
+
+- typed JSON success → `ResponseConversionTests.TypedConversion_ShouldDeserializeJsonValue_OnSuccess` (JsonTypeInfo), `TypedConversion_WithOptions_ShouldDeserializeJsonValue_OnSuccess` (options), `SendResultTests.TypedSend_WithJsonTypeInfo_ShouldDeserialize_OnSuccess`, `SendResultTests.TypedSend_WithOptions_ShouldDeserialize_OnSuccess`.
+- raw response success → `ResponseConversionTests.RawConversion_ShouldReturnTheResponse_OnSuccess`, `SendResultTests.RawSend_ShouldReturnTheResponse_OnSuccess`.
+- non-2xx ProblemDetails (incl. extension fields) → `ResponseConversionTests.NonSuccessConversion_ShouldParseProblemDetails_WhenProblemJsonContentType` (asserts the `traceId` and `errors` extensions).
+- non-ProblemDetails status failure → `ResponseConversionTests.NonSuccessConversion_ShouldReturnStatusOnlyFailure_WhenNotProblemJson`, `NonSuccessConversion_ShouldCarryTheExactStatusCode`.
+- malformed ProblemDetails fallback → `ResponseConversionTests.NonSuccessConversion_ShouldKeepStatusAndLeaveProblemDetailsUnset_WhenProblemBodyMalformed`.
+- malformed success JSON → `ResponseConversionTests.TypedConversion_ShouldReturnInvalidResponse_WhenBodyMalformed`.
+- `HttpRequestException` → `SendResultTests.Send_ShouldMapHttpRequestException_ToTransport`.
+- timeout → `SendResultTests.Send_ShouldMapClientTimeout_ToTimeout`.
+- caller cancellation → `SendResultTests.Send_ShouldRethrowOperationCanceledException_WhenCallerTokenCancelled`.
+- response/request/client ownership → `ResponseConversionTests.Conversion_ShouldNotDisposeTheCallerOwnedResponse`, `SendResultTests.TypedSend_ShouldDisposeResponseOnce_AndLeaveRequestAndClientUntouched`, `SendResultTests.RawSend_ShouldDisposeNothing`.
+
+**S6 — `docs/httpclient.md` created.** Covers raw, typed and value-returning usage; status and ProblemDetails inspection (including extension members); transport, timeout and cancellation handling with the timeout-vs-caller-cancellation discriminator; ownership (caller owns `HttpClient` and `HttpRequestMessage`, the raw form transfers response ownership, the typed form disposes its response); the no-retry rule; and the `JsonTypeInfo<T>` Native AOT route versus the reflective `JsonSerializerOptions` convenience. Every snippet compiles against the real public API (verified with a scratch net10.0 console project referencing `src/ResulTus.HttpClient`, 0 warnings / 0 errors). The P3 package table lives in `odd/tasks/docs-readme.md`, so README and the About table are intentionally untouched.
+
+**S7 observed.** `dotnet build ResulTus.slnx` → 0 warnings / 0 errors in both Debug and Release. `dotnet test ResulTus.slnx` (Debug, the documented default) → 670/670 green: ResulTus.Tests 60, Serialization 86, Diagnostics 29, HttpClient 41, Logging 36, Testing 16, Extensions 149, SourceGenerators 50, Collections 93, Analyzers 41, AspNetCore 41, Validation 28. Both projects remain in `ResulTus.slnx`; `TreatWarningsAsErrors` + `GenerateDocumentationFile` re-confirm every public member is XML-documented (no CS1591).
+
+Note for the parent: a `-c Release` full-suite run reproduces three pre-existing failures in `ResulTus.Collections.Tests` allocation tests (`NonMaterializingArrayAndListFold_ShouldAllocateZeroBytes`, `UnitArrayAndReadOnlyListOverloads_ShouldAllocateZeroBytes`, `NonMaterializingArrayAndReadOnlyListOverloads_ShouldAllocateZeroBytes`), each "found 24L" — the `GC.GetAllocatedBytesForCurrentThread` sensor reads a 24-byte `Error` under the Release JIT. They pass 93/93 in Debug, are unrelated to this module, and are reported rather than fixed.
