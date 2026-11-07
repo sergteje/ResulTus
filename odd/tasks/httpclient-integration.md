@@ -22,7 +22,7 @@ Risk: none anticipated. APIs are additive and HTTP outcomes, cancellation and ow
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S4 | inline | done | — |
+| T1 | S1, S4 | inline | done | 7146baa |
 | T2 | S2 | inline | pending | — |
 | T3 | S3 | inline | pending | — |
 | T4 | S5–S7 | inline | pending | — |
@@ -59,3 +59,7 @@ All work stays inline. Keep code, tests and documentation for each behavior in t
 ### L6 — T1 layout decision (struct vs class)
 
 S1/S4 implemented. `HttpClientFailureKind`, `HttpClientError` and `HttpProblemDetails` are all `sealed class`, not structs. The library's inline struct convention (`Error`) is justified by a tiny, reference-free, zero-allocation layout; `HttpClientError` owns an optional `Exception` and an optional `HttpProblemDetails` (which itself owns a `Dictionary<string, JsonElement>` of extension members), so that convention does not apply. `HttpProblemDetails` stores extension values as `JsonElement` (built-in, faithful, no ASP.NET Core reference) and normalizes a null/empty extensions dictionary to null. Cancellation is deliberately absent from `HttpClientFailureKind` (closed set: transport, timeout, status error, invalid response): S3 rethrows `OperationCanceledException` rather than capturing it as an error. File layout: one file per type, matching `Error.cs`/`ErrorType.cs`.
+
+### L7 — S2 implementation
+
+S2 implemented. `HttpResponseMessageResultExtensions` (one file, mirroring the repo's `*Extensions` naming) adds three conversions: the typed `JsonTypeInfo<TSuccess>` overload (AOT-safe), the options-based convenience overload (reflection path, with `[UnconditionalSuppressMessage]` kept only on the private helper and phrasing reused from `ResultJsonConverter`), and the raw overload. Reading is hand-rolled over `System.Text.Json` rather than `System.Net.Http.Json` for three reasons: null/absent content must map to `InvalidResponse` (not `ArgumentNullException`), only `JsonException`-family parse failures must map to `InvalidResponse` while `OperationCanceledException` propagates untouched, and the ProblemDetails body is read as raw bytes anyway for the module's own minimal RFC 9457 reader. That reader keeps unknown members (including `errors`) as extensions and `JsonElement.Clone()`s each extension so it stays detached from the disposed source `JsonDocument`. The caller-owned response is never disposed. Tests: 14 new public-interface tests (typed success, options success, raw success, exact-status theory, ProblemDetails with extension + `errors`, status-only non-problem, malformed-problem fallback, malformed success → `InvalidResponse`, no-dispose across the four paths, null arguments, cancellation-is-not-an-error); HttpClient.Tests 16 → 30, full suite 645 → 659.
