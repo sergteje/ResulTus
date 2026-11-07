@@ -28,7 +28,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T2 | S3 | inline | done | see L11 |
 | T3 | S4 | inline | deferred to P2 | — |
 | T4 | S5 | inline | done | see L12 |
-| T5 | S6 | inline | pending | — |
+| T5 | S6 | inline | done | see L14 |
 | T6 | S7, S8 | inline | pending | — |
 | T7 | S9 | inline | pending | — |
 
@@ -164,6 +164,27 @@ A separate verifier reviewed `git diff d50cbb4..4bbd109` in a scratch tree outsi
 One finding with real weight, now closed: **a bare `default` literal is ambiguous** between the eager `Error` parameter and `Func<Error>` (`CS0121`), where it compiled before. L12 predicted this risk in prose; the XML remarks of both deferred overloads now state it and point at `default(Error)` as the explicit form, and a test pins that `default(Error)` still binds the eager overload and stores that error. Three further advisories were recorded without code: an overloaded method-group factory (`Error Make()` beside `Error Make(int)`) needs a cast, but that shape did not compile at baseline either; `.Bind(v => Error.Forbidden("nope"))` compiles now through the implicit `Error`-to-`Result` conversion and returns a failure, which is new capability rather than a rebinding; and one never-compiling shape changed its compiler error code, which is not an output change for working code.
 
 Six probes were promoted to `tests/ResulTus.Extensions.Tests/EnsureFactoryAndProjectionVerifierTests.cs`: the method-group factory skipped on an existing failure, the explicitly typed `default(Error)` still binding eager, the value-aware factory receiving `default(int)`, sentinel-error preservation through `ToUnitResult` and the unit `Bind`, and a second allocation sweep over cached non-capturing delegates. After promotion the Extensions project is 149/149 and the suite is **562/562** with a 0-warning, 0-error build.
+
+### L14 — T5 completed: the `ResulTus.Testing` package
+
+S6 landed as a new project, `src/ResulTus.Testing`, targeting `net8.0` with `IsTrimmable` and `IsAotCompatible` like the rest of the libraries. Its only reference is the core `ResulTus` project: there is no `PackageReference` of any kind in the csproj, so no test framework or assertion library is a production dependency.
+
+`ResultAssertions` exposes six helpers, two per result shape:
+
+| Shape | `ShouldSucceed` returns | `ShouldFail` returns |
+| --- | --- | --- |
+| unit `Result` | the receiver | the `Error` |
+| `Result<T>` | the success value `T` | the `Error` |
+| `Result<TSuccess, TError>` | the success value | the typed error `TError` |
+
+Every helper returns the payload the caller usually wants next, so a test asserts on it without a cast or a second call. `ResultAssertionException` is sealed, lives in the same package, derives from `Exception`, and carries the actual error in the message — code, type and message for the `Error` tier, and the rendered typed error for the generic tier. One deliberate omission: `ShouldFail` on a successful `Result<T>` never puts the success value in the message, because a value that failed an assertion is data the test did not choose to print. A test pins that with a token-shaped string.
+
+Two of the package's own constraints are pinned by tests rather than trusted: the assembly's `TargetFrameworkAttribute` must read `.NETCoreApp,Version=v8.0`, and `GetReferencedAssemblies()` must contain nothing named `xunit`, `NUnit`, `MSTest`, `FluentAssertions` or `Microsoft.NET.Test.Sdk`. The second needed an `[UnconditionalSuppressMessage("Trimming", "IL2026")]` because the repository sets `IsTrimmable` for every project, test projects included, and `GetReferencedAssemblies()` is annotated as unsafe under trimming. That is a property of the test, not of the package.
+
+**RED → GREEN:** the two csproj files and their solution entries were created first as scaffolding, then the 16 tests were written and the project failed with 46 errors (`CS1061` for the missing helpers, `CS0246` for the missing exception type). After the implementation `tests/ResulTus.Testing.Tests` is 16/16, the solution build is 0 warnings and 0 errors, and the suite is **578/578**.
+
+**Risk:** none of items 1-6. Nothing references the new project, so no existing behavior can move; the work is a new directory plus two solution lines, and undoing it is deleting them. Worth stating explicitly rather than hiding: the project is packable by default, so a future `dotnet pack` over the solution will produce a `ResulTus.Testing` package. The repository has no CI, pack script or publishing configuration at all, so this change publishes nothing, and whether that package ships is the owner's decision under ordinary policy — which is why it is not counted as a release-surface risk here, and is noted for the P3 README instead.
+
 
 
 
