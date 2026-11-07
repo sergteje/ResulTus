@@ -202,22 +202,48 @@ public static class ResultCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(results);
 
-        var successes = new List<T>();
-        var failures = new List<Error>();
+        var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+        var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
+        var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
+        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        var successCount = 0;
+        var failureCount = 0;
 
-        foreach (var result in results)
+        try
         {
-            if (result.TryGetValue(out var value, out var error))
+            foreach (var result in results)
             {
-                successes.Add(value!);
-            }
-            else
-            {
-                failures.Add(error);
-            }
-        }
+                if (result.TryGetValue(out var value, out var error))
+                {
+                    if (successCount == successBuffer.Length)
+                    {
+                        successBuffer = Grow(successBuffer, successCount, clearOnReturn);
+                    }
 
-        return (successes.ToArray(), failures.ToArray());
+                    successBuffer[successCount++] = value!;
+                }
+                else
+                {
+                    if (failureCount == failureBuffer.Length)
+                    {
+                        failureBuffer = Grow(failureBuffer, failureCount, clearErrorsOnReturn);
+                    }
+
+                    failureBuffer[failureCount++] = error;
+                }
+            }
+
+            var successes = new T[successCount];
+            Array.Copy(successBuffer, successes, successCount);
+            var failures = new Error[failureCount];
+            Array.Copy(failureBuffer, failures, failureCount);
+            return (successes, failures);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
+            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+        }
     }
 
     /// <summary>
@@ -612,21 +638,48 @@ public static class ResultCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(results);
 
-        var successes = new List<T>();
-        var failures = new List<Error>();
-        for (var index = 0; index < results.Length; index++)
-        {
-            if (results[index].TryGetValue(out var value, out var error))
-            {
-                successes.Add(value!);
-            }
-            else
-            {
-                failures.Add(error);
-            }
-        }
+        var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+        var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
+        var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
+        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        var successCount = 0;
+        var failureCount = 0;
 
-        return (successes.ToArray(), failures.ToArray());
+        try
+        {
+            for (var index = 0; index < results.Length; index++)
+            {
+                if (results[index].TryGetValue(out var value, out var error))
+                {
+                    if (successCount == successBuffer.Length)
+                    {
+                        successBuffer = Grow(successBuffer, successCount, clearOnReturn);
+                    }
+
+                    successBuffer[successCount++] = value!;
+                }
+                else
+                {
+                    if (failureCount == failureBuffer.Length)
+                    {
+                        failureBuffer = Grow(failureBuffer, failureCount, clearErrorsOnReturn);
+                    }
+
+                    failureBuffer[failureCount++] = error;
+                }
+            }
+
+            var successes = new T[successCount];
+            Array.Copy(successBuffer, successes, successCount);
+            var failures = new Error[failureCount];
+            Array.Copy(failureBuffer, failures, failureCount);
+            return (successes, failures);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
+            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+        }
     }
 
     /// <summary>
@@ -640,21 +693,48 @@ public static class ResultCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(results);
 
-        var successes = new List<T>();
-        var failures = new List<Error>();
-        for (var index = 0; index < results.Count; index++)
-        {
-            if (results[index].TryGetValue(out var value, out var error))
-            {
-                successes.Add(value!);
-            }
-            else
-            {
-                failures.Add(error);
-            }
-        }
+        var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+        var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
+        var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
+        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        var successCount = 0;
+        var failureCount = 0;
 
-        return (successes.ToArray(), failures.ToArray());
+        try
+        {
+            for (var index = 0; index < results.Count; index++)
+            {
+                if (results[index].TryGetValue(out var value, out var error))
+                {
+                    if (successCount == successBuffer.Length)
+                    {
+                        successBuffer = Grow(successBuffer, successCount, clearOnReturn);
+                    }
+
+                    successBuffer[successCount++] = value!;
+                }
+                else
+                {
+                    if (failureCount == failureBuffer.Length)
+                    {
+                        failureBuffer = Grow(failureBuffer, failureCount, clearErrorsOnReturn);
+                    }
+
+                    failureBuffer[failureCount++] = error;
+                }
+            }
+
+            var successes = new T[successCount];
+            Array.Copy(successBuffer, successes, successCount);
+            var failures = new Error[failureCount];
+            Array.Copy(failureBuffer, failures, failureCount);
+            return (successes, failures);
+        }
+        finally
+        {
+            ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
+            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+        }
     }
 
     /// <summary>

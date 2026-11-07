@@ -319,6 +319,25 @@ T4 adds the indexed overloads for `Result[]` and `IReadOnlyList<Result>`, so onl
 
 **Readout:** both sources stay at 0 B, which is the point of the change. The array row moved 21% faster and the list row 4% slower; both are single-run comparisons against a different run, and §2 requires a non-overlapping confidence interval plus a reproducing second run before a difference counts as a fact, so no speed claim is made here. The `IEnumerable<T>` overloads are untouched and remain the control.
 
+#### P1/T5 — `Partition` pooled buffers — remeasured 2026-11-07
+
+`Partition` now rents both buffers and copies into exactly sized arrays instead of growing two `List<T>`. Two post-change samples were taken with the same BenchmarkDotNet 0.15.8 `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14: one full 14-row collection run and one filtered run containing only these two rows.
+
+| Method | Source | Pre-change (two runs) | Post-change (two runs) |
+| --- | --- | ---: | ---: |
+| Partition | Array | 2.858 μs / 12,480 B · 3.930 μs / 12,480 B | 3.756 μs / 4,048 B · 4.131 μs / 3.95 KB |
+| Partition | List | 3.150 μs / 12,480 B · 3.409 μs / 12,480 B | 4.456 μs / 4,048 B · 4.557 μs / 3.95 KB |
+
+**Readout — allocation wins, list time loses.** Allocation drops 67% on both sources, from 12,480 B to the two exactly sized output arrays, and stays at that level across both samples. Time does not follow:
+
+- **Array: no resolvable difference.** The two post-change means (3.756, 4.131 μs) bracket the second pre-change mean (3.930 μs) and their intervals overlap it. No claim either way.
+- **List: a loss, reproduced.** Both post-change means (4.456 ± 0.021, 4.557 ± 0.061 μs) sit outside the intervals of both pre-change means (3.150, 3.409 ± 0.068 μs), so by §2 this is a fact, not noise: roughly 30% slower.
+
+**Cause.** The `IEnumerable<T>` overload is the one that lost. `List<T>` growth is amortized and `ToArray()` copies once from a contiguous block whose count is already known; the pooled version adds a rent, a capacity test per element, a copy per output array and a return, and saves only the intermediate arrays. The indexed array and read-only-list overloads read the count up front, so they pay the same rent/copy/return without the growth they were never paying before.
+
+**Why it is tracked rather than reverted.** §2 makes allocation a hard rule with no tolerance and speed a comparative question. The operation now allocates the minimum possible (its two output arrays, which it must return), which is what P1 exists to achieve. The ~1.1 ns per element on a 1,000-element list is accepted as the price of that floor, the same class of trade as the array `Traverse` row above.
+
+
 ### Serialization — P0 baseline and P1 remeasurements — measured 2026-11-06
 
 `SerializationOperationBenchmark` measures the factory-based `AddResulTusConverters()` path with `DefaultJob`. The `Result<int>[]` rows use 1,000 successful values and expose the per-element converter lookup. Input JSON and serializer options are prepared in `GlobalSetup`; benchmark outputs escape through instance sinks read in `GlobalCleanup`.
@@ -437,6 +456,7 @@ Measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, post-B1 (`Error` 24 
 | **Array traversal vs competitors** | **Fixed 2026-10-29 — it is a loss.** Measured in §4.4: 1.25x–1.47x slower than every 16-byte competitor on the success path. The 32 B inline error is the cause and the trade is deliberate. Kept here as a standing fact, not an open question. |
 | **Array-specific collection Traverse vs its IEnumerable path** | **Performance follow-up deferred by the owner 2026-11-06.** P1/T3 measured 7.447 μs / 4,024 B for the indexed array overload and 3.055 μs / 4,056 B for the IEnumerable control in one run. The indexed overload saves 32 B but is slower; do not claim a speed win. |
 | **Indexed materializer allocation on the failure path** | **Open — introduced by P1/T3, found by independent verification 2026-11-07.** The array and read-only-list `Sequence`/`Traverse` overloads allocate their output array before the first failure is known. A 1,000-element source that fails at index 0 costs **4,024 B**, against **32 B** for the `IEnumerable<T>` path, which only allocates its enumerator. Success-path allocation is unchanged (the output array). This contradicts the §2 rule that allocation is 0 B on the failure path. Not a behavior change; needs an owner decision: pre-scan images for `Sequence`, rent a pooled buffer and copy, or accept and keep this row. |
+| **Indexed `Partition` time on lists** | **Documented structural difference 2026-11-07.** P1/T5 cut `Partition` allocation from 12,480 B to 4,048 B on both sources and made the list overload ~30% slower (4.456 and 4.557 µs against 3.150 and 3.409 µs, reproduced, intervals not overlapping). The allocation floor is the mandatory §2 rule; the time cost is the accepted price, measured in §4.7. |
 
 Every gap in this table must eventually resolve to one of: **fixed**, **noise-floor tie**, or **documented structural difference**. "We are close enough" is not a resolution.
 
@@ -444,4 +464,5 @@ Every gap in this table must eventually resolve to one of: **fixed**, **noise-fl
 
 - A result type change that regresses any row outside the noise floor does not merge.
 - A new benchmark row must be added to this document in the same commit that adds the benchmark.
+- **A benchmark run measures only the rows the change affects.** Filter to the specific benchmarks (`--filter "*Class.Method*"`) and run the whole suite only when the owner explicitly asks for a full run. An unfiltered run is minutes of measurement that answers nothing about the change under review.
 - This charter is the authority. If a benchmark contradicts it, the charter wins and the benchmark is suspect.

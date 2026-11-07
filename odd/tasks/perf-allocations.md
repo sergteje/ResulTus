@@ -34,7 +34,7 @@ Risk: item 3 (contracts others consume) for T3 and T4 only — see L6. T1 and T2
 | T2 | S2 | inline | done | `95eccbe` |
 | T3 | S3 (non-unit collections) | inline | done | `548db66` |
 | T4 | S3 (unit collections) | inline | done | this commit |
-| T5 | S4 | inline | pending | — |
+| T5 | S4 | inline | done | this commit |
 | T6 | S5, S6, S7 | inline | pending | — |
 
 ## Log
@@ -143,4 +143,18 @@ Three advisories were recorded:
 1. **Fixed in this commit.** The `ResultCollectionExtensions` class summary still claimed to cover only `IEnumerable<T>`.
 2. **Open in `docs/performance.md` §7 — owner decision needed.** The indexed `Sequence`/`Traverse` allocate the output array before the first failure is known: 4,024 B for a 1,000-element source failing at index 0, against 32 B for the `IEnumerable<T>` path. This contradicts the §2 rule that allocation is 0 B on the failure path. Options: pre-scan for `Sequence` only (impossible for `Traverse`, whose selector must run), rent and copy, or accept and track.
 3. **Pre-existing, unchanged.** `List<T>.ForEach` instance method shadows the `ForEach` extension for a statically typed `List<T>` receiver and does not short-circuit. It reproduces identically at `00a5ff9`; the list overloads are exercised through `IReadOnlyList<T>`-typed variables, which is the documented usage.
+
+### L16 — T5 `Partition` pooling completed
+
+All three `Partition` overloads now rent a `T[]` and an `Error[]` from `ArrayPool.Shared`, grow through the existing `Grow` helper, copy into exactly sized arrays and return both buffers in a `finally` with `RuntimeHelpers.IsReferenceOrContainsReferences<T>()` and `<Error>()` as clear flags. `InitialCapacity` and `Grow` were reused rather than a second buffering pattern. Public signatures, tuple shape and order, null guards and output values are unchanged.
+
+**RED → GREEN:** the allocation test expected the two output arrays and measured **688,896 B** against a **224,768 B** hand-written two-array baseline over 16 iterations — a 464,128 B delta from `List<T>` growth plus `ToArray()`. After the change it measures **224,768 B**, a delta of 0, for both the array and the read-only-list overloads.
+
+**Verification:** `dotnet test tests\ResulTus.Collections.Tests\...` → 56/56 passed (53 pre-existing + 3 new). `dotnet build ResulTus.slnx` → 0 warnings, 0 errors.
+
+**Out of scope, by design:** the `IEnumerable<Result<T>>` overload still uses `foreach` and therefore still pays the enumerator. S3 keeps that overload unchanged, and L6 requires it.
+
+**Charter:** `docs/performance.md` §4.7 records two post-change samples. Allocation drops 67% on both sources, 12,480 B → the two exactly sized output arrays. Time does not follow: the array rows show no resolvable difference, and the list rows are a reproduced ~30% loss (4.456 and 4.557 µs against 3.150 and 3.409 µs pre-change, intervals not overlapping). Per §5 that is a **loss, tracked and explained, not hidden**: the pooled path buys the mandatory allocation floor with ~1.1 ns per element on a 1,000-element list. §8 now also requires benchmark runs to be filtered to the affected rows unless the owner asks for a full run.
+
+
 
