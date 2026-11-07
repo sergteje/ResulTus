@@ -54,6 +54,30 @@ public static class ResultExtensions
     }
 
     /// <summary>
+    /// Combines two results into one holding both success values in argument order, or returns the
+    /// first failure.
+    /// </summary>
+    /// <typeparam name="TFirst">The type of the first success value.</typeparam>
+    /// <typeparam name="TSecond">The type of the second success value.</typeparam>
+    /// <param name="first">The first result.</param>
+    /// <param name="second">The second result.</param>
+    /// <returns>A success holding both values, or the first error in argument order.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Result<(TFirst First, TSecond Second)> Combine<TFirst, TSecond>(
+        this Result<TFirst> first,
+        Result<TSecond> second)
+    {
+        if (!first.TryGetValue(out var firstValue, out var firstError))
+        {
+            return Result<(TFirst First, TSecond Second)>.Failure(firstError);
+        }
+
+        return second.TryGetValue(out var secondValue, out var secondError)
+            ? Result<(TFirst First, TSecond Second)>.Success((firstValue!, secondValue!))
+            : Result<(TFirst First, TSecond Second)>.Failure(secondError);
+    }
+
+    /// <summary>
     /// Transforms the error of a failed result, leaving a success untouched.
     /// </summary>
     /// <typeparam name="T">The type of the success value.</typeparam>

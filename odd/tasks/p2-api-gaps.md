@@ -24,7 +24,7 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S0 | inline | pending | — |
+| T1 | S1, S0 | inline | done | this commit |
 | T2 | S2 | — | blocked — spec undefined | — |
 | T3 | S3 | — | blocked — spec undefined | — |
 | T4 | S4 | — | blocked — spec undefined and risk assessment required | — |
@@ -43,3 +43,12 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 ### L3 — state at start
 
 P1 is closed: `docs/performance.md` records the allocation work and its two tracked differences, and the suite is 476/476 with a 0-warning build. `api-completion.md` already delegated its `Combine` task (T3/S4) to P2 so the member exists exactly once; that spec is the only fully defined item in this document. The other four names are scope, not specification: each needs its semantics decided by the owner before a spec, a task, or a line of code exists.
+
+### L4 — T1 binary `Combine` completed
+
+`ResultExtensions.Combine<TFirst, TSecond>(this Result<TFirst> first, Result<TSecond> second)` returns `Result<(TFirst First, TSecond Second)>`. It checks the first result before touching the second, so a first failure short-circuits, and a second failure propagates only when the first succeeded. The tuple preserves argument order and the failure keeps the first error in argument order.
+
+**RED → GREEN:** the tests were written first and the project failed to compile with four `CS1061: "Result<int>" no contiene una definición para "Combine"` errors, which is the RED evidence for a new API. After the implementation, `tests\ResulTus.Extensions.Tests` is 84/84 (80 pre-existing + 4 new). Full solution build is 0 warnings and 0 errors, and the suite is 480/480.
+
+**Risk:** item 3 (contracts others consume). The member is additive and nothing else in the library is named `Combine` for `Result<T>`, but a new extension can still change overload resolution at a call site that today binds elsewhere, so this unit goes to independent verification.
+
