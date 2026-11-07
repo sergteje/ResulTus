@@ -30,7 +30,7 @@ Risk: none anticipated. New APIs are additive; existing behavior must remain unc
 | T4 | S5 | inline | done | see L12 |
 | T5 | S6 | inline | done | see L14 |
 | T6 | S7, S8 | inline | done | see L15 |
-| T7 | S9 | inline | done | see L17 |
+| T7 | S9 | delegated direct | done | see L17, L18 |
 
 ## Log
 
@@ -259,6 +259,20 @@ All failure detection reads the receiver through `Deconstruct` — the only valu
 **RED → GREEN:** the tests were written first. The Collections test project failed with 39 errors — `CS0411`×28 (type inference failed because no typed-tier overload exists) and `CS1929`×11 (no `Fold` accepts a typed-result receiver). After the implementation `tests/ResulTus.Collections.Tests` is 84/84 (20 new), the solution build is 0 warnings and 0 errors, and the suite is **620/620** (baseline 600). No async variants and no LINQ-query syntax were added, per the owner's P2 rejection.
 
 **Risk:** item 3 (contracts others consume) — nine new public extension members in a shipped package. The overload-resolution concern from L12/L13 does not extend here because the typed receivers are disjoint from every existing overload, but the two binding pins above exist precisely so a future change that did overlap would fail loudly.
+
+### L18 — independent verification of T7 and the promoted probes
+
+A separate verifier reviewed `git diff 7744e08..0a961e0` in a scratch tree outside the workspace, with home, temp and NuGet variables redirected.
+
+**Verdict: S9 pass on every clause. No blockers.** The 135-check consumer probe found zero failures: failures placed at every index position, across all three source shapes, return the exact first-failure object by reference; selector and accumulator invocation counts track the failing index exactly (fail-fast, with lazy sources stopped at the failing element for both `Traverse` and `Sequence`); two distinct failure objects resolve to the lowest index; order is preserved with duplicates. A reference-type `TError`-identity check — the only proof that "the exact first error object" is preserved rather than merely an equal one — passed on all nine members. The API delta is exactly one type plus the nine methods, no other assembly moved a byte, the RED replay reproduced the 39 errors (`CS0411`x28, `CS1929`x11) against the baseline tree, and there are no async or query-syntax members.
+
+**Allocation readings (all with a live sensitivity control):** array/list `Fold` 0 B; array/list `Sequence`/`Traverse` byte-equal to the hand-written output array; the IEnumerable steady state is the output array only, and its failure path reads **0 B**; the 32 B an array-backed success path shows is the BCL array enumerator, which an equivalent hand-written `foreach` over the interface also pays — the library adds nothing.
+
+**Advisories, none change-caused.** (1) Array/list `Sequence`/`Traverse` allocate their exact output array before scanning, so a failure at index 0 discards it — the pre-existing generic tier (`ResultCollectionExtensions`) does the same, and the 0 B rule names the non-materializing operations, so this is documented behavior, not a breach. (2) The 32 B enumerator cost is the caller's, not the library's. (3) A throwing selector/accumulator adds a constant 272 B from deeper stack capture, not a buffer; repeating an enumeration 200 times over a failure path reads 0 B and never surfaces a pool error — the rented pool buffers are returned through the `finally`.
+
+**Promoted to `tests/ResulTus.Collections.Tests/TypedResultCollectionVerifierTests.cs` (9 test cases):** the any-position first-failure matrix across all nine members, the two-failure lowest-index case with an instrumented accumulator, the lazy-source stop-at-failing-element consumption count, the grown-pool no-aliasing check, `Fold` 0 B with a live sensor, materializing overloads byte-equal to hand-written equivalents on all three shapes, and the throwing-selector pool-boundedness run. During promotion three verifier transcription-level assertion mismatches were corrected instead of forced through: the IEnumerable equivalent must enumerate through the same `(IEnumerable<T>)` cast so both sides pay the same 32 B enumerator, `list.ToArray()` must be hoisted out of the measured lambda because its copy is caller cost, and the throwing-ternary probe needed an Action-shaped call. After promotion Collections is **93/93** over three consecutive runs and the suite is **629/629**, 0-warning build.
+
+**Feature state:** `api-completion` is complete. T1 (verified), T2 (assessed), T4 (verified), T5 (assessed `none`), T6 (verified, pending-clause decision recorded by the owner), T7 (verified) are done; T3 stays deferred to P2 as recorded. Per the roadmap, the next feature is `ResulTus.HttpClient`, then P3 README.
 
 
 
