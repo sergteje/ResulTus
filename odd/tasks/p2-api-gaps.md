@@ -4,7 +4,7 @@ Objective: implement the API gaps the owner named after P1 closed, keeping every
 
 Test runner: `dotnet test ResulTus.slnx`; targeted projects run alone first. Delivery strategy: `auto-chain`. Push, PR creation and merge remain the owner's decisions.
 
-Risk: **T1 carries item 3** (contracts others consume) because it adds a public `Combine` overload that can change overload resolution next to the existing `IEnumerable<Result>` unit overload. Everything else is unclassified until its spec exists; the multi-error item, if it reaches the core `Error` layout, would carry item 1 and item 3 and must be assessed before implementation.
+Risk: **T1 carried item 3** (contracts others consume) because it added a public `Combine` overload next to the existing `IEnumerable<Result>` unit overload; it was independently verified with no blockers. The four rejected items carry no risk because no code was written for them; the multi-error item would have carried items 1 and 3 had the core `Error` layout changed, which is part of why it was rejected.
 
 ## Specs
 
@@ -18,7 +18,7 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 
 - **S4 — multi-error inside `Error`. REJECTED by the owner 2026-11-07 (L8).** Aggregation already exists outside `Error`: `ValidationErrors` holds N `ValidationIssue` values and `ToError()` collapses them into one `Error`, and the typed tier already carries any error type, so `Result<TSuccess, ValidationErrors>` expresses multiple failures without losing any. Putting a collection inside `Error` would require a third reference field, growing `Error` from 24 B to 32 B and `Result<int>` from 32 B to 40 B, which reverses decision 001 — the decision that removed the `Metadata` dictionary for exactly this reason — and would reintroduce an allocation on the failure path that P1 measured at 0 B. No member is added and `Error` keeps its layout.
 
-- **S5 — `StackResult`.** **Assumption pending owner definition.** No semantics recorded beyond the name. Open questions: whether it is a stack-only result (a `ref struct` with `ISpanFormattable`-style zero-allocation behavior), a result that carries a captured stack trace, or a result type usable as a stack frame for nested error propagation. Each of those is a different feature with different constraints; the name alone does not select one.
+- **S5 — `StackResult`. REJECTED by the owner 2026-11-07 (L9).** Each plausible reading is either already true or already closed: as a stack-only `ref struct` it would add restrictions (no class field, no `async`, no boxing, no lambda capture) for a 0 B guarantee the existing struct already meets by measurement; as a captured stack trace it needs a field in `Error`, which S4 just rejected, and S3 already defines `Error.FromException` without a trace; as a stack of nested errors it is S4 again. No type is added.
 
 ## Tasks
 
@@ -28,7 +28,7 @@ Risk: **T1 carries item 3** (contracts others consume) because it adds a public 
 | T2 | S2 | — | closed — rejected by the owner | — |
 | T3 | S3 | — | closed — rejected by the owner | — |
 | T4 | S4 | — | closed — rejected by the owner | — |
-| T5 | S5 | — | blocked — spec undefined | — |
+| T5 | S5 | — | closed — rejected by the owner | — |
 
 ## Log
 
@@ -93,5 +93,13 @@ The owner was shown the measured constraint rather than a preference: `Error` is
 S4 is closed. Aggregation stays where it already works: `ValidationErrors` for validation issues, and `Result<TSuccess, TError>` with any error type the caller chooses, `ValidationErrors` included, when several failures must survive together. `Error` keeps its layout, decision 001 stands unchanged, and P1's measurements remain valid.
 
 One P2 item remains undefined — `StackResult`.
+
+### L9 — `StackResult` rejected by the owner, and P2 closed
+
+The owner was shown the three readings the name admits and what each one costs. Answered verbatim:
+
+> No agregarlo (Recomendado)
+
+S5 is closed with no type. P2 is now complete: one implementable item, the binary `Combine`, shipped and verified; four names that were scope rather than specification (`FailIf`, query syntax, multi-error inside `Error`, `StackResult`), each rejected by the owner with a recorded reason and none of them added to the API. No P2 item remains open, so the gate S8 of `api-completion.md` placed in front of that feature's remaining tasks is released.
 
 
