@@ -222,7 +222,7 @@ The two cells that do separate cleanly are both failure paths, and both favour t
 ### Migration notes
 
 - **`Error` stays a `readonly record struct`** (spec line 5). Converting it into a class would make `default(Error)` null and break every `Deconstruct(out bool, out T, out Error)` caller. This is the second reason Option A is rejected.
-- **`Metadata` was a spec feature**, not an implementation detail: `ER-2`, `ER-3` and `ER-6` defined it. B1 was therefore a **spec amendment** as well as a code change; all three requirements and the scenarios that asserted it were amended in `openspec/specs/result-core/spec.md`.
+- **`Metadata` was a spec feature**, not an implementation detail: `ER-2`, `ER-3` and `ER-6` defined it. B1 was therefore a **spec amendment** as well as a code change; all three requirements and the scenarios that asserted it were amended in [`odd/specs/result-core.md`](../../odd/specs/result-core.md).
 - **`[StructLayout(Pack = 1)]` now lives only where it does measurable work.** Removed from `Error` (runtime forced realignment: 40 B with and without it) and from `Result<T>` (its inline `Error` holds references, so the same realignment applies and the attribute is inert — `Result<int>` measures 32 B either way). It stays on `Result<TSuccess, TError>`, where it is honored when the error type holds no references and produces the measured 13 B generic tier instead of 16 B. See the section above.
 - **Nothing about `Error.None` needed to change.** It stays a property that builds a struct, which costs no allocation. Option A would have forced it into a cached singleton.
 - **`AllocationBenchmark.ResulTus_Failure_Allocation` stays at `0 B` and is now the assertion target for P3**, not an accidental bonus. `LayoutTests.FailurePath_ShouldNotAllocate` pins it in the unit suite.
@@ -257,7 +257,7 @@ The two cells that do separate cleanly are both failure paths, and both favour t
 - [Result{T}.cs](../../src/ResulTus/Result%7BT%7D.cs) — the 32-byte instantiation
 - [Error.cs](../../src/ResulTus/Error.cs) — the 24-byte payload, `Pack = 1` removed
 - `tests/ResulTus.Tests/LayoutTests.cs` — pins every size in P2 and the zero-allocation failure path
-- `openspec/specs/result-core/spec.md` — RV-10, RT-13, RG-7 (both-path allocation), ER-2, ER-3, ER-6 (no untyped payload)
+- [result-core.md](../../odd/specs/result-core.md) — RV-10, RT-13, RG-7 (both-path allocation), ER-2, ER-3, ER-6 (no untyped payload)
 
 ## Next
 

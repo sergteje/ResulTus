@@ -217,3 +217,24 @@ The last row corrects a wrong statement made in L13, where `openspec/` was descr
 Commit `d4cbb84` tracks `AGENTS.md` and documents each remaining entry in place, including a note telling future readers not to add the file back.
 
 **On the `Match` learning.** It is a documentation defect, not a library defect. `Match<TResult>` requires both arms to return the same `TResult`; with `Console.WriteLine` as the arm body there is no value to infer, so the example could not compile. The library already has a named terminal for side effects — `Switch(this Result<T>, Action<T>, Action<Error>)` in `src/ResulTus.Extensions/ResultExtensions.cs` — so no `Action` overload of `Match` is needed and none was added.
+
+### L16 — owner deletes openspec (verbatim)
+
+> Dale, y el openspec a borrar
+
+> Vale pues si no las quieres borrar muevelas o metelos en odd?
+
+The 18 tracked `openspec/` files were removed, with one file preserved by move rather than dropped:
+
+| Path | Outcome |
+| --- | --- |
+| `openspec/specs/result-core/spec.md` | **moved to `odd/specs/result-core.md`** (8 KB, no internal links to rewrite) |
+| `openspec/changes/phase-1..11/proposal.md` (16 files) + `apply-progress`, `design`, `exploration`, `tasks`, `verify-report` for phase 1 + `config.yaml` | deleted from the repository, recoverable from history |
+
+The move is not sentimentality. Two live documents cited that spec: `docs/decisions/001-result-struct-size.md` referenced it twice, and an accepted ADR must not point at a path that no longer exists. Both citations now read `../../odd/specs/result-core.md`. The destination follows the owner's second instruction: the specification artifact belongs next to the ODD documents, not under `docs/`, which holds guides and measured numbers.
+
+The remaining `openspec/changes/*` proposals are superseded roadmap input; the `odd/tasks/phase-*.md` records quote the scoped parts inline, so nothing load-bearing is lost, and `git log` still holds the originals.
+
+The `.gitignore` entry went with the directory — an ignore rule for a path that no longer exists is just noise, and if an old SDD tool ever recreates it, the reappearance should be visible instead of silently hidden.
+
+**Deletion is not a review candidate**: no code, no contract, no build input. After the move, `dotnet build ResulTus.slnx` returned 0 warnings / 0 errors and `dotnet test ResulTus.slnx --no-build` returned **670 passed, 0 failed, 0 skipped**, so nothing resolved those paths.

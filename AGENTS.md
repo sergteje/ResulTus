@@ -32,6 +32,10 @@ your work covered. On resume, reconcile the file with the Engram mirror under
 the document and work-unit commits on the feature branch. Push, pull-request creation and merge
 always remain the owner's decision.
 
+`odd/specs/` holds the durable specifications that outlive a single feature — today the
+`result-core` contract migrated from the retired SDD phase. `docs/` holds guides and measured
+numbers instead; do not mix the two.
+
 ## Agents
 
 - `gentle-orchestrator` — plans, writes inline by default, owns product decisions and git.
