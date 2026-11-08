@@ -59,7 +59,7 @@ The repository state is ready for it: `git rev-list --count HEAD..origin/main` i
 
 ```bash
 gh auth login
-gh pr create --base main --head feature-1 --title "Release 0.0.1 — first versioned release" --body-file .git/PR_BODY.md
+gh pr create --base main --head feature-1 --title "feat: add ResulTus 0.0.1, a zero-allocation Result library for .NET" --body-file .git/PR_BODY.md
 ```
 
 The body was drafted here rather than in the repository, because a PR description is not a tracked artifact. `--fill` also works if the owner prefers the commit-derived body.
