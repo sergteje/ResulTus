@@ -35,13 +35,13 @@ Risk: none. No code, no public API, no behavior.
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S2 | inline | done | — |
-| T2 | S3, S4 | inline | done | — |
-| T3 | S7 | inline | done | — |
-| T4 | S8 | inline | done | — |
-| T5 | S9 | inline | done | — |
-| T6 | S5, S6, S10 | inline | pending | — |
-| T7 | S11 | inline | done | — |
+| T1 | S1, S2 | inline | done | 1ca3a8e |
+| T2 | S3, S4 | inline | done | 1ca3a8e |
+| T3 | S7 | inline | done | 1ca3a8e |
+| T4 | S8 | inline | done | 1ca3a8e |
+| T5 | S9 | inline | done | 0d4eff9 |
+| T6 | S5, S6, S10 | inline | done | see L14 |
+| T7 | S11 | inline | done | 540561f |
 
 ## Log
 
@@ -127,7 +127,7 @@ A delegated writer produced a draft of `README.md` before its session was cancel
 | Collections readout said `Partition` "allocates its two output arrays" while the table shows 12,480 B | the P0 row grows two lists; the readout now states the P1/T5 cut to 4,048 B and surfaces the two documented losses (array `Traverse`, pooled `Partition` on lists) |
 | The emitted factory body was shown as a `csharp` block | it cannot compile as source (it would duplicate the method); it is now an inline code span |
 
-**S5 evidence.** The 13 `csharp` blocks were extracted from the file by regex into a scratch `net10.0` project referencing six `src/` projects plus the source generator as an analyzer, with `TreatWarningsAsErrors=true`: **0 warnings / 0 errors**. The same harness compiled `README.es.md`.
+**S5 evidence.** The 13 `csharp` blocks were extracted from the file by regex into a scratch `net10.0` project referencing five `src/` projects plus the source generator as an analyzer, with `TreatWarningsAsErrors=true`: **0 warnings / 0 errors**. The same harness compiled `README.es.md`.
 
 **S8 provenance, series by series.** Creation §4 · Matching §4 · Allocation §4 · Failure path §4.6 · Struct size §4.2 · Array traversal §4.4 · Collections §4 baseline plus the P1/T3–T5 subsections · Serialization §4 · Logging §4 · Validation §4. Every row quoted verbatim; no series estimated, and a series with no recorded rows is absent.
 
@@ -162,3 +162,37 @@ What the new file states, each claim checked against the repository rather than 
 - **Source control** — Conventional Commits, no attribution, no push or merge without instruction.
 
 Thirteen `src/` projects confirmed on disk, matching the README package table.
+
+**Tracking decision.** `AGENTS.md` is listed in `.gitignore` under "Development artifacts (not for GitHub)", together with `.vs/`, `openspec/` and `.atl/`. That is a deliberate repository policy, so the refreshed file stays local and was **not** force-added. Only this log entry is committed. If the owner wants agent instructions shared with other clones, the `.gitignore` rule has to change first — that is the owner's call, not a documentation edit.
+
+### L14 — T6 gate: build, suite and snippet compilation (2026-11-08)
+
+**Build gate.** `dotnet build ResulTus.slnx` → **0 warnings, 0 errors**.
+
+**Suite gate.** `dotnet test ResulTus.slnx --no-build` → **670 passed, 0 failed, 0 skipped**:
+
+| Test project | Passed |
+| --- | ---: |
+| ResulTus.Extensions.Tests | 149 |
+| ResulTus.Collections.Tests | 93 |
+| ResulTus.Serialization.Tests | 86 |
+| ResulTus.Tests | 60 |
+| ResulTus.SourceGenerators.Tests | 50 |
+| ResulTus.HttpClient.Tests | 41 |
+| ResulTus.AspNetCore.Tests | 41 |
+| ResulTus.Analyzers.Tests | 41 |
+| ResulTus.Logging.Tests | 36 |
+| ResulTus.Diagnostics.Tests | 29 |
+| ResulTus.Validation.Tests | 28 |
+| ResulTus.Testing.Tests | 16 |
+| **Total** | **670** |
+
+**S5 gate.** The 13 `csharp` blocks extracted by regex from `README.md` were assembled into a scratch `net10.0` project that references five `src/` projects — `ResulTus`, `Extensions`, `Collections`, `Serialization`, `HttpClient` — plus `ResulTus.SourceGenerators` as an analyzer with `ReferenceOutputAssembly=false`, all under `TreatWarningsAsErrors=true`. Result: **0 warnings, 0 errors**. The same harness compiled `README.es.md` with the same result. Both scratch projects lived outside the worktree and were deleted after the run; no artifact entered the repository.
+
+**Parity gate (S9).** Mechanical comparison of the two editions: 13 code blocks each and **byte-identical** block by block; 24 `##`/`###` headings each; 151 numeric tokens each with equal multisets (`Compare-Object` reported no token present in only one edition).
+
+**Scope note.** `dotnet test` ran in Debug, the default. A separate Release-mode run shows three `ResulTus.Collections.Tests` allocation tests reading 24 L where they expect 0 B; that finding predates this feature, is not caused by any change here, and is queued for the next session rather than silently accepted.
+
+**Where T6's commit lives.** The task was complete when `1ca3a8e` and `0d4eff9` landed; this entry records the gate evidence, so the table points here instead of at a hash that would be its own commit.
+
+**Native assessment.** `gentle-ai review assess --base-ref 47e84ed --committed-only --json` over the whole feature range returned `risk: passive` (`non_executable_only`), `review_due: false`, `review_due_reason: passive`. 3 changed paths, 991 changed lines, all Markdown. No native review was opened, which is the intended behaviour for a documentation-only candidate. Push, pull request and merge stay with the owner.
