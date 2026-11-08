@@ -10,7 +10,7 @@ Risk: item 5 (delivery/release). The version string reaches consumers through th
 
 - **S1 — no document points at a path that no longer exists.** The **13 `openspec/` citations across 10 `odd/tasks/*.md` records** must resolve or state where the original lives. Two files are excluded because they already explain the retirement: `docs-readme.md` (its log entries) and `phase-11-ci-cd.md` (its own header). Historical wording stays untouched: the record said what it said, and rewriting history to look tidy is worse than annotating it. Quote from the owner's instruction: "Documentation y entrega está sera la version 0.0.1".
 - **S2 — the deliverable carries version 0.0.1.** `Directory.Build.props` sets it once for all thirteen packages; no project overrides it.
-- **S3 — delivery is one reviewable pull request** from `feature-1` to `main`, opened by the owner, never by an agent.
+- **S3 — delivery is one reviewable pull request** from `feature-1` to `main`. An agent opens it only with explicit owner authorization; without that authorization the pull request stays the owner's action. Quote from the owner's authorization: "ya me he autorizado, prueba de nuevo".
 - **S4 — nothing is published from this feature.** No NuGet push, no tag without an explicit owner instruction; the release workflow does not exist yet.
 - **S5 — 0.0.1 ships a changelog.** `CHANGELOG.md` in Keep a Changelog form, written from what actually shipped and not from assumptions; a released version documents itself in the same commit that ships it. Quote from the owner's instruction: "Hara falta además de un changelog me imagino haz T3".
 
@@ -20,7 +20,7 @@ Risk: item 5 (delivery/release). The version string reaches consumers through th
 | --- | --- | --- | --- | --- |
 | T1 | S1 | inline | done | see L2 |
 | T2 | S2 | inline | done | see L2 |
-| T3 | S3 | owner | blocked | — |
+| T3 | S3 | owner | done | [PR #1](https://github.com/sergteje/ResulTus/pull/1), see L4 |
 | T4 | S4 | owner | pending | — |
 | T5 | S5 | inline | done | see L3 |
 
@@ -63,3 +63,24 @@ gh pr create --base main --head feature-1 --title "feat: add ResulTus 0.0.1, a z
 ```
 
 The body was drafted here rather than in the repository, because a PR description is not a tracked artifact. `--fill` also works if the owner prefers the commit-derived body.
+
+### L4 — owner authorizes, pull request opened (2026-11-08)
+
+**Owner authorization (verbatim):**
+
+> ya me he autorizado, prueba de nuevo
+
+**T3, S3 done.** `gh auth status` now reports *"Logged in to github.com account sergteje (keyring)"* with scopes `gist`, `read:org`, `repo`, `workflow`, so the blocked state in L3 was a missing credential and nothing else. `gh pr create` was re-run with the same title and body file and exited **0**.
+
+Observed state of the created pull request, read back from the API rather than assumed:
+
+- **#1** — `feat: add ResulTus 0.0.1, a zero-allocation Result library for .NET`
+- `OPEN`, not a draft, `main` ← `feature-1`
+- `mergeable = MERGEABLE`, `mergeStateStatus = CLEAN`
+- **+31,809 / −1 across 218 files**
+
+`mergeStateStatus` was reported `UNSTABLE` on the first read and `CLEAN` afterwards: the only check is GitGuardian, which passed in 4 s. There is no CI of our own, which is exactly what the changelog `Notes` states.
+
+The commit count in L2 said "75-commit branch" and was superseded by measurement: the branch is **77 commits** ahead of `main`.
+
+**Still open.** T4 — the `v0.0.1` tag and/or a NuGet push. Nothing is tagged and nothing is published; `CHANGELOG.md`'s `[0.0.1]` link resolves only once that tag exists. Merging the pull request is likewise the owner's decision, not part of this record.
