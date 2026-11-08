@@ -238,3 +238,15 @@ The remaining `openspec/changes/*` proposals are superseded roadmap input; the `
 The `.gitignore` entry went with the directory — an ignore rule for a path that no longer exists is just noise, and if an old SDD tool ever recreates it, the reappearance should be visible instead of silently hidden.
 
 **Deletion is not a review candidate**: no code, no contract, no build input. After the move, `dotnet build ResulTus.slnx` returned 0 warnings / 0 errors and `dotnet test ResulTus.slnx --no-build` returned **670 passed, 0 failed, 0 skipped**, so nothing resolved those paths.
+
+### L17 — the CI/CD proposal was work, not history (verbatim)
+
+> Y ci cd no está por ahí?
+
+It was, and L16 was wrong to delete it. That batch classified all 17 remaining files as "superseded roadmap input", but `openspec/changes/phase-11-ci-cd/proposal.md` describes infrastructure the repository **does not have**: there is no `.github/` directory and no workflow of any kind, so nothing builds or tests on push or pull request. A plan for missing infrastructure is pending work, not a dead artifact.
+
+Restored as `odd/tasks/phase-11-ci-cd.md`, in the ODD shape rather than as a loose proposal: `S1`–`S5` quote the proposal's five success criteria verbatim, the scope table marks which proposal items already exist (`tests/ResulTus.Benchmarks/` and `README.md` do; the workflows, `CONTRIBUTING.md`, the DocFX site and the NuGet tags/icon do not), every task stays `pending` with an undecided route, and `L1` holds the complete original proposal verbatim.
+
+Corrected count: **16** files remain deleted, not 17. The other 16 are proposals for phases already delivered, and that classification still holds.
+
+Nothing was implemented here. No workflow was authored and no package metadata was changed; the document is a parked specification waiting for the owner to schedule it.
