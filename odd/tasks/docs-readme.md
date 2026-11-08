@@ -196,3 +196,24 @@ Thirteen `src/` projects confirmed on disk, matching the README package table.
 **Where T6's commit lives.** The task was complete when `1ca3a8e` and `0d4eff9` landed; this entry records the gate evidence, so the table points here instead of at a hash that would be its own commit.
 
 **Native assessment.** `gentle-ai review assess --base-ref 47e84ed --committed-only --json` over the whole feature range returned `risk: passive` (`non_executable_only`), `review_due: false`, `review_due_reason: passive`. 3 changed paths, 991 changed lines, all Markdown. No native review was opened, which is the intended behaviour for a documentation-only candidate. Push, pull request and merge stay with the owner.
+
+### L15 — owner unblocks AGENTS.md and asks about the Match learning (verbatim)
+
+> saca del gitignore lo que consideres que debe estar en el github.
+>
+> Y esto que pasa? 2. Result&lt;T&gt;.Match solo existe en forma que devuelve valor; no hay overload Action, así que lambdas void no compilan.
+
+This supersedes the tracking decision recorded in L13. `.gitignore` was reviewed entry by entry instead of emptied:
+
+| Entry | Decision | Reason |
+| --- | --- | --- |
+| `AGENTS.md` | **removed from the ignore list, now tracked** | agent instructions are project documentation; keeping them local left every clone blind and let the file drift |
+| `.vs/` | stays ignored | IDE state |
+| `.atl/` | stays ignored | generated skill registry that embeds absolute paths from one machine |
+| `openspec/` | stays listed, comment corrected | **its 18 files are already tracked**, so the rule is a no-op for them and only keeps future files out; an ignore rule never untracks anything |
+
+The last row corrects a wrong statement made in L13, where `openspec/` was described as staying local. `git ls-files openspec` returns 18 files and `git check-ignore --no-index openspec/` returns the rule, which proves the rule does not apply to already-tracked paths. Removing those files from the repository is a deletion decision, not a `.gitignore` edit, so it was left to the owner.
+
+Commit `d4cbb84` tracks `AGENTS.md` and documents each remaining entry in place, including a note telling future readers not to add the file back.
+
+**On the `Match` learning.** It is a documentation defect, not a library defect. `Match<TResult>` requires both arms to return the same `TResult`; with `Console.WriteLine` as the arm body there is no value to infer, so the example could not compile. The library already has a named terminal for side effects — `Switch(this Result<T>, Action<T>, Action<Error>)` in `src/ResulTus.Extensions/ResultExtensions.cs` — so no `Action` overload of `Match` is needed and none was added.
