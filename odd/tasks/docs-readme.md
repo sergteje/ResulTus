@@ -41,7 +41,7 @@ Risk: none. No code, no public API, no behavior.
 | T4 | S8 | inline | done | — |
 | T5 | S9 | inline | done | — |
 | T6 | S5, S6, S10 | inline | pending | — |
-| T7 | S11 | inline | pending | — |
+| T7 | S11 | inline | done | — |
 
 ## Log
 
@@ -145,3 +145,20 @@ A delegated writer produced a draft of `README.md` before its session was cancel
 - **The same harness compiled `README.es.md`**: 0 warnings / 0 errors.
 
 Register: neutral professional Spanish, no voseo and no regional slang, per the decision recorded in L6. `README.md` stays canonical and carries `**English** · [Español](README.es.md)` at the top; the Spanish edition mirrors the switcher and points back.
+
+### L13 — `AGENTS.md` rewritten to describe the running project (2026-11-08)
+
+The old file was written in an early SDD/openspec phase: it described an `sdd-*` agent roster and an openspec artifact store that the project no longer uses, and it predated five packages and several behavior rules. It was replaced, not patched.
+
+What the new file states, each claim checked against the repository rather than remembered:
+
+- **Stack and gates** — `Directory.Build.props` sets `net8.0`, `Nullable=enable`, `TreatWarningsAsErrors=true`, `GenerateDocumentationFile=true`, `IsTrimmable=true`, `IsAotCompatible=true`; tests target `net10.0`.
+- **Workflow** — ODD with `odd/tasks/<feature>.md` as the specification artifact (header, `## Specs` with verbatim `S#`, `## Tasks`, `## Log` with `L1` verbatim) and the Engram mirror under `odd/<feature>/tasks`.
+- **Agents** — the four the runtime actually runs, with the writer's rule that commits stay with the orchestrator.
+- **Behavior rules** — 0 B on both paths as a hard rule with time comparative; struct-versus-class decided by reference ownership; the 24 B / 32 B / 13 B sizes as documented decisions; cancellation as control flow; no naked `Value`; the narrow typed tier; no opinionated resilience layer without a real repeated use; no AOT claim without observed proof.
+- **Tests** — public-interface Given/When/Then, fakes over mocks, determinism, scratch outside the worktree.
+- **Documentation** — both editions at parity and every code block must compile.
+- **Benchmarks** — filtered runs by default, `docs/performance.md` as the authority.
+- **Source control** — Conventional Commits, no attribution, no push or merge without instruction.
+
+Thirteen `src/` projects confirmed on disk, matching the README package table.
