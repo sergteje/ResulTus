@@ -39,7 +39,7 @@ Risk: none. No code, no public API, no behavior.
 | T2 | S3, S4 | inline | done | — |
 | T3 | S7 | inline | done | — |
 | T4 | S8 | inline | done | — |
-| T5 | S9 | inline | pending | — |
+| T5 | S9 | inline | done | — |
 | T6 | S5, S6, S10 | inline | pending | — |
 | T7 | S11 | inline | pending | — |
 
@@ -134,3 +134,14 @@ A delegated writer produced a draft of `README.md` before its session was cancel
 **S10 discipline.** The document mentions no `FailIf`, no query syntax, no multi-error `Error` and no `StackResult`. The Native AOT route is presented as the `JsonTypeInfo<T>` design path, never as a published-AOT measurement.
 
 **Delivery.** Two commits instead of three slices: the English edition is one coherent artifact and the Spanish edition the second. Splitting the English file between "contract" and "fluency" would have served a review a document whose `[Benchmarks](#benchmarks)` links point at a section that does not exist yet.
+
+### L12 — Spanish edition at parity (2026-11-08)
+
+`README.es.md` is a full translation, not a stub. Parity was checked mechanically instead of by reading both files:
+
+- **13 code blocks in each edition, byte-for-byte identical** (identifiers and comments stay English inside the code, as S9 requires).
+- **24 headings in each**, same sections in the same order.
+- **151 numeric tokens in each, and the two multisets are equal** — no number was rounded, retyped or dropped in translation.
+- **The same harness compiled `README.es.md`**: 0 warnings / 0 errors.
+
+Register: neutral professional Spanish, no voseo and no regional slang, per the decision recorded in L6. `README.md` stays canonical and carries `**English** · [Español](README.es.md)` at the top; the Spanish edition mirrors the switcher and points back.
