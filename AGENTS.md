@@ -85,8 +85,10 @@ mocking frameworks, and keep everything deterministic: no real network, no wall-
 
 `README.md` is canonical and `README.es.md` mirrors it at parity: same sections, same numbers, same
 code blocks, neutral professional Spanish. Module guides live in `docs/`, the performance charter in
-`docs/performance.md`. Generated technical artifacts — code, comments, docs, commit messages — are
-English; conversation follows the owner's language.
+`docs/performance.md`, and durable specifications in `odd/specs/`. `CHANGELOG.md` records every
+released version in Keep a Changelog form; a change that ships updates it in the same commit.
+Generated technical artifacts — code, comments, docs, commit messages — are English; conversation
+follows the owner's language.
 
 **Every code block in a document must compile.** Extract the blocks and build them against the
 real source projects in a throwaway project outside the repository; a snippet that does not build
