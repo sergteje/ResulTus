@@ -1,0 +1,62 @@
+# Changelog
+
+All notable changes to ResulTus are documented in this file.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
+follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
+defines it, means the public API may still change between minor releases.
+
+## [Unreleased]
+
+## [0.0.1] - 2026-11-08
+
+First versioned release. Thirteen packages, one result type shared by all of them.
+
+### Added
+
+- **`ResulTus`** — `Result`, `Result<T>`, `Result<TSuccess, TError>`, `Error` and `ErrorType` as
+  inline `readonly record struct` types. Zero heap allocation on the success path and on the
+  failure path, including a failure built from a unique, uncached message. `Error` is 24 bytes,
+  `Result<int>` is 32 bytes and the generic tier is 13 bytes with a reference-free error; the
+  32-byte default tier is the documented price of the inline error
+  ([decision 001](docs/decisions/001-result-struct-size.md)).
+- **`ResulTus.Extensions`** — `Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally` and
+  `Switch` for the unit, `Result<T>` and generic tiers, the `Task`/`ValueTask` overloads with
+  cancellation, and the value, nullable and exception conversions.
+- **`ResulTus.Collections`** — `Traverse`, `Sequence`, `Fold`, `Partition`, `FirstFailure`,
+  `Combine` and the inspection queries over arrays, lists, read-only lists and `IEnumerable<T>`,
+  plus the asynchronous `WhenAll` and `WhenAny`.
+- **`ResulTus.Logging`** — `ILogger` extensions that hand the provider named fields
+  (`ResultType`, `IsSuccess`, `ErrorType`, `ErrorCode`, `ErrorMessage`) instead of a rendered
+  string, with no allocation while the log level is disabled.
+- **`ResulTus.Serialization`** — `System.Text.Json` converters for `Result<T>`, `Error` and
+  `ErrorType` over a fixed wire format (`isSuccess`, `value`, `error`) that ignores naming
+  policies, plus strict reading that rejects numeric tokens and unknown `ErrorType` names.
+- **`ResulTus.Diagnostics`** — opt-in timing and tracing through one `ActivitySource` and one
+  `DiagnosticListener`, silent and allocation-free when nothing listens.
+- **`ResulTus.AspNetCore`** — `ToActionResult`, `ToHttpResult`, `ErrorType`-to-status mapping and
+  RFC 9457 ProblemDetails.
+- **`ResulTus.HttpClient`** — `SendResultAsync` returning `Result<TSuccess, HttpClientError>`, with
+  typed failure kinds and caller cancellation kept as control flow.
+- **`ResulTus.Validation`** and **`ResulTus.Validation.FluentValidation`** — structured
+  `ValidationErrors`/`ValidationIssue`, a DataAnnotations adapter and an `IValidator<T>` adapter.
+- **`ResulTus.Analyzers`** — `RESULT001` through `RESULT006`, treating result misuse as build
+  diagnostics.
+- **`ResulTus.SourceGenerators`** — `[ResultErrors]`/`[ErrorFactory]` error factories, with
+  `RESULTGEN001` for declarations the generator cannot emit.
+- **`ResulTus.Testing`** — framework-independent `ShouldSucceed`/`ShouldFail` assertions.
+- **Documentation** — `README.md` and `README.es.md` at parity, `docs/performance.md` as the
+  measured charter every number in the README links to, `docs/httpclient.md`, and the
+  [`result-core` specification](odd/specs/result-core.md).
+
+### Notes
+
+- No CI yet: the repository has no workflow, so build and test run locally
+  (`dotnet build ResulTus.slnx`, `dotnet test ResulTus.slnx`).
+- Trimming and Native AOT compatibility are designed and annotated, not proven by a published
+  publish-and-run result.
+- Benchmarks are reproducible through `tests/ResulTus.Benchmarks/`; every recorded number and its
+  measurement stamp live in [`docs/performance.md`](docs/performance.md).
+
+[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.1

@@ -55,3 +55,18 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Development artifacts (not for GitHub)
+# .vs/ — IDE state
+.vs/
+# .atl/ — generated skill registry, contains absolute machine paths
+.atl/
+
+# AGENTS.md is tracked on purpose: agent instructions are project documentation,
+# not machine state. Do not add it back to this list.
+
+# BenchmarkDotNet output
+BenchmarkDotNet.Artifacts/
+
+# CodeGraph index (local, machine-specific)
+.codegraph/

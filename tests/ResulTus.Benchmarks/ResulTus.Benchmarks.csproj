@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ResulTus.Benchmarks</RootNamespace>
+    <AssemblyName>ResulTus.Benchmarks</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ResulTus\ResulTus.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Collections\ResulTus.Collections.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Logging\ResulTus.Logging.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Serialization\ResulTus.Serialization.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Validation\ResulTus.Validation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="FluentResults" />
+    <PackageReference Include="ErrorOr" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+    <PackageReference Include="ZeroResult" />
+  </ItemGroup>
+
+</Project>

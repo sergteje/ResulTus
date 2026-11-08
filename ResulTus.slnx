@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ResulTus/ResulTus.csproj" />
+    <Project Path="src/ResulTus.Extensions/ResulTus.Extensions.csproj" />
+    <Project Path="src/ResulTus.Collections/ResulTus.Collections.csproj" />
+    <Project Path="src/ResulTus.Serialization/ResulTus.Serialization.csproj" />
+    <Project Path="src/ResulTus.AspNetCore/ResulTus.AspNetCore.csproj" />
+    <Project Path="src/ResulTus.Validation/ResulTus.Validation.csproj" />
+    <Project Path="src/ResulTus.Validation.FluentValidation/ResulTus.Validation.FluentValidation.csproj" />
+    <Project Path="src/ResulTus.Logging/ResulTus.Logging.csproj" />
+    <Project Path="src/ResulTus.Diagnostics/ResulTus.Diagnostics.csproj" />
+    <Project Path="src/ResulTus.Testing/ResulTus.Testing.csproj" />
+    <Project Path="src/ResulTus.Analyzers/ResulTus.Analyzers.csproj" />
+    <Project Path="src/ResulTus.SourceGenerators/ResulTus.SourceGenerators.csproj" />
+    <Project Path="src/ResulTus.HttpClient/ResulTus.HttpClient.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
+    <Project Path="tests/ResulTus.Extensions.Tests/ResulTus.Extensions.Tests.csproj" />
+    <Project Path="tests/ResulTus.Collections.Tests/ResulTus.Collections.Tests.csproj" />
+    <Project Path="tests/ResulTus.Serialization.Tests/ResulTus.Serialization.Tests.csproj" />
+    <Project Path="tests/ResulTus.AspNetCore.Tests/ResulTus.AspNetCore.Tests.csproj" />
+    <Project Path="tests/ResulTus.Validation.Tests/ResulTus.Validation.Tests.csproj" />
+    <Project Path="tests/ResulTus.Benchmarks/ResulTus.Benchmarks.csproj" />
+    <Project Path="tests/ResulTus.Logging.Tests/ResulTus.Logging.Tests.csproj" />
+    <Project Path="tests/ResulTus.Diagnostics.Tests/ResulTus.Diagnostics.Tests.csproj" />
+    <Project Path="tests/ResulTus.Testing.Tests/ResulTus.Testing.Tests.csproj" />
+    <Project Path="tests/ResulTus.Analyzers.Tests/ResulTus.Analyzers.Tests.csproj" />
+    <Project Path="tests/ResulTus.SourceGenerators.Tests/ResulTus.SourceGenerators.Tests.csproj" />
+    <Project Path="tests/ResulTus.HttpClient.Tests/ResulTus.HttpClient.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,18 @@
+# Default severities for ResulTus.Analyzers.
+#
+# Roslyn reads rule severity from an analyzer config file, never from an MSBuild property, so this
+# is the file that actually configures the rules. To change a severity in a project, add the same
+# key to that project's .editorconfig with a higher precedence (a nearer file, or the same file with
+# `severity = ...`), for example:
+#
+#   [*.cs]
+#   dotnet_diagnostic.RESULT004.severity = none
+#
+is_global = true
+
+dotnet_diagnostic.RESULT001.severity = warning
+dotnet_diagnostic.RESULT002.severity = warning
+dotnet_diagnostic.RESULT003.severity = warning
+dotnet_diagnostic.RESULT004.severity = info
+dotnet_diagnostic.RESULT005.severity = warning
+dotnet_diagnostic.RESULT006.severity = warning
