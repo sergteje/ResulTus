@@ -57,10 +57,16 @@ TestResult.xml
 nunit-*.xml
 
 # Development artifacts (not for GitHub)
+# .vs/ — IDE state
 .vs/
+# openspec/ — its 18 SDD-phase files are still tracked (git ignores rules never
+# untrack them); this entry only keeps future files out. Superseded by odd/tasks/*.md.
 openspec/
+# .atl/ — generated skill registry, contains absolute machine paths
 .atl/
-AGENTS.md
+
+# AGENTS.md is tracked on purpose: agent instructions are project documentation,
+# not machine state. Do not add it back to this list.
 
 # BenchmarkDotNet output
 BenchmarkDotNet.Artifacts/
