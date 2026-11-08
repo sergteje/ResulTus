@@ -35,10 +35,10 @@ Risk: none. No code, no public API, no behavior.
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S2 | inline | pending | — |
-| T2 | S3, S4 | inline | pending | — |
-| T3 | S7 | inline | pending | — |
-| T4 | S8 | inline | pending | — |
+| T1 | S1, S2 | inline | done | — |
+| T2 | S3, S4 | inline | done | — |
+| T3 | S7 | inline | done | — |
+| T4 | S8 | inline | done | — |
 | T5 | S9 | inline | pending | — |
 | T6 | S5, S6, S10 | inline | pending | — |
 | T7 | S11 | inline | pending | — |
@@ -113,3 +113,24 @@ The final README depends on the P2, API-completion and HttpClient tasks closing 
 `AGENTS.md` exists — created in an early SDD/openspec phase — and is stale: it describes an `sdd-*` agent roster and an OpenSpec artifact store, while the project now runs ODD with `odd/tasks/*.md` documents and the runtime's actual agents. It also predates the two newest packages and several behavior rules. Authorized as **S11** below and routed T7.
 
 - **S11 — refresh `AGENTS.md` to describe the project as it actually runs.** Keep what is still true (net8.0/net10.0, nullable, warnings as errors, Conventional Commits, MIT, XML documentation required) and rewrite what is not: the ODD workflow with `odd/tasks/*.md` feature documents as the specification artifact, the runtime agents actually used (`gentle-orchestrator` orchestrating, with read-only explore/verify and bounded writer roles), the current package list (the 13 projects in the README's package table, including `ResulTus.Testing`), and the behavior rules that decide how code is written here: 0 B on the success **and** failure path for core operations, cancellation as control flow (`OperationCanceledException` rethrown, never converted into an error), typing via `readonly record struct` for the inline tiers with the documented exception (`HttpClientError`/`HttpProblemDetails` are classes because they own references), and test discipline (public-interface `Given/When/Then` tests, one per rule, plus the compile-the-snippet gate for docs). No process narrative beyond what helps a fresh agent work correctly tomorrow.
+
+### L11 — English edition: draft audited and completed inline (2026-11-08)
+
+A delegated writer produced a draft of `README.md` before its session was cancelled. The owner then instructed to continue without delegation, so the draft was audited line by line against `src/` and `docs/performance.md` rather than trusted. What the audit changed:
+
+| Found | Fix |
+| --- | --- |
+| Two generic-tier `Match` examples passed `void` lambdas (`Console.WriteLine`) | `Match<TResult>` is the only shape — no `Action` overload exists — so no `TResult` can be inferred from a `void` lambda and the block did not compile. Both now return a string. |
+| `Parse` and `ParseAge` had identical bodies | one helper, used by both sections |
+| `RESULT002` described as "a value is read without checking" | `UnguardedOutcomeAnalyzer` reports reading a **default value** (`GetValueOrDefault`) without checking; the sentence was corrected |
+| Licence link pointed at `blob/feature-1/LICENSE` | relative `LICENSE`, valid after merge |
+| Collections readout said `Partition` "allocates its two output arrays" while the table shows 12,480 B | the P0 row grows two lists; the readout now states the P1/T5 cut to 4,048 B and surfaces the two documented losses (array `Traverse`, pooled `Partition` on lists) |
+| The emitted factory body was shown as a `csharp` block | it cannot compile as source (it would duplicate the method); it is now an inline code span |
+
+**S5 evidence.** The 13 `csharp` blocks were extracted from the file by regex into a scratch `net10.0` project referencing six `src/` projects plus the source generator as an analyzer, with `TreatWarningsAsErrors=true`: **0 warnings / 0 errors**. The same harness compiled `README.es.md`.
+
+**S8 provenance, series by series.** Creation §4 · Matching §4 · Allocation §4 · Failure path §4.6 · Struct size §4.2 · Array traversal §4.4 · Collections §4 baseline plus the P1/T3–T5 subsections · Serialization §4 · Logging §4 · Validation §4. Every row quoted verbatim; no series estimated, and a series with no recorded rows is absent.
+
+**S10 discipline.** The document mentions no `FailIf`, no query syntax, no multi-error `Error` and no `StackResult`. The Native AOT route is presented as the `JsonTypeInfo<T>` design path, never as a published-AOT measurement.
+
+**Delivery.** Two commits instead of three slices: the English edition is one coherent artifact and the Spanish edition the second. Splitting the English file between "contract" and "fluency" would have served a review a document whose `[Benchmarks](#benchmarks)` links point at a section that does not exist yet.
