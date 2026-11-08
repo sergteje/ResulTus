@@ -133,3 +133,5 @@ Authorises reinterpreting `RESULT002`, `RESULT003` and `RESULT005` against the r
 - `tests/ResulTus.Analyzers.Tests`: 12 source files plus the project, 41 tests, `net10.0`.
 - Severities ship in `ResulTus.Analyzers.globalconfig`, packed to `build/`.
 - Next phase: 10 (source generator). Delivery — commit chain, PR, merge — stays the user's call.
+
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

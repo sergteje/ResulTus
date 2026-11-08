@@ -92,3 +92,4 @@ The whole-run figure is 88.2% line only because the core assembly is instrumente
 | `1b6ea18` | the async pipeline for both result types, cancellation, and the short-circuit coverage |
 | `efa1860` | the conversions and this record |
 
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

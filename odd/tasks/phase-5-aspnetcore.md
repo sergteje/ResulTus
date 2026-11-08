@@ -106,3 +106,5 @@ In response to the close of Phase 7 and the open question of whether to open a P
 - T3 GREEN: 41/41.
 - Coverage on `ResulTus.AspNetCore`: **100% lines, 100% branches**, all four classes at 100%. No suppressions were needed: `Status499ClientClosedRequest` and `ReasonPhrases.GetReasonPhrase` are both trim-safe, so S8 holds without a single `[UnconditionalSuppressMessage]`.
 - Full solution: `dotnet build ResulTus.slnx` -> 0 warnings, 0 errors. `dotnet test ResulTus.slnx` -> 265 passed (41 aspnetcore, 59 serialization, 47 core, 80 extensions, 38 collections). No regression.
+
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

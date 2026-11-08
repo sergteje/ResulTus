@@ -81,3 +81,4 @@ First measurement was 90.8% line: the unit `WhenAnyAsync`, the `Fold` failure pa
 | `c1f724d` | the project, the solution wiring, the sync collection surface for both result types and its tests |
 | `a922ac9` | the async `WhenAll`/`WhenAny`, the guards and the growth coverage |
 
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

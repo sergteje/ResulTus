@@ -110,3 +110,5 @@ Continuing the roadmap after Phase 5. The user then chose the return shape of `V
 - `dotnet build ResulTus.slnx` -> 0 warnings, 0 errors.
 - `dotnet test ResulTus.slnx` -> **293 passed** (28 validation, 41 aspnetcore, 59 serialization, 47 core, 80 extensions, 38 collections). No regression.
 - No `[UnconditionalSuppressMessage]` anywhere. The only trimming annotation is the explicit `[RequiresUnreferencedCode]` on the DataAnnotations adapter, which is what S7 permits.
+
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

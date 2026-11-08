@@ -126,3 +126,4 @@ Two failures in T2 were real generator defects found by the tests, not by inspec
 
 Phase 11 (CI/CD, DocFX, NuGet publish). Delivery — commit chain, PR, merge — stays the user's call.
 
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

@@ -130,3 +130,5 @@ So the honest position is: this converter works normally and under trimming of a
 - Remaining uncovered lines are defensive guards, not behavior: "unexpected token while reading", "unexpected end of JSON", and the `_ =>` arm of the `ErrorType` to factory switch. All three are unreachable while the reader validates the token stream; the `_ =>` arm is the safety net for a future `ErrorType` added without its factory mapping.
 - Coverage gap found by measurement, not by guessing: `EveryErrorType_ShouldRoundTrip` round-trips the **enum**, not the `Error` factory mapping — only `None`, `NotFound` and `Timeout` were proven. Added `EveryErrorType_ShouldMapToItsFactory`, which is where the other seven mappings got covered.
 - Full solution: `dotnet build ResulTus.slnx` → 0 warnings, 0 errors. `dotnet test ResulTus.slnx` → 224 passed (59 serialization, 47 core, 80 extensions, 38 collections). No regression in the pre-existing 165.
+
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*

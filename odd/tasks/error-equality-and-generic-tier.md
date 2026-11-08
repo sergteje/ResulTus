@@ -90,5 +90,4 @@ Aligned wins 1 of 4 cells. The aligned success/7000 pair itself spreads 3.6% run
 | `6ae9996` | `docs/performance.md`, Decision 001, this record |
 | `a87212e` | `.codegraph/` ignored |
 
-
-
+*The `openspec/` paths cited above belong to the retired SDD store. The originals are recoverable with `git show 75b0962:<path>`; this record quotes the scoped parts inline.*
