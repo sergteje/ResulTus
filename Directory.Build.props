@@ -30,6 +30,7 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>Result;Errors;Functional;Dotnet;CSharp;ZeroAllocation;Performance</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
