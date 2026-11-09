@@ -17,3 +17,23 @@ jobs:
         run: dotnet build ResulTus.slnx
       - name: Test
         run: dotnet test ResulTus.slnx --no-build
+
+  # Publish-and-run proof for the claims annotated since 0.0.1: a console app
+  # walking the AOT-safe System.Text.Json path is published trimmed and then
+  # natively (windows-latest ships the MSVC linker this host lacks) and both
+  # artifacts must execute with every assertion passing.
+  aot-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish (trimmed)
+        run: dotnet publish samples/AotSmoke/ResulTus.AotSmoke.csproj -c Release /p:PublishTrimmed=true -o publish-trimmed
+      - name: Run (trimmed)
+        run: ./publish-trimmed/ResulTus.AotSmoke.exe
+      - name: Publish (Native AOT)
+        run: dotnet publish samples/AotSmoke/ResulTus.AotSmoke.csproj -c Release -r win-x64 /p:PublishAot=true -o publish-aot
+      - name: Run (Native AOT)
+        run: ./publish-aot/ResulTus.AotSmoke.exe

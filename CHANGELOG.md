@@ -8,6 +8,12 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke application both trimmed and natively on a runner with no host limitations. *(The AOT wording is finalized once that job's first run is observed.)*
+- **Packaging** — the package icon and the canonical README are carried inside every `nupkg` (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
+- **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, consumed by both README editions.
+
 ## [0.0.1] - 2026-11-08
 
 First versioned release. Thirteen packages, one result type shared by all of them.
