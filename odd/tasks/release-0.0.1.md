@@ -21,7 +21,7 @@ Risk: item 5 (delivery/release). The version string reaches consumers through th
 | T1 | S1 | inline | done | see L2 |
 | T2 | S2 | inline | done | see L2 |
 | T3 | S3 | owner | done | [PR #1](https://github.com/sergteje/ResulTus/pull/1), see L4 |
-| T4 | S4 | owner | pending | tag done, publish open — see L5 |
+| T4 | S4 | owner | pending | tag + GitHub release done; NuGet publish deferred by owner — see L6 |
 | T5 | S5 | inline | done | see L3 |
 
 ## Log
@@ -102,3 +102,19 @@ The commit count in L2 said "75-commit branch" and was superseded by measurement
 **GitHub release object.** The tag page alone is not a release entry, so `gh release create v0.0.1` was run with notes copied from the changelog's `0.0.1` section, which is the only place allowed to claim what shipped. The release object makes the version visible under the Releases tab without a `v0.0.2` of prose that could drift.
 
 **Still open, sole remainder of T4.** Publishing to NuGet: irreversible per S4, needs the owner's API key, and a 0.0.1 already on nuget.org can never be reused — a defect found later forces a 0.0.2. Nothing was pushed.
+
+### L6 — GitHub secret set, publish deferred to the next version (2026-11-09)
+
+**Owner, verbatim:**
+
+> 1 ya lo he hecho ‹later corrected› perdon he puesto la apikey
+> No.Si ‹1 = did not run the push; 2 = loaded the secret into GitHub›
+> lo miramos en la siguiente version?
+
+The correction sequence mattered and is recorded: the first claim of a completed publish was premature, and the four nuget.org endpoints (package page, registration, flat container, search) verified **404 / 0 hits** before the owner corrected the state — the difference between "published" and "credential loaded" is measurable and was measured. What actually happened: the `NUGET_API_KEY` secret was created in the repository's Actions secrets. That alone publishes nothing; the manual push was never run, and the 0.0.1 package remains unpublished on nuget.org.
+
+**NuGet publish is deferred by the owner to the next version** ("lo miramos en la siguiente versión"). Consequences, all deliberate:
+
+- T4 does not close-blocked: the tag and GitHub release are done, and the one unpublished artifact is the NuGet push, which moves to the 0.0.x flow as its first publish — with the release.yml pipeline already live, the *next* `v*` tag publishes automatically, so 0.0.2 may never need a hand run.
+- The deferred first-publish rule still holds in spirit: 0.0.1 remains unpublished, so delaying costs nothing and the version stays unused for whenever the owner chooses it.
+- `odd/tasks/phase-11-ci-cd.md` T1 (CI) and T2 (release workflow) are done; the empty-indexer claim in L5 stands corrected only by this entry.
