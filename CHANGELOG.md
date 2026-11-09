@@ -10,7 +10,7 @@ defines it, means the public API may still change between minor releases.
 
 ### Added
 
-- **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke application both trimmed and natively on a runner with no host limitations. *(The AOT wording is finalized once that job's first run is observed.)*
+- **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke application both trimmed and natively on `windows-latest` (CI run `42653755212`, both jobs green) — the publish-and-run proof the 0.0.1 notes could not make.
 - **Packaging** — the package icon and the canonical README are carried inside every `nupkg` (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
 - **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, consumed by both README editions.
 

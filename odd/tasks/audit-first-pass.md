@@ -21,7 +21,7 @@ Every audit claim below was re-verified against the repository before being acce
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | inline | pending | AOT smoke via `samples/AotSmoke` + CI job, see L2 |
+| T1 | S1 | inline | done | [run 42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212), see L2 |
 | T2 | S2, S3 | inline | done | see L2 |
 | T3 | S4 | inline | pending | — |
 | T4 | S5 | inline | pending | — |
@@ -36,3 +36,18 @@ Every audit claim below was re-verified against the repository before being acce
 The owner submitted a first external audit: 13 production packages reviewed, core design endorsed, scores from 9/10 (architecture) to 6.5/10 (publication readiness), and a suggested next-step order. The auditor states they could not build or test the repository. Their framing matches the owner's own bar: "defender cada decisión con código y mediciones". The full verbatim text lives in the owner's message of this session and is not duplicated here.
 
 The audit's one blocking factual error — "no CI yet" — was caused by reading `CHANGELOG.md`'s 0.0.1 `Notes`, which was true when the tag existed and one day later was not. No correction to history is needed; S3 records post-tag work separately.
+
+### L2 — T1 and T2 executed and observed (2026-11-09)
+
+**T2, S2.** Repository metadata set through `gh repo edit`: description *"High-performance Result Pattern library for .NET - inline readonly record struct, zero heap allocation on success and failure."* and topics `csharp, dotnet, error-handling, functional-programming, nuget, performance, result-pattern`, read back from the API.
+
+**T1, S1.** `samples/AotSmoke/` — a console app whose only serializer calls run through the AOT-safe surface of api-completion S7 (`new ResultJsonConverter<int>(SmokeJsonContext.Default.Int32)` with `Write`/`Read` over `Utf8JsonWriter`/`Utf8JsonReader`), exercising the success and failure wire formats, a fixed wire read, and `Match`, exiting non-zero on any assertion. The build itself is a guard: the first attempt used `JsonSerializer.Deserialize<TValue>(string)` and the repo's AOT analyzers rejected it with **IL2026/IL3050** — the smoke app compiles only through the safe surface, which is the discipline S7 asks to demonstrate.
+
+The CI `aot-smoke` job publishes the app twice on `windows-latest` and executes both artifacts:
+
+- **Trimmed**: `/p:PublishTrimmed=true` — also run locally first (exit 0).
+- **Native AOT**: `-r win-x64 /p:PublishAot=true` — impossible on this host (no MSVC linker), proven on the runner, which ships it.
+
+Observed: CI run **`42653755212`** — `build-and-test: success`, `aot-smoke: success`. `CHANGELOG.md` records the proof with the run id; README and any public claim of AOT support still wait for a deliberate wording decision by the owner, in line with the repo rule that no support claim ships without observed proof — now there *is* observed proof, but the claim itself is the owner's wording to choose.
+
+Commit: `426d7c4`.
