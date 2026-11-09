@@ -22,25 +22,26 @@ orbit arc around the check.
 
 ## Typography
 
-ResulTus uses [Inter][inter] (SIL Open Font License).
+Documentation uses [Inter][inter] (SIL Open Font License): body text, **Inter
+SemiBold** for titles when custom typesetting is needed.
 
-- **Inter** — body text and documentation.
-- **Inter SemiBold** — titles.
-- **Inter ExtraBold** — the logotype. The wordmark is always the exact string
-  `ResulTus` with that casing: capital R, capital T, no space.
-
-The logo PNGs in `assets/branding/` were rendered from the official
-`Inter-ExtraBold.ttf`, so no font installation is needed to reproduce them;
-the rendering script parameters live in this repository's history.
+The wordmark and the mark are **owner-supplied artwork** (brand suite v2.0,
+November 2026, `assets/branding/*.png` rendered from the owner's own files) —
+they are fixed raster art, not a font. When text needs to *read* as the brand
+in new material, use Inter ExtraBold and respect the wordmark casing: the
+exact string `ResulTus`, capital R, capital T, no space. Never re-typeset the
+logo from a font.
 
 ## Official variants
 
 | File | Use |
 | --- | --- |
-| [`icon.png`][icon] | NuGet package icon and GitHub avatar |
-| [`logo-dark.png`][dark] | Documentation on dark backgrounds |
-| [`logo-light.png`][light] | Documentation on light backgrounds |
-| [`logo-mono.png`][mono] | Print and monochrome uses (solid black, check knocked out in white) |
+| [`icon.png`][icon] | NuGet package icon and GitHub avatar (512×512, from the owner's 1254×1254 master) |
+| [`logo-dark.png`][dark] | Documentation on dark backgrounds (navy lockup card) |
+| [`logo-light.png`][light] | Documentation on light backgrounds (white lockup card) |
+| [`logo-mono.png`][mono] | Print and monochrome uses (solid black lockup) |
+
+Owner's brand values: **Reliable, Performant, Flexible, Developer First**.
 
 The READMEs pick dark/light automatically with a `<picture>` element. Print
 uses the monochrome variant only — never reinterpret the palette in CMYK.

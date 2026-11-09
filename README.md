@@ -420,6 +420,10 @@ Array source, N = 1,000 fully successful elements:
 
 [Full section](docs/performance.md#validation-conversions--1000-issues--measured-2026-11-06). `ToDictionary` materializes the grouped dictionary and per-field message arrays over 1,000 issues; `ToError` creates the summary message and a value-type `Error`.
 
+## Runtime compatibility
+
+Libraries target `net8.0`. Trimming and Native AOT are **verified by an observed publish-and-run** on every CI push (job `aot-smoke`, runner `windows-latest`; e.g. run [42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212)): a console application published both trimmed and natively executes the core result types and the AOT-safe System.Text.Json surface — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — passing every assertion. Register converters through that surface in AOT applications; the factory-based convenience registration remains the ordinary path for non-AOT apps.
+
 ## HTTP responses as results
 
 `ResulTus.HttpClient` is a separate, optional package that turns an HTTP response, an RFC 9457 ProblemDetails document and a transport failure into a result instead of an exception. It never retries, never throws for ordinary HTTP failures, and never disposes the caller's `HttpClient` or `HttpRequestMessage`. The full module is documented in [`docs/httpclient.md`](docs/httpclient.md).

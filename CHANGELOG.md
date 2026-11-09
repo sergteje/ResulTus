@@ -12,7 +12,11 @@ defines it, means the public API may still change between minor releases.
 
 - **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke application both trimmed and natively on `windows-latest` (CI run `42653755212`, both jobs green) — the publish-and-run proof the 0.0.1 notes could not make.
 - **Packaging** — the package icon and the canonical README are carried inside every `nupkg` (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
-- **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, consumed by both README editions.
+- **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, now supplied as owner artwork (brand suite v2.0) and consumed by both README editions.
+
+### Verified
+
+- **Trimming and Native AOT** are run-verified in CI (`aot-smoke`, run `42653755212`, green): a console application published both trimmed and natively executes the core result types plus the AOT-safe System.Text.Json surface, passing every assertion. Both README editions carry the runtime-compatibility section.
 
 ## [0.0.1] - 2026-11-08
 

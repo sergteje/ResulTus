@@ -58,3 +58,25 @@ The `PackageReadmeFile` addition is the owner's own config and is safe to adopt:
 - `dotnet build ResulTus.slnx` → 0 warnings / 0 errors. `dotnet test --no-build` → **670 passed, 0 failed, 0 skipped**.
 - README parity re-measured symmetrically: **25/25 headings, 405/405 numeric tokens** across the two editions.
 - The CI workflow runs the same build+test on push; its result is the third, independent gate.
+
+### L3 — owner-supplied brand suite v2.0 replaces the rendered assets (2026-11-09)
+
+**Owner, with the two files (`ResultusIconSuite.jpeg`, `ResultusIcon.jpeg`):**
+
+> mira he hecho unos logos un una suite completa de logos
+
+The owner's own artwork supersedes the locally rendered set — the owner defines the identity. What changed in `assets/branding/`:
+
+- `icon.png` — the owner's 1254×1254 master, downsampled to 512×512 PNG (192,964 B, under NuGet's 1 MB limit). JPEG→PNG conversion and bicubic resample only; no redesign.
+- `logo-dark.png`, `logo-light.png`, `logo-mono.png` — the three lockup cards cropped from the owner's suite sheet (1536×1024), visually verified after cutting: navy card for dark, white card for light, solid black for print.
+- `brand-guidelines.md` — the lockup set is the owner's fixed raster art, no longer re-typeset from Inter; the Inter roles remain for material that needs new text. The owner's brand values (Reliable, Performant, Flexible, Developer First) are recorded.
+
+The README `<picture>` markup kept the same filenames, so both editions gained the new art without a markup change. Pack verified: the `nupkg` carries the owner's icon (structure otherwise unchanged, 0 warnings / 0 errors pack). README parity stays symmetric (26/26 headings, 408/408 numeric tokens).
+
+### L4 — the README AOT claim the owner approved (2026-11-09)
+
+**Owner, verbatim:**
+
+> tambien dale a esto: el AOT tiene prueba observada. Publicar "Native AOT compatible" en el README es una decisión de wording tuya
+
+Both README editions gained `## Runtime compatibility` (identical structure, translated) stating that trimming and Native AOT are **verified by an observed publish-and-run** in CI, citing the `aot-smoke` job and run `42653755212`, and scoping the claim to what the smoke actually exercises: the core result types plus the AOT-safe System.Text.Json surface. The factory-based registration stays recommended for non-AOT apps. `CHANGELOG.md`'s `[Unreleased]` gained a **Verified** section with the same run id. The 0.0.1 `Notes` line "not proven by a published publish-and-run result" stays untouched — it describes the tag truthfully and is superseded in `[Unreleased]`, exactly per the S3 rule.
