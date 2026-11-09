@@ -1,5 +1,10 @@
 # ResulTus
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-dark.png">
+  <img src="assets/branding/logo-light.png" alt="ResulTus - Make every result count." width="540">
+</picture>
+
 [English](README.md) · **Español**
 
 ResulTus es una biblioteca `Result` de alto rendimiento para .NET que representa el éxito o el fallo como un `readonly record struct` en línea, sin asignación de heap en ninguna de las dos rutas.
