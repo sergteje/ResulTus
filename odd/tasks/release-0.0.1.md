@@ -21,7 +21,7 @@ Risk: item 5 (delivery/release). The version string reaches consumers through th
 | T1 | S1 | inline | done | see L2 |
 | T2 | S2 | inline | done | see L2 |
 | T3 | S3 | owner | done | [PR #1](https://github.com/sergteje/ResulTus/pull/1), see L4 |
-| T4 | S4 | owner | pending | — |
+| T4 | S4 | owner | pending | tag done, publish open — see L5 |
 | T5 | S5 | inline | done | see L3 |
 
 ## Log
@@ -83,4 +83,22 @@ Observed state of the created pull request, read back from the API rather than a
 
 The commit count in L2 said "75-commit branch" and was superseded by measurement: the branch is **77 commits** ahead of `main`.
 
-**Still open.** T4 — the `v0.0.1` tag and/or a NuGet push. Nothing is tagged and nothing is published; `CHANGELOG.md`'s `[0.0.1]` link resolves only once that tag exists. Merging the pull request is likewise the owner's decision, not part of this record.
+**Still open.** T4 - the `v0.0.1` tag and/or a NuGet push. Nothing is tagged and nothing is published; `CHANGELOG.md`'s `[0.0.1]` link resolves only once that tag exists. Merging the pull request is likewise the owner's decision, not part of this record.
+
+### L5 — pull request merged, branch deleted, tagged, and release object (2026-11-08)
+
+**Owner, verbatim:**
+
+> mergea con squash
+> dale ‹re: la primera limpieza propuesta›
+> 1 y 2 dale ‹re: registrar el seguimiento y crear el objeto GitHub Release›
+
+**Merge.** #1 was squashed into `main` under the owner's instruction, with an explicit `--subject` and a hand-written commit body, because a bare `gh pr merge --squash` would have produced a body listing all 79 commit subjects. Verification that the squash lost nothing: `git diff --shortstat origin/main feature-1` after the merge was **empty**. Squash commit: `781bf11`. Local `main` fast-forwarded to it.
+
+**Branch cleanup.** `feature-1` was deleted locally and on `origin` with the owner's approval, leaving a single head on both sides. The local deletion needed `-D`, not `-d`: a squash merge leaves the branch's commits non-ancestors of `main`, so `-d` reports "not fully merged" even though every line is preserved in the squash commit, and the PR keeps all 79 commits visible for audit.
+
+**Tag.** `v0.0.1` — annotated, not lightweight — was created on `781bf11` with the owner's "dale" and pushed (`ce9c745` → `781bf11` dereferenced). The two `CHANGELOG.md` link references that pointed at the tag now resolve instead of 404.
+
+**GitHub release object.** The tag page alone is not a release entry, so `gh release create v0.0.1` was run with notes copied from the changelog's `0.0.1` section, which is the only place allowed to claim what shipped. The release object makes the version visible under the Releases tab without a `v0.0.2` of prose that could drift.
+
+**Still open, sole remainder of T4.** Publishing to NuGet: irreversible per S4, needs the owner's API key, and a 0.0.1 already on nuget.org can never be reused — a defect found later forces a 0.0.2. Nothing was pushed.
