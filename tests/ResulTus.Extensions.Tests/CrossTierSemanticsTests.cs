@@ -526,6 +526,321 @@ public class CrossTierSemanticsTests
         syncFailure.IsFailure.Should().BeTrue();
     }
 
+    // --- error side: MapError / OnFailure / Switch / Ensure factories ---------
+
+    /// <summary>
+    /// GIVEN a unit failure
+    /// WHEN <c>MapErrorAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>MapError</c> outcome, unchanged on success.
+    /// </summary>
+    [Fact]
+    public async Task Unit_MapErrorAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result.Failure(Failure).MapError(error => Error.Failure("E2", "mapped"));
+        var successFromSync = Result.Success().MapError(error => Error.Failure("E2", "mapped"));
+
+        var fromTask = await Task.FromResult(Result.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromValueTask = await ValueTask.FromResult(Result.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromTaskSuccess = await Task.FromResult(Result.Success()).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromValueTaskSuccess = await ValueTask.FromResult(Result.Success()).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskSuccess.Should().Be(successFromSync);
+        fromValueTaskSuccess.Should().Be(successFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a unit failure
+    /// WHEN <c>OnFailureAsync</c> runs through both sources
+    /// THEN both must run the side effect exactly where the sync <c>OnFailure</c> runs it and
+    /// return the receiver unchanged.
+    /// </summary>
+    [Fact]
+    public async Task Unit_OnFailureAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var observed = new List<string>();
+        Result.Success().OnFailure(error => observed.Add("sync"));
+        Result.Failure(Failure).OnFailure(error => observed.Add($"sync:{error.Code}"));
+
+        await Task.FromResult(Result.Success()).OnFailureAsync((error, _) => { observed.Add("task"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result.Success()).OnFailureAsync((error, _) => { observed.Add("vtask"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result.Failure(Failure)).OnFailureAsync((error, _) => { observed.Add($"task:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result.Failure(Failure)).OnFailureAsync((error, _) => { observed.Add($"vtask:{error.Code}"); return ValueTask.CompletedTask; });
+
+        observed.Should().Equal("sync:F1", "task:F1", "vtask:F1");
+    }
+
+    /// <summary>
+    /// GIVEN a unit success and a unit failure
+    /// WHEN <c>SwitchAsync</c> runs through both sources
+    /// THEN exactly one branch must be invoked per result, matching the sync <c>Switch</c> branch.
+    /// </summary>
+    [Fact]
+    public async Task Unit_SwitchAsync_ShouldInvokeExactlyOneBranchThroughBothSources()
+    {
+        var syncProvided = new List<string>();
+        Result.Success().Switch(() => syncProvided.Add("s"), error => syncProvided.Add($"f:{error.Code}"));
+        Result.Failure(Failure).Switch(() => syncProvided.Add("s"), error => syncProvided.Add($"f:{error.Code}"));
+
+        var provided = new List<string>();
+        await Task.FromResult(Result.Success()).SwitchAsync(_ => { provided.Add("s"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result.Success()).SwitchAsync(_ => { provided.Add("s"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result.Failure(Failure)).SwitchAsync(_ => { provided.Add("s"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result.Failure(Failure)).SwitchAsync(_ => { provided.Add("s"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+
+        provided.Should().Equal("s", "s", "f:F1", "f:F1");
+        syncProvided.Should().Equal("s", "f:F1");
+    }
+
+    /// <summary>
+    /// GIVEN a unit success
+    /// WHEN <c>EnsureAsync</c> runs in its factory shape through both sources
+    /// THEN both must return exactly the synchronous factory-shaped <c>Ensure</c> outcome.
+    /// </summary>
+    [Fact]
+    public async Task Unit_EnsureAsync_Factory_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result.Success().Ensure(() => false, () => Error.NotFound("N1"));
+        var heldFromSync = Result.Success().Ensure(() => true, () => Error.NotFound("N1"));
+
+        var fromTask = await Task.FromResult(Result.Success()).EnsureAsync(_ => ValueTask.FromResult(false), _ => ValueTask.FromResult(Error.NotFound("N1")));
+        var fromValueTask = await ValueTask.FromResult(Result.Success()).EnsureAsync(_ => ValueTask.FromResult(false), _ => ValueTask.FromResult(Error.NotFound("N1")));
+        var fromTaskHeld = await Task.FromResult(Result.Success()).EnsureAsync(_ => ValueTask.FromResult(true), _ => ValueTask.FromResult(Error.NotFound("N1")));
+        var fromValueTaskHeld = await ValueTask.FromResult(Result.Success()).EnsureAsync(_ => ValueTask.FromResult(true), _ => ValueTask.FromResult(Error.NotFound("N1")));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskHeld.Should().Be(heldFromSync);
+        fromValueTaskHeld.Should().Be(heldFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a value failure
+    /// WHEN <c>MapErrorAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>MapError</c> outcome, unchanged on success.
+    /// </summary>
+    [Fact]
+    public async Task Value_MapErrorAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int>.Failure(Failure).MapError(error => Error.Failure("E2", "mapped"));
+        var successFromSync = Result<int>.Success(41).MapError(error => Error.Failure("E2", "mapped"));
+
+        var fromTask = await Task.FromResult(Result<int>.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromValueTask = await ValueTask.FromResult(Result<int>.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromTaskSuccess = await Task.FromResult(Result<int>.Success(41)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+        var fromValueTaskSuccess = await ValueTask.FromResult(Result<int>.Success(41)).MapErrorAsync((error, _) => ValueTask.FromResult(Error.Failure("E2", "mapped")));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskSuccess.Should().Be(successFromSync);
+        fromValueTaskSuccess.Should().Be(successFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a value failure
+    /// WHEN <c>OnFailureAsync</c> runs through both sources
+    /// THEN both must run the side effect exactly where the sync <c>OnFailure</c> runs it and
+    /// return the receiver unchanged.
+    /// </summary>
+    [Fact]
+    public async Task Value_OnFailureAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var observed = new List<string>();
+        await Task.FromResult(Result<int>.Failure(Failure)).OnFailureAsync((error, _) => { observed.Add($"task:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int>.Failure(Failure)).OnFailureAsync((error, _) => { observed.Add($"vtask:{error.Code}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result<int>.Success(41)).OnFailureAsync((error, _) => { observed.Add("task"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int>.Success(41)).OnFailureAsync((error, _) => { observed.Add("vtask"); return ValueTask.CompletedTask; });
+
+        observed.Should().Equal("task:F1", "vtask:F1");
+    }
+
+    /// <summary>
+    /// GIVEN a value success and a value failure
+    /// WHEN <c>SwitchAsync</c> runs through both sources
+    /// THEN exactly one branch must be invoked per result, matching the sync <c>Switch</c> branch.
+    /// </summary>
+    [Fact]
+    public async Task Value_SwitchAsync_ShouldInvokeExactlyOneBranchThroughBothSources()
+    {
+        var provided = new List<string>();
+        await Task.FromResult(Result<int>.Success(41)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int>.Success(41)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result<int>.Failure(Failure)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int>.Failure(Failure)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"f:{error.Code}"); return ValueTask.CompletedTask; });
+
+        provided.Should().Equal("s41", "s41", "f:F1", "f:F1");
+    }
+
+    /// <summary>
+    /// GIVEN a value success
+    /// WHEN <c>EnsureAsync</c> runs in both factory shapes through both sources
+    /// THEN both sources must return exactly the synchronous outcome per shape.
+    /// </summary>
+    [Fact]
+    public async Task Value_EnsureAsync_Factories_ShouldAgreeWithSync()
+    {
+        var fromSync = Result<int>.Success(41).Ensure(v => v < 0, () => Error.NotFound("N1"));
+        var valueFromSync = Result<int>.Success(41).Ensure(v => v < 0, v => Error.NotFound($"N{v}"));
+
+        var fromTask = await Task.FromResult(Result<int>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v < 0), _ => ValueTask.FromResult(Error.NotFound("N1")));
+        var fromValueTask = await ValueTask.FromResult(Result<int>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v < 0), _ => ValueTask.FromResult(Error.NotFound("N1")));
+        var fromTaskValue = await Task.FromResult(Result<int>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v < 0), (v, _) => ValueTask.FromResult(Error.NotFound($"N{v}")));
+        var fromValueTaskValue = await ValueTask.FromResult(Result<int>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v < 0), (v, _) => ValueTask.FromResult(Error.NotFound($"N{v}")));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskValue.Should().Be(valueFromSync);
+        fromValueTaskValue.Should().Be(valueFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed failure
+    /// WHEN <c>MapErrorAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>MapError</c> outcome, unchanged on success.
+    /// </summary>
+    [Fact]
+    public async Task Typed_MapErrorAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Failure("E1").MapError(error => error.Length);
+        var successFromSync = Result<int, string>.Success(41).MapError(error => error.Length);
+
+        var fromTask = await Task.FromResult(Result<int, string>.Failure("E1")).MapErrorAsync((error, _) => ValueTask.FromResult(error.Length));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Failure("E1")).MapErrorAsync((error, _) => ValueTask.FromResult(error.Length));
+        var fromTaskSuccess = await Task.FromResult(Result<int, string>.Success(41)).MapErrorAsync((error, _) => ValueTask.FromResult(error.Length));
+        var fromValueTaskSuccess = await ValueTask.FromResult(Result<int, string>.Success(41)).MapErrorAsync((error, _) => ValueTask.FromResult(error.Length));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskSuccess.Should().Be(successFromSync);
+        fromValueTaskSuccess.Should().Be(successFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed failure
+    /// WHEN <c>OnFailureAsync</c> runs through both sources
+    /// THEN both must run the side effect exactly where the sync <c>OnFailure</c> runs it and
+    /// return the receiver unchanged.
+    /// </summary>
+    [Fact]
+    public async Task Typed_OnFailureAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var observed = new List<string>();
+        await Task.FromResult(Result<int, string>.Failure("E1")).OnFailureAsync((error, _) => { observed.Add($"task:{error}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Failure("E1")).OnFailureAsync((error, _) => { observed.Add($"vtask:{error}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result<int, string>.Success(41)).OnFailureAsync((error, _) => { observed.Add("task"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Success(41)).OnFailureAsync((error, _) => { observed.Add("vtask"); return ValueTask.CompletedTask; });
+
+        observed.Should().Equal("task:E1", "vtask:E1");
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>SwitchAsync</c> runs through both sources
+    /// THEN exactly one branch must be invoked per result, matching the sync <c>Switch</c> branch.
+    /// </summary>
+    [Fact]
+    public async Task Typed_SwitchAsync_ShouldInvokeExactlyOneBranchThroughBothSources()
+    {
+        var provided = new List<string>();
+        await Task.FromResult(Result<int, string>.Success(41)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"e{error}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Success(41)).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"e{error}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result<int, string>.Failure("E1")).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"e{error}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Failure("E1")).SwitchAsync((v, _) => { provided.Add($"s{v}"); return ValueTask.CompletedTask; }, (error, _) => { provided.Add($"e{error}"); return ValueTask.CompletedTask; });
+
+        provided.Should().Equal("s41", "s41", "eE1", "eE1");
+    }
+
+    /// <summary>
+    /// GIVEN a typed success
+    /// WHEN <c>EnsureAsync</c> — the tier's only shape — runs through both sources
+    /// THEN both must return exactly the synchronous <c>Ensure</c> outcome.
+    /// </summary>
+    [Fact]
+    public async Task Typed_EnsureAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Success(41).Ensure(v => v > 0, "NEGATIVE");
+        var failedFromSync = Result<int, string>.Success(41).Ensure(v => v > 100, "TOO_BIG");
+
+        var fromTask = await Task.FromResult(Result<int, string>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v > 0), "NEGATIVE");
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v > 0), "NEGATIVE");
+        var fromTaskFailed = await Task.FromResult(Result<int, string>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v > 100), "TOO_BIG");
+        var fromValueTaskFailed = await ValueTask.FromResult(Result<int, string>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(v > 100), "TOO_BIG");
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskFailed.Should().Be(failedFromSync);
+        fromValueTaskFailed.Should().Be(failedFromSync);
+    }
+
+    // --- batteries over the whole new surface ----------------------------------
+
+    /// <summary>
+    /// GIVEN the new unit asynchronous operators
+    /// WHEN a required delegate is null or a token is cancelled
+    /// THEN null delegates throw <see cref="ArgumentNullException"/> and a cancelled token throws
+    /// <see cref="OperationCanceledException"/> before any delegate runs.
+    /// </summary>
+    [Fact]
+    public async Task Unit_NewAsyncMethods_NullAndCancelledShouldFollowTheContract()
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result.Failure(Failure)).MapErrorAsync(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result.Failure(Failure)).OnFailureAsync(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result.Success()).SwitchAsync(null!, (error, _) => ValueTask.CompletedTask).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result.Success()).EnsureAsync(null!, _ => ValueTask.FromResult(Error.NotFound("N1"))).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => ValueTask.FromResult(Result.Success()).EnsureAsync(null!, _ => ValueTask.FromResult(Error.NotFound("N1"))).AsTask());
+
+        var cancelled = new CancellationToken(true);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(error), cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result.Failure(Failure)).OnFailureAsync((error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result.Success()).SwitchAsync(_ => ValueTask.CompletedTask, (error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result.Success()).EnsureAsync(_ => ValueTask.FromResult(true), _ => ValueTask.FromResult(Error.NotFound("N1")), cancelled).AsTask());
+    }
+
+    /// <summary>
+    /// GIVEN the new value asynchronous operators
+    /// WHEN a required delegate is null or a token is cancelled
+    /// THEN null delegates throw <see cref="ArgumentNullException"/> and a cancelled token throws
+    /// <see cref="OperationCanceledException"/> before any delegate runs.
+    /// </summary>
+    [Fact]
+    public async Task Value_NewAsyncMethods_NullAndCancelledShouldFollowTheContract()
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int>.Failure(Failure)).MapErrorAsync(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int>.Failure(Failure)).OnFailureAsync(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int>.Success(41)).SwitchAsync(null!, (error, _) => ValueTask.CompletedTask).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int>.Success(41)).EnsureAsync(null!, _ => ValueTask.FromResult(Error.NotFound("N1"))).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int>.Success(41)).EnsureAsync(null!, (v, _) => ValueTask.FromResult(Error.NotFound("N1"))).AsTask());
+
+        var cancelled = new CancellationToken(true);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int>.Failure(Failure)).MapErrorAsync((error, _) => ValueTask.FromResult(error), cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int>.Failure(Failure)).OnFailureAsync((error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int>.Success(41)).SwitchAsync((v, _) => ValueTask.CompletedTask, (error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(true), _ => ValueTask.FromResult(Error.NotFound("N1")), cancelled).AsTask());
+    }
+
+    /// <summary>
+    /// GIVEN the typed asynchronous operators
+    /// WHEN a required delegate is null or a token is cancelled
+    /// THEN null delegates throw <see cref="ArgumentNullException"/> and a cancelled token throws
+    /// <see cref="OperationCanceledException"/> before any delegate runs.
+    /// </summary>
+    [Fact]
+    public async Task Typed_AsyncMethods_NullAndCancelledShouldFollowTheContract()
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int, string>.Failure("E1")).MapErrorAsync<int, string, int>(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int, string>.Failure("E1")).OnFailureAsync(null!).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int, string>.Success(41)).SwitchAsync(null!, (error, _) => ValueTask.CompletedTask).AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Task.FromResult(Result<int, string>.Success(41)).EnsureAsync(null!, "NEGATIVE").AsTask());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => ValueTask.FromResult(Result<int, string>.Success(41)).TapAsync<int, string>(null!).AsTask());
+
+        var cancelled = new CancellationToken(true);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int, string>.Failure("E1")).MapErrorAsync((error, _) => ValueTask.FromResult(error), cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int, string>.Failure("E1")).OnFailureAsync((error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int, string>.Success(41)).SwitchAsync((v, _) => ValueTask.CompletedTask, (error, _) => ValueTask.CompletedTask, cancelled).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.FromResult(Result<int, string>.Success(41)).EnsureAsync((v, _) => ValueTask.FromResult(true), "NEGATIVE", cancelled).AsTask());
+    }
+
     // The value tier's cancelled-token battery is already covered by
     // AsyncResultExtensionsTests.AsyncMethods_WithCancelledToken_ShouldThrow;
     // named here as the covering test rather than duplicated.

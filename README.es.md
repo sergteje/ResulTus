@@ -189,6 +189,13 @@ Result<int> fetched = await FetchAsync(21)
     .RecoverAsync((error, token) => ValueTask.FromResult(0));
 ```
 
+Cada operador sincrónico tiene su gemelo `Async` sobre `Task` y `ValueTask`, en los tres tiers —
+`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`,
+`Finally` — con delegates conscientes del token y el token honrado antes del trabajo awaitado. El
+tier tipado toma una sola forma de `Ensure` (el valor de error que ya tenés); los tiers unit y
+`Result<T>` llevan además las formas con fábrica de error. Un token cancelado se manifiesta como
+`OperationCanceledException`, nunca como un fallo.
+
 Una cadena de colecciones — `Traverse` → `Fold` → `Partition` sobre una lista real:
 
 ```csharp

@@ -431,4 +431,229 @@ public static class TypedResultAsyncExtensions
         ArgumentNullException.ThrowIfNull(result);
         return FinallyAsync(new ValueTask<Result<TSuccess, TError>>(result), finallyAction, cancellationToken);
     }
+
+    /// <summary>
+    /// Transforms the error of a failed typed result asynchronously, leaving a success untouched.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <typeparam name="TNewError">The type produced by <paramref name="map"/>.</typeparam>
+    /// <param name="result">The result to transform.</param>
+    /// <param name="map">Asynchronous error transformation. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the transformation.</param>
+    /// <returns>The original success, or a failure carrying the mapped error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async ValueTask<Result<TSuccess, TNewError>> MapErrorAsync<TSuccess, TError, TNewError>(
+        this ValueTask<Result<TSuccess, TError>> result,
+        Func<TError, CancellationToken, ValueTask<TNewError>> map,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        current.Deconstruct(out var isSuccess, out var value, out var error);
+        return isSuccess
+            ? Result<TSuccess, TNewError>.Success(value!)
+            : Result<TSuccess, TNewError>.Failure(await map(error!, cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Transforms the error of a failed typed result asynchronously, leaving a success untouched.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <typeparam name="TNewError">The type produced by <paramref name="map"/>.</typeparam>
+    /// <param name="result">The result to transform.</param>
+    /// <param name="map">Asynchronous error transformation. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the transformation.</param>
+    /// <returns>The original success, or a failure carrying the mapped error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> or <paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Result<TSuccess, TNewError>> MapErrorAsync<TSuccess, TError, TNewError>(
+        this Task<Result<TSuccess, TError>> result,
+        Func<TError, CancellationToken, ValueTask<TNewError>> map,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return MapErrorAsync(new ValueTask<Result<TSuccess, TError>>(result), map, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs an asynchronous side effect with the error of a failed typed result and returns the
+    /// original result unchanged.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to observe.</param>
+    /// <param name="onFailure">Asynchronous side effect. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the side effect.</param>
+    /// <returns>The original <paramref name="result"/>, unchanged.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async ValueTask<Result<TSuccess, TError>> OnFailureAsync<TSuccess, TError>(
+        this ValueTask<Result<TSuccess, TError>> result,
+        Func<TError, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(onFailure);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        current.Deconstruct(out var isSuccess, out _, out var error);
+        if (!isSuccess)
+        {
+            await onFailure(error!, cancellationToken).ConfigureAwait(false);
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Runs an asynchronous side effect with the error of a failed typed result and returns the
+    /// original result unchanged.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to observe.</param>
+    /// <param name="onFailure">Asynchronous side effect. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the side effect.</param>
+    /// <returns>The original <paramref name="result"/>, unchanged.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Result<TSuccess, TError>> OnFailureAsync<TSuccess, TError>(
+        this Task<Result<TSuccess, TError>> result,
+        Func<TError, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return OnFailureAsync(new ValueTask<Result<TSuccess, TError>>(result), onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Matches the result state through asynchronous side-effect functions, invoking exactly one.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to switch on.</param>
+    /// <param name="onSuccess">Asynchronous side effect invoked with the success value.</param>
+    /// <param name="onFailure">Asynchronous side effect invoked with the error value.</param>
+    /// <param name="cancellationToken">Token observed before and during the switch.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async ValueTask SwitchAsync<TSuccess, TError>(
+        this ValueTask<Result<TSuccess, TError>> result,
+        Func<TSuccess, CancellationToken, ValueTask> onSuccess,
+        Func<TError, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        current.Deconstruct(out var isSuccess, out var value, out var error);
+        if (isSuccess)
+        {
+            await onSuccess(value!, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await onFailure(error!, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Matches the result state through asynchronous side-effect functions, invoking exactly one.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to switch on.</param>
+    /// <param name="onSuccess">Asynchronous side effect invoked with the success value.</param>
+    /// <param name="onFailure">Asynchronous side effect invoked with the error value.</param>
+    /// <param name="cancellationToken">Token observed before and during the switch.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/>, <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask SwitchAsync<TSuccess, TError>(
+        this Task<Result<TSuccess, TError>> result,
+        Func<TSuccess, CancellationToken, ValueTask> onSuccess,
+        Func<TError, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return SwitchAsync(new ValueTask<Result<TSuccess, TError>>(result), onSuccess, onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying <paramref name="error"/> otherwise.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="error">Error used when <paramref name="predicate"/> returns <c>false</c>.</param>
+    /// <param name="cancellationToken">Token observed before and during the predicate.</param>
+    /// <returns>The original success, a failure carrying <paramref name="error"/>, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    /// <remarks>
+    /// The typed tier keeps a single <c>Ensure</c> shape (an already-held <typeparamref name="TError"/>)
+    /// rather than factory shapes: a typed error is an arbitrary value the caller already has, so a
+    /// synthesizing factory is not requested until a real use is named.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async ValueTask<Result<TSuccess, TError>> EnsureAsync<TSuccess, TError>(
+        this ValueTask<Result<TSuccess, TError>> result,
+        Func<TSuccess, CancellationToken, ValueTask<bool>> predicate,
+        TError error,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        current.Deconstruct(out var isSuccess, out var value, out _);
+        if (!isSuccess)
+        {
+            return current;
+        }
+
+        return await predicate(value!, cancellationToken).ConfigureAwait(false)
+            ? current
+            : Result<TSuccess, TError>.Failure(error);
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying <paramref name="error"/> otherwise.
+    /// </summary>
+    /// <typeparam name="TSuccess">The type of the success value.</typeparam>
+    /// <typeparam name="TError">The type of the error value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="error">Error used when <paramref name="predicate"/> returns <c>false</c>.</param>
+    /// <param name="cancellationToken">Token observed before and during the predicate.</param>
+    /// <returns>The original success, a failure carrying <paramref name="error"/>, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> or <paramref name="predicate"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    /// <remarks>
+    /// The typed tier keeps a single <c>Ensure</c> shape; see the synchronous twin's rationale.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<Result<TSuccess, TError>> EnsureAsync<TSuccess, TError>(
+        this Task<Result<TSuccess, TError>> result,
+        Func<TSuccess, CancellationToken, ValueTask<bool>> predicate,
+        TError error,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return EnsureAsync(new ValueTask<Result<TSuccess, TError>>(result), predicate, error, cancellationToken);
+    }
 }

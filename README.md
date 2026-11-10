@@ -189,6 +189,13 @@ Result<int> fetched = await FetchAsync(21)
     .RecoverAsync((error, token) => ValueTask.FromResult(0));
 ```
 
+Every synchronous operator has its `Async` twin over `Task` and `ValueTask`, on all three tiers —
+`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`,
+`Finally` — with cancellation-aware delegates and the token honoured before the awaited work runs.
+The typed tier takes one `Ensure` shape (the error value you already hold); the unit and `Result<T>`
+tiers also carry the error-factory shapes. A cancelled token surfaces as
+`OperationCanceledException`, never as a failure.
+
 A collections pipeline — `Traverse` → `Fold` → `Partition` over a real list:
 
 ```csharp

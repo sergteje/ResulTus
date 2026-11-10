@@ -14,6 +14,10 @@ defines it, means the public API may still change between minor releases.
 - **Packaging** — the package icon and the canonical README are carried inside every `nupkg` (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
 - **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, now supplied as owner artwork (brand suite v2.0) and consumed by both README editions.
 
+### Added (extensions surface)
+
+- **Async parity across the three tiers** — the typed tier (`Result<TSuccess, TError>`) gained its own `Task`/`ValueTask` pipeline operators (`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`, `Finally`), and the unit and value tiers gained the missing error-side terminals (`MapErrorAsync`, `OnFailureAsync`, `SwitchAsync`) plus the `Ensure` error-factory shapes. Cancellation-aware delegates match the existing shapes; a cancelled token surfaces as `OperationCanceledException`, never as a failure. The typed tier keeps one `Ensure` shape, documented in the API surface. Coverage: `CrossTierSemanticsTests` (Task/ValueTask/sync parity, success and failure paths, plus null and cancelled batteries).
+
 ### Verified
 
 - **Trimming and Native AOT** are run-verified in CI (`aot-smoke`, run `42653755212`, green): a console application published both trimmed and natively executes the core result types plus the AOT-safe System.Text.Json surface, passing every assertion. Both README editions carry the runtime-compatibility section.
@@ -31,8 +35,9 @@ First versioned release. Thirteen packages, one result type shared by all of the
   32-byte default tier is the documented price of the inline error
   ([decision 001](docs/decisions/001-result-struct-size.md)).
 - **`ResulTus.Extensions`** — `Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally` and
-  `Switch` for the unit, `Result<T>` and generic tiers, the `Task`/`ValueTask` overloads with
-  cancellation, and the value, nullable and exception conversions.
+  `Switch` for the unit, `Result<T>` and generic tiers; `Task`/`ValueTask` overloads with
+  cancellation for the unit and `Result<T>` pipeline operators at this tag (the typed tier's async
+  operators land in 0.0.2); and the value, nullable and exception conversions.
 - **`ResulTus.Collections`** — `Traverse`, `Sequence`, `Fold`, `Partition`, `FirstFailure`,
   `Combine` and the inspection queries over arrays, lists, read-only lists and `IEnumerable<T>`,
   plus the asynchronous `WhenAll` and `WhenAny`.

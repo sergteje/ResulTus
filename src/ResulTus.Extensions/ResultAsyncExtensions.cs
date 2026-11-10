@@ -357,4 +357,264 @@ public static class ResultAsyncExtensions
         ArgumentNullException.ThrowIfNull(result);
         return FinallyAsync(new ValueTask<Result<T>>(result), finallyAction, cancellationToken);
     }
+
+    /// <summary>
+    /// Transforms the error of a failed result asynchronously, leaving a success untouched.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to transform.</param>
+    /// <param name="map">Asynchronous error transformation. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the transformation.</param>
+    /// <returns>The original success, or a failure carrying the mapped error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static async ValueTask<Result<T>> MapErrorAsync<T>(
+        this ValueTask<Result<T>> result,
+        Func<Error, CancellationToken, ValueTask<Error>> map,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        if (current.TryGetValue(out var value, out var error))
+        {
+            return Result<T>.Success(value!);
+        }
+
+        return Result<T>.Failure(await map(error, cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Transforms the error of a failed result asynchronously, leaving a success untouched.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to transform.</param>
+    /// <param name="map">Asynchronous error transformation. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the transformation.</param>
+    /// <returns>The original success, or a failure carrying the mapped error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> or <paramref name="map"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static ValueTask<Result<T>> MapErrorAsync<T>(
+        this Task<Result<T>> result,
+        Func<Error, CancellationToken, ValueTask<Error>> map,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return MapErrorAsync(new ValueTask<Result<T>>(result), map, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs an asynchronous side effect with the error of a failed result and returns the original
+    /// result unchanged.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to observe.</param>
+    /// <param name="onFailure">Asynchronous side effect. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the side effect.</param>
+    /// <returns>The original <paramref name="result"/>, unchanged.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static async ValueTask<Result<T>> OnFailureAsync<T>(
+        this ValueTask<Result<T>> result,
+        Func<Error, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(onFailure);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        if (!current.TryGetValue(out _, out var error))
+        {
+            await onFailure(error, cancellationToken).ConfigureAwait(false);
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Runs an asynchronous side effect with the error of a failed result and returns the original
+    /// result unchanged.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to observe.</param>
+    /// <param name="onFailure">Asynchronous side effect. Never invoked on success.</param>
+    /// <param name="cancellationToken">Token observed before and during the side effect.</param>
+    /// <returns>The original <paramref name="result"/>, unchanged.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static ValueTask<Result<T>> OnFailureAsync<T>(
+        this Task<Result<T>> result,
+        Func<Error, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return OnFailureAsync(new ValueTask<Result<T>>(result), onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Matches the result state through asynchronous side-effect functions, invoking exactly one.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to switch on.</param>
+    /// <param name="onSuccess">Asynchronous side effect invoked with the success value.</param>
+    /// <param name="onFailure">Asynchronous side effect invoked with the failure error.</param>
+    /// <param name="cancellationToken">Token observed before and during the switch.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static async ValueTask SwitchAsync<T>(
+        this ValueTask<Result<T>> result,
+        Func<T, CancellationToken, ValueTask> onSuccess,
+        Func<Error, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        if (current.TryGetValue(out var value, out var error))
+        {
+            await onSuccess(value!, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await onFailure(error, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Matches the result state through asynchronous side-effect functions, invoking exactly one.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to switch on.</param>
+    /// <param name="onSuccess">Asynchronous side effect invoked with the success value.</param>
+    /// <param name="onFailure">Asynchronous side effect invoked with the failure error.</param>
+    /// <param name="cancellationToken">Token observed before and during the switch.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/>, <paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static ValueTask SwitchAsync<T>(
+        this Task<Result<T>> result,
+        Func<T, CancellationToken, ValueTask> onSuccess,
+        Func<Error, CancellationToken, ValueTask> onFailure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return SwitchAsync(new ValueTask<Result<T>>(result), onSuccess, onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying the asynchronously produced error otherwise.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="errorFactory">Asynchronous error producer. Never invoked on failure.</param>
+    /// <param name="cancellationToken">Token observed before and during both delegates.</param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static async ValueTask<Result<T>> EnsureAsync<T>(
+        this ValueTask<Result<T>> result,
+        Func<T, CancellationToken, ValueTask<bool>> predicate,
+        Func<CancellationToken, ValueTask<Error>> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        if (!current.TryGetValue(out var value, out _))
+        {
+            return current;
+        }
+
+        if (!await predicate(value!, cancellationToken).ConfigureAwait(false))
+        {
+            return Result<T>.Failure(await errorFactory(cancellationToken).ConfigureAwait(false));
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying the asynchronously produced error otherwise.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="errorFactory">Asynchronous error producer. Never invoked on failure.</param>
+    /// <param name="cancellationToken">Token observed before and during both delegates.</param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/>, <paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static ValueTask<Result<T>> EnsureAsync<T>(
+        this Task<Result<T>> result,
+        Func<T, CancellationToken, ValueTask<bool>> predicate,
+        Func<CancellationToken, ValueTask<Error>> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return EnsureAsync(new ValueTask<Result<T>>(result), predicate, errorFactory, cancellationToken);
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying the asynchronously produced, value-derived error otherwise.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="errorFactory">Asynchronous error producer receiving the value. Never invoked on failure.</param>
+    /// <param name="cancellationToken">Token observed before and during both delegates.</param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static async ValueTask<Result<T>> EnsureAsync<T>(
+        this ValueTask<Result<T>> result,
+        Func<T, CancellationToken, ValueTask<bool>> predicate,
+        Func<T, CancellationToken, ValueTask<Error>> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var current = await result.ConfigureAwait(false);
+        if (!current.TryGetValue(out var value, out _))
+        {
+            return current;
+        }
+
+        if (!await predicate(value!, cancellationToken).ConfigureAwait(false))
+        {
+            return Result<T>.Failure(await errorFactory(value!, cancellationToken).ConfigureAwait(false));
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// Keeps a success only while the asynchronous predicate holds, turning it into a failure
+    /// carrying the asynchronously produced, value-derived error otherwise.
+    /// </summary>
+    /// <typeparam name="T">The type of the success value.</typeparam>
+    /// <param name="result">The result to guard.</param>
+    /// <param name="predicate">Asynchronous condition. Never invoked on failure.</param>
+    /// <param name="errorFactory">Asynchronous error producer receiving the value. Never invoked on failure.</param>
+    /// <param name="cancellationToken">Token observed before and during both delegates.</param>
+    /// <returns>The original success, a failure carrying the produced error, or the original failure.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="result"/>, <paramref name="predicate"/> or <paramref name="errorFactory"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
+    public static ValueTask<Result<T>> EnsureAsync<T>(
+        this Task<Result<T>> result,
+        Func<T, CancellationToken, ValueTask<bool>> predicate,
+        Func<T, CancellationToken, ValueTask<Error>> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return EnsureAsync(new ValueTask<Result<T>>(result), predicate, errorFactory, cancellationToken);
+    }
 }
