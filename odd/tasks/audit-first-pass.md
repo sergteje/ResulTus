@@ -25,7 +25,7 @@ Every audit claim below was re-verified against the repository before being acce
 | T2 | S2, S3 | inline | done | see L2 |
 | T3 | S4 | inline | done | see L3 |
 | T4 | S5 | inline | pending | — |
-| T5 | S6, S7 | inline | pending | — |
+| T5 | S6, S7 | inline | done | see L3 |
 | T6 | S8 | owner | pending | decision criteria, no build |
 | T7 | S9 | owner | pending | backlog for 1.0 |
 
@@ -64,7 +64,19 @@ The audit's one blocking factual error — "no CI yet" — was caused by reading
 - *"Que los delegates nulos tengan comportamiento coherente"* — value tier was covered (`AsyncMethods_WithNullArguments_ShouldThrow`); the unit tier's async battery **did not exist** and now does: `CrossTierSemanticsTests.Unit_AsyncMethods_WithNullDelegatesShouldThrow`, one assertion per operator per source type.
 - *"Que no existan conversiones implícitas con resultados anidados"* — **not a test gap**: the overlay analyzer is named exactly for this — `RESULT005` (`NestedResultAnalyzer`, `src/ResulTus.Analyzers/NestedResultAnalyzer.cs:40`), with analyzer tests in `tests/ResulTus.Analyzers.Tests/`. Named; verified.
 
-**Gaps that are REAL API facts, not test work (owner decision required — not implemented):**
+**Gaps that are REAL API facts, not test work (owner decision required — not implemented):
+
+### L4 — T5 executed: the false-positive battery and the Gen0 columns (2026-11-10)
+
+**S6 — analyzers.** `tests/ResulTus.Analyzers.Tests/AnalyzerFalsePositiveTests.cs` adds six curated silent-expectation cases, one per rule, each a shape a name-based search would misjudge but that the real symbol gates must ignore: the consumer's own `Result` type in another namespace freely discarded; `Nullable<int>.GetValueOrDefault()` read without a guard; an ordinary tuple deconstruction discarding a component; an identity `Bind(v => v)` through a consumer-defined extension on a consumer-defined type; a nested lookalike (`Acme.Internal.Result<Tiny>` whose `Tiny` carries another lookalike `Result?`); and an `Ensure` predicate that reads an instance's state even when the state is always true. All six run every rule and every rule must stay silent — if an analyzer grows an unjustified complaint, the suite fails before any future rule lands. (Two of the six sources initially failed to compile and were fixed before asserting — the harness's compile-first discipline doing its job.)
+
+**S7 — the charter's generation columns.** The measured evidence existed in the locally stored `report-github.md` artifacts of the 2026-10-29 runs — no re-benchmarks needed, no number invented: the Creation and Matching tables in `docs/performance.md` now carry the `Gen0` column quoted from those runs (`FluentResults` shows `0.0268`/`0.0573` on creation and `0.0229`/`0.0210` on matching; `ErrorOr_Create_Failure` shows `0.0210`). `Gen1`/`Gen2` are absent from the reports because every run measured zero — BenchmarkDotNet drops an all-zero column, and the charter now states that the absence is the record and a non-zero value must be added the day a run produces one. The zero-allocation rows quote `-`, verbatim from the artifacts.
+
+Suite at closure: analyzers project 47 passed; full suite run before commit.
+
+### The three gaps of L3, closed under the owner's decision
+
+The T3 sweep surfaced three real API facts. The owner decided "hay que arreglar los 3"; the work lives in `odd/tasks/async-parity.md` and is complete — listed here in their pre-work state for the record:
 
 1. The typed tier `Result<TSuccess, TError>` has **zero** asynchronous operators. `README.md`'s packages table reads "the `Task`/`ValueTask` overloads with cancellation" without scoping them to unit+value, so a reader expects them on all three tiers. Either the operators land (typed `MapAsync`, etc. with `CancellationTokenSharper`-aware delegates mirroring the value tier), or the README states the scope explicitly.
 2. `MapErrorAsync`, `OnFailureAsync` and async `Switch` do not exist in either async file — `TapAsync` covers only the success side, so a failure-side async terminal is missing in both tiers.

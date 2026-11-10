@@ -8,6 +8,17 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Analyzer false-positive battery** — six curated silent-expectation sources (lookalike `Result`
+  types in user namespaces, `Nullable<T>.GetValueOrDefault`, ordinary tuple discards, third-party
+  identity binds, nested lookalikes, stateful `Ensure` predicates) pin the analyzers' symbol gates:
+  code that a name-based search would mistake for misuse must never reach a complaint.
+- **Benchmark charter generation columns** — the creation and matching comparison tables in
+  `docs/performance.md` now publish the `Gen0` column quoted from the stored run artifacts, with
+  the rule stated that `Gen1`/`Gen2` were zero in every measured run and their column absence is
+  the record.
+
 ## [0.0.2] - 2026-11-10
 
 ### Added

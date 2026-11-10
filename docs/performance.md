@@ -58,37 +58,46 @@ Benchmarks: `tests/ResulTus.Benchmarks/`.
 
 Post-B1: `Error` is 24 B and `Result<int>` is 32 B, zero allocation on both paths.
 
-| Method | Mean | Allocated |
-| --- | ---: | ---: |
-| **ResulTus_Create_Success** | 0.0118 ns | **0 B** |
-| **ResulTus_Create_Failure** | 0.0192 ns | **0 B** |
-| ResulTus_Create_Implicit_From_Value | 0.0130 ns | 0 B |
-| ResulTus_Create_Implicit_From_Error | 0.1153 ns | 0 B |
-| ZeroResult_Create_Success | 0.0150 ns | 0 B |
-| ZeroResult_Create_Failure | 0.3182 ns | 0 B |
-| CSharpFunctionalExtensions_Create_Success | 2.2914 ns | 0 B |
-| CSharpFunctionalExtensions_Create_Failure | 0.0544 ns | 0 B |
-| ErrorOr_Create_Success | 0.1295 ns | 0 B |
-| ErrorOr_Create_Failure | 11.6516 ns | **88 B** |
-| FluentResults_Create_Success | 18.7471 ns | **112 B** |
-| FluentResults_Create_Failure | 40.6202 ns | **240 B** |
+The `Gen0` column below is quoted from the same measured runs
+(`BenchmarkDotNet.Artifacts/results/`…`report-github.md`, this machine): Gen 0 collections per
+1,000 operations. Gen 1 and Gen 2 are absent from the benchmark reports because every measured
+run recorded zero, which BenchmarkDotNet expresses by dropping the column — the absence is the
+record, and a non-zero Gen 1/Gen 2 must be added the day a measured run shows one.
+
+| Method | Mean | Gen0 | Allocated |
+| --- | ---: | ---: | ---: |
+| **ResulTus_Create_Success** | 0.0118 ns | - | **0 B** |
+| **ResulTus_Create_Failure** | 0.0192 ns | - | **0 B** |
+| ResulTus_Create_Implicit_From_Value | 0.0130 ns | - | 0 B |
+| ResulTus_Create_Implicit_From_Error | 0.1153 ns | - | 0 B |
+| ZeroResult_Create_Success | 0.0150 ns | - | 0 B |
+| ZeroResult_Create_Failure | 0.3182 ns | - | 0 B |
+| CSharpFunctionalExtensions_Create_Success | 2.2914 ns | - | 0 B |
+| CSharpFunctionalExtensions_Create_Failure | 0.0544 ns | - | 0 B |
+| ErrorOr_Create_Success | 0.1295 ns | - | 0 B |
+| ErrorOr_Create_Failure | 11.6516 ns | 0.0210 | **88 B** |
+| FluentResults_Create_Success | 18.7471 ns | 0.0268 | **112 B** |
+| FluentResults_Create_Failure | 40.6202 ns | 0.0573 | **240 B** |
 
 **Verdict:** every row below 1 ns is a tie by the noise-floor rule — that includes CSharpFunctionalExtensions' `0.0544 ns` failure, which is not a loss we can measure. The meaningful result is `Create_Failure`: **0.0192 ns and 0 B** against ErrorOr's `11.65 ns` + **88 B** and FluentResults' `40.62 ns` + **240 B**, i.e. **607x** and **2116x** faster with no allocation while they allocate an error object. ZeroResult's `0.3182 ns` is also zero-allocation; the gap is real in direction but is not the story — the story is that every competitor except ZeroResult must allocate to report a failure.
 
-### Result matching — measured 2026-10-29
+### Result matching - measured 2026-10-29
 
-| Method | Mean | Allocated |
-| --- | ---: | ---: |
-| **ResulTus_Match_Success** | 0.9235 ns | **0 B** |
-| **ResulTus_Match_Failure** | 1.3834 ns | **0 B** |
-| ErrorOr_Match_Success | **0.7175 ns** | 0 B |
-| ErrorOr_Match_Failure | **0.5482 ns** | 0 B |
-| ZeroResult_Match_Success | 0.9391 ns | 0 B |
-| ZeroResult_Match_Failure | **0.7818 ns** | 0 B |
-| CSharpFunctionalExtensions_Match_Success | 1.9599 ns | 0 B |
-| CSharpFunctionalExtensions_Match_Failure | 1.8911 ns | 0 B |
-| FluentResults_Match_Success | 21.4166 ns | **96 B** |
-| FluentResults_Match_Failure | 19.0831 ns | **88 B** |
+`Gen0` is quoted from the same measured runs (creation table rules apply: Gen 1 and Gen 2 were
+zero in every run and are therefore absent from the reports).
+
+| Method | Mean | Gen0 | Allocated |
+| --- | ---: | ---: | ---: |
+| **ResulTus_Match_Success** | 0.9235 ns | - | **0 B** |
+| **ResulTus_Match_Failure** | 1.3834 ns | - | **0 B** |
+| ErrorOr_Match_Success | **0.7175 ns** | - | 0 B |
+| ErrorOr_Match_Failure | **0.5482 ns** | - | 0 B |
+| ZeroResult_Match_Success | 0.9391 ns | - | 0 B |
+| ZeroResult_Match_Failure | **0.7818 ns** | - | 0 B |
+| CSharpFunctionalExtensions_Match_Success | 1.9599 ns | - | 0 B |
+| CSharpFunctionalExtensions_Match_Failure | 1.8911 ns | - | 0 B |
+| FluentResults_Match_Success | 21.4166 ns | 0.0229 | **96 B** |
+| FluentResults_Match_Failure | 19.0831 ns | 0.0210 | **88 B** |
 
 **Verdict:** the settled wins are structural, not nanosecond-sized.
 
