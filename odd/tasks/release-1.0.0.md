@@ -17,16 +17,16 @@ nuget.org, and the version number every consumer treats as a stability statement
   link references moved to the tag; `[Unreleased]` starts fresh.
 - **S3 — the tag-driven pipeline performs the whole publish**, including the GitHub Release
   object with notes extracted from this changelog section (the covenant automated at
-  `d70133e`), and the analyzer mirror to GitHub Packages.
+  `d70133e`), and the mirror to GitHub Packages.
 - **S4 — the observables read back after publication**, per the 0.0.2/0.0.3 playbook.
 
 ## Tasks
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1, S2 | inline | done | see L1 |
-| T2 | S3 | inline | pending | tag push |
-| T3 | S4 | inline | pending | verification |
+| T1 | S1, S2 | inline | done | `6c4fe7c` |
+| T2 | S3 | inline | pending | `permissions: contents: write` fix pushed (`d35ccd0`) — see L2 |
+| T3 | S4 | inline | pending | see L2 |
 
 ## Log
 
@@ -40,3 +40,32 @@ files, and the 1.0 promise ("a surface change without a MAJOR bump fails CI") is
 moral. The declaration is therefore gated by tooling that already exists and already runs — the
 sequence the owner ordered (multi-targeting → coverage gaps → gate → api-compat) ends with
 exactly the gate that makes this version safe to declare.
+
+### L2 — the covenant hit least-privilege on its last step; the release is complete except nuget.org's index (2026-11-10)
+
+**T1 done.** `<Version>1.0.0</Version>`; pack emits 13 `.nupkg` × 1.0.0 + the `.snupkg` set;
+`[Unreleased]` rolled into `[1.0.0] - 2026-11-10` with the covenant at its top and links moved.
+
+**T2 — the run's first failure was the workflow's own least-privilege**, exactly where CodeQL's
+advice pointed before it: the release workflow declared `contents: read`, so the automated
+release-object creation returned **HTTP 403 "Resource not accessible by integration"** after the
+packages had already published. Fixed to `contents: write` — commit `d35ccd0` — but the v1.0.0
+run uses the workflow file of the commit the tag pointed at, so the correction applies from the
+next `v*` tag; the release object for 1.0.0 was created manually with the same changelog-extracted
+notes, completing the observable set.
+
+**Evidence, read per step from run `42897509763`:**
+
+- nuget.org: **26 "Your package was pushed"** (13 `.nupkg` + 13 `.snupkg`) — 1.0.0 is pushed and
+  immutable there.
+- GitHub Packages mirror: **13 "Your package was pushed"** (`.nupkg` only, by design).
+- GitHub Release object: **`v1.0.0` created, `Latest`**, notes verbatim from the `[1.0.0]`
+  changelog section — https://github.com/sergteje/ResulTus/releases/tag/v1.0.0.
+- nuget.org's own index (flat container, search) still listed only 0.0.2/0.0.3 when the session
+  ended — indexing latency for a new version of an existing package, the same pattern as 0.0.2
+  and 0.0.3 before it.
+
+**Pending for tomorrow, S4 close-out:** re-read the four observables (flat container, search,
+package page, and the releases/API listing) to confirm nuget.org's index lists 1.0.0, then mark
+T2/T3 done in this record. Nothing else remains: the tags v0.0.1–v1.0.0, the four release
+objects, both feeds, and the covenant are live.
