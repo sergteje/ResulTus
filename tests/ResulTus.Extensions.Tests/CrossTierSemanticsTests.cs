@@ -365,6 +365,167 @@ public class CrossTierSemanticsTests
         syncFailure.IsFailure.Should().BeTrue();
     }
 
+    // --- typed tier: Task vs ValueTask vs sync --------------------------------
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>MapAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>Map</c> outcome.
+    /// </summary>
+    [Fact]
+    public async Task Typed_MapAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Success(41).Map(v => v + 1);
+        var failureFromSync = Result<int, string>.Failure("E1").Map(v => v + 1);
+
+        var fromTask = await Task.FromResult(Result<int, string>.Success(41)).MapAsync((v, _) => ValueTask.FromResult(v + 1));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Success(41)).MapAsync((v, _) => ValueTask.FromResult(v + 1));
+        var fromTaskFailure = await Task.FromResult(Result<int, string>.Failure("E1")).MapAsync((v, _) => ValueTask.FromResult(v + 1));
+        var fromValueTaskFailure = await ValueTask.FromResult(Result<int, string>.Failure("E1")).MapAsync((v, _) => ValueTask.FromResult(v + 1));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskFailure.Should().Be(failureFromSync);
+        fromValueTaskFailure.Should().Be(failureFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>BindAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>Bind</c> outcome.
+    /// </summary>
+    [Fact]
+    public async Task Typed_BindAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Success(41).Bind(v => Result<string, string>.Success($"v{v}"));
+        var failureFromSync = Result<int, string>.Failure("E1").Bind(v => Result<string, string>.Success($"v{v}"));
+
+        var fromTask = await Task.FromResult(Result<int, string>.Success(41)).BindAsync((v, _) => ValueTask.FromResult(Result<string, string>.Success($"v{v}")));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Success(41)).BindAsync((v, _) => ValueTask.FromResult(Result<string, string>.Success($"v{v}")));
+        var fromTaskFailure = await Task.FromResult(Result<int, string>.Failure("E1")).BindAsync((v, _) => ValueTask.FromResult(Result<string, string>.Success($"v{v}")));
+        var fromValueTaskFailure = await ValueTask.FromResult(Result<int, string>.Failure("E1")).BindAsync((v, _) => ValueTask.FromResult(Result<string, string>.Success($"v{v}")));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskFailure.Should().Be(failureFromSync);
+        fromValueTaskFailure.Should().Be(failureFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>TapAsync</c> (and its <c>OnSuccessAsync</c> alias) runs through both sources
+    /// THEN both must run the side effect exactly where the sync <c>Tap</c> runs it —
+    /// success only — and return the receiver unchanged.
+    /// </summary>
+    [Fact]
+    public async Task Typed_TapAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var observed = new List<int>();
+        var syncSuccess = Result<int, string>.Success(41).Tap(v => observed.Add(v));
+
+        var fromTask = await Task.FromResult(Result<int, string>.Success(41)).TapAsync((v, _) => { observed.Add(v); return ValueTask.CompletedTask; });
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Success(41)).OnSuccessAsync((v, _) => { observed.Add(v); return ValueTask.CompletedTask; });
+        var fromTaskFailure = await Task.FromResult(Result<int, string>.Failure("E1")).TapAsync((v, _) => { observed.Add(v); return ValueTask.CompletedTask; });
+        var fromValueTaskFailure = await ValueTask.FromResult(Result<int, string>.Failure("E1")).TapAsync((v, _) => { observed.Add(v); return ValueTask.CompletedTask; });
+
+        observed.Should().Equal(41, 41, 41);
+        fromTask.Should().Be(syncSuccess);
+        fromValueTask.Should().Be(syncSuccess);
+        fromTaskFailure.Should().Be(Result<int, string>.Failure("E1"));
+        fromValueTaskFailure.Should().Be(Result<int, string>.Failure("E1"));
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>MatchAsync</c> runs through both sources
+    /// THEN both must return exactly the synchronous <c>Match</c> outcome on both branches.
+    /// </summary>
+    [Fact]
+    public async Task Typed_MatchAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Success(41).Match(v => v * 2, error => -1);
+        var failureFromSync = Result<int, string>.Failure("E1").Match(v => v * 2, error => -1);
+
+        var fromTask = await Task.FromResult(Result<int, string>.Success(41)).MatchAsync((v, _) => ValueTask.FromResult(v * 2), (error, _) => ValueTask.FromResult(-1));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Success(41)).MatchAsync((v, _) => ValueTask.FromResult(v * 2), (error, _) => ValueTask.FromResult(-1));
+        var fromTaskFailure = await Task.FromResult(Result<int, string>.Failure("E1")).MatchAsync((v, _) => ValueTask.FromResult(v * 2), (error, _) => ValueTask.FromResult(-1));
+        var fromValueTaskFailure = await ValueTask.FromResult(Result<int, string>.Failure("E1")).MatchAsync((v, _) => ValueTask.FromResult(v * 2), (error, _) => ValueTask.FromResult(-1));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskFailure.Should().Be(failureFromSync);
+        fromValueTaskFailure.Should().Be(failureFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>RecoverAsync</c> runs through both sources in its value shape
+    /// THEN both must return exactly the synchronous value-shaped <c>Recover</c> outcome,
+    /// and the recovery must never run on success.
+    /// </summary>
+    [Fact]
+    public async Task Typed_RecoverAsync_ValueShape_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Failure("E1").Recover(error => 99);
+        var successFromSync = Result<int, string>.Success(41).Recover(error => 99);
+
+        var fromTask = await Task.FromResult(Result<int, string>.Failure("E1")).RecoverAsync((error, _) => ValueTask.FromResult(99));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Failure("E1")).RecoverAsync((error, _) => ValueTask.FromResult(99));
+        var fromTaskSuccess = await Task.FromResult(Result<int, string>.Success(41)).RecoverAsync((error, _) => ValueTask.FromResult(99));
+        var fromValueTaskSuccess = await ValueTask.FromResult(Result<int, string>.Success(41)).RecoverAsync((error, _) => ValueTask.FromResult(99));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskSuccess.Should().Be(successFromSync);
+        fromValueTaskSuccess.Should().Be(successFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>RecoverAsync</c> runs through both sources in its result shape
+    /// THEN both must return exactly the synchronous result-shaped <c>Recover</c> outcome.
+    /// </summary>
+    [Fact]
+    public async Task Typed_RecoverAsync_ResultShape_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var fromSync = Result<int, string>.Failure("E1").Recover(error => Result<int, string>.Success(99));
+        var successFromSync = Result<int, string>.Success(41).Recover(error => Result<int, string>.Success(99));
+
+        var fromTask = await Task.FromResult(Result<int, string>.Failure("E1")).RecoverAsync((error, _) => ValueTask.FromResult(Result<int, string>.Success(99)));
+        var fromValueTask = await ValueTask.FromResult(Result<int, string>.Failure("E1")).RecoverAsync((error, _) => ValueTask.FromResult(Result<int, string>.Success(99)));
+        var fromTaskSuccess = await Task.FromResult(Result<int, string>.Success(41)).RecoverAsync((error, _) => ValueTask.FromResult(Result<int, string>.Success(99)));
+        var fromValueTaskSuccess = await ValueTask.FromResult(Result<int, string>.Success(41)).RecoverAsync((error, _) => ValueTask.FromResult(Result<int, string>.Success(99)));
+
+        fromTask.Should().Be(fromSync);
+        fromValueTask.Should().Be(fromSync);
+        fromTaskSuccess.Should().Be(successFromSync);
+        fromValueTaskSuccess.Should().Be(successFromSync);
+    }
+
+    /// <summary>
+    /// GIVEN a typed success and a typed failure
+    /// WHEN <c>FinallyAsync</c> runs through both sources
+    /// THEN both must observe exactly what the sync <c>Finally</c> observes — the payload and
+    /// the default error on success, the default payload and the error on failure — exactly once.
+    /// </summary>
+    [Fact]
+    public async Task Typed_FinallyAsync_TaskAndValueTaskShouldAgreeWithSync()
+    {
+        var observations = new List<string>();
+        var syncOutcome = Result<int, string>.Success(41).Finally((v, error) => observations.Add($"v{v}"));
+        var syncFailure = Result<int, string>.Failure("E1").Finally((v, error) => observations.Add($"e{error}"));
+
+        var observed = new List<string>();
+        await Task.FromResult(Result<int, string>.Success(41)).FinallyAsync((v, error, _) => { observed.Add($"v{v}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Success(41)).FinallyAsync((v, error, _) => { observed.Add($"v{v}"); return ValueTask.CompletedTask; });
+        await Task.FromResult(Result<int, string>.Failure("E1")).FinallyAsync((v, error, _) => { observed.Add($"e{error}"); return ValueTask.CompletedTask; });
+        await ValueTask.FromResult(Result<int, string>.Failure("E1")).FinallyAsync((v, error, _) => { observed.Add($"e{error}"); return ValueTask.CompletedTask; });
+
+        observed.Should().Equal("v41", "v41", "eE1", "eE1");
+        syncOutcome.IsSuccess.Should().BeTrue();
+        syncFailure.IsFailure.Should().BeTrue();
+    }
+
     // The value tier's cancelled-token battery is already covered by
     // AsyncResultExtensionsTests.AsyncMethods_WithCancelledToken_ShouldThrow;
     // named here as the covering test rather than duplicated.
