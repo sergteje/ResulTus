@@ -318,6 +318,11 @@ public static class HttpResponseMessageResultExtensions
             return null;
         }
 
+        if (property.Value.ValueKind != JsonValueKind.Number)
+        {
+            throw new JsonException("The 'status' member of a problem details document must be an integer or null.");
+        }
+
         if (property.Value.TryGetInt32(out var status))
         {
             return status;

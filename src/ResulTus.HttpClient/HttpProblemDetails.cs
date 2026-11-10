@@ -2,6 +2,7 @@
 
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ResulTus.HttpClient;
 
@@ -176,7 +177,7 @@ public sealed class HttpProblemDetails : IEquatable<HttpProblemDetails>
 
         foreach (var pair in left)
         {
-            if (!right.TryGetValue(pair.Key, out var value) || !pair.Value.Equals(value))
+            if (!right.TryGetValue(pair.Key, out var value) || !ElementsEqual(pair.Value, value))
             {
                 return false;
             }
@@ -186,10 +187,30 @@ public sealed class HttpProblemDetails : IEquatable<HttpProblemDetails>
     }
 
     /// <summary>
+    /// Compares two extension values by content. <see cref="JsonElement"/> does not implement
+    /// value equality of its own (its members reference the document they were parsed from), so
+    /// two documents parsed separately never compare equal through it — content is what matters.
+    /// </summary>
+    /// <param name="left">The left element.</param>
+    /// <param name="right">The right element.</param>
+    /// <returns><c>true</c> when the two elements carry the same JSON content.</returns>
+    private static bool ElementsEqual(JsonElement left, JsonElement right)
+    {
+#if NET9_0_OR_GREATER
+        return JsonElement.DeepEquals(left, right);
+#else
+        return JsonNode.DeepEquals(JsonNode.Parse(left.GetRawText()), JsonNode.Parse(right.GetRawText()));
+#endif
+    }
+
+    /// <summary>
     /// Computes a content-based hash over an extension dictionary, order-independent so that two
     /// structurally equal dictionaries hash alike regardless of insertion order.
     /// </summary>
     /// <param name="extensions">The dictionary to hash, or <c>null</c>.</param>
+    /// <remarks>
+    /// across separately parsed documents.
+    /// </remarks>
     /// <returns>The combined hash code, or <c>0</c> when <paramref name="extensions"/> is <c>null</c>.</returns>
     private static int ExtensionsHash(IReadOnlyDictionary<string, JsonElement>? extensions)
     {
@@ -202,7 +223,7 @@ public sealed class HttpProblemDetails : IEquatable<HttpProblemDetails>
         foreach (var pair in extensions.OrderBy(static pair => pair.Key, StringComparer.Ordinal))
         {
             hash.Add(pair.Key, StringComparer.Ordinal);
-            hash.Add(pair.Value);
+            hash.Add(pair.Value.GetRawText(), StringComparer.Ordinal);
         }
 
         return hash.ToHashCode();
