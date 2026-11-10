@@ -52,3 +52,18 @@ jobs:
             --store-password-in-clear-text \
             "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           dotnet nuget push "${{ env.ARTIFACTS }}/*.nupkg" --source github --skip-duplicate
+
+      # Tag and release are the same covenant: pushing a v* tag publishes the packages AND
+      # creates the Release object with the notes taken verbatim from that version's changelog
+      # section — no release object can exist without the tag it belongs to.
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES=$(mktemp)
+          awk -v section="## [$VERSION]" 'found { if ($0 ~ /^## /) exit; print } $0 == section { found = 1 }' CHANGELOG.md > "$NOTES"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "ResulTus $VERSION" \
+            --notes-file "$NOTES" \
+            --latest
