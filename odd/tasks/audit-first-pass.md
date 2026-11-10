@@ -23,7 +23,7 @@ Every audit claim below was re-verified against the repository before being acce
 | --- | --- | --- | --- | --- |
 | T1 | S1 | inline | done | [run 42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212), see L2 |
 | T2 | S2, S3 | inline | done | see L2 |
-| T3 | S4 | inline | pending | — |
+| T3 | S4 | inline | done | see L3 |
 | T4 | S5 | inline | pending | — |
 | T5 | S6, S7 | inline | pending | — |
 | T6 | S8 | owner | pending | decision criteria, no build |
@@ -36,6 +36,41 @@ Every audit claim below was re-verified against the repository before being acce
 The owner submitted a first external audit: 13 production packages reviewed, core design endorsed, scores from 9/10 (architecture) to 6.5/10 (publication readiness), and a suggested next-step order. The auditor states they could not build or test the repository. Their framing matches the owner's own bar: "defender cada decisión con código y mediciones". The full verbatim text lives in the owner's message of this session and is not duplicated here.
 
 The audit's one blocking factual error — "no CI yet" — was caused by reading `CHANGELOG.md`'s 0.0.1 `Notes`, which was true when the tag existed and one day later was not. No correction to history is needed; S3 records post-tag work separately.
+
+### L3 — the consistency sweep (T3): inventory, findings, and the covering tests (2026-11-10)
+
+**Method.** Every public operator in `src/ResulTus.Extensions` was inventoried from source (five extension files), every existing test file was mapped to what it actually covers, and the audit's five claims became named tests or named covering tests. Opinions were not counted as coverage.
+
+**The verified matrix (public surface):**
+
+| Operator | `Result` sync | `Result<T>` sync | typed sync | unit async (Task/ValueTask) | value async (Task/ValueTask) |
+| --- | --- | --- | --- | --- | --- |
+| Map | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Bind (→result) | ✓×2 | ✓×2 | ✓ | ✓ | ✓ |
+| MapError | ✓ | ✓ | ✓ | **absent** | **absent** |
+| Tap / OnSuccess | ✓ | ✓ | ✓ | ✓ | ✓ |
+| OnFailure | ✓ | ✓ | ✓ | **absent** | **absent** |
+| Switch | ✓ | ✓ | ✓ | **absent** | **absent** |
+| Ensure | ✓(predicate, error / factory) | ✓×3 (predicate, error / factory / factory(value)) | ✓(predicate, error only) | ✓(predicate, error only) | ✓(predicate, error only) |
+| Recover | ✓(result) | ✓(value, result) | ✓(value, result) | ✓(value) | ✓(value) |
+| Match (extension) | — | — | — | ✓ | ✓ (no sync twin operator; types carry Match) |
+| Finally | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+**Claims the audit made, each now answered by a named test:**
+
+- *"Que las operaciones corten inmediatamente cuando existe un error"* — **covered**, named: `tests/ResulTus.Extensions.Tests/ShortCircuitCoverageTests.cs` plus the per-op `_ShouldShortCircuit` tests in `SyncUnitResultExtensionsTests.cs`, `SyncResultExtensionsTests.cs`, `TypedResultExtensionsTests.cs`, `AsyncResultExtensionsTests.cs`, `AsyncUnitResultExtensionsTests.cs`.
+- *"Que Task y ValueTask mantengan exactamente la misma semántica"* — NEW tests: `tests/ResulTus.Extensions.Tests/CrossTierSemanticsTests.cs` asserts each of the seven async operators × both tiers through a `Task` source and a `ValueTask` source against the synchronous outcome, success **and** failure path. **Observation: zero divergence.**
+- *"Que CancellationToken se propague correctamente"* — **covered**, named: `AsyncResultExtensionsTests.AsyncMethods_WithCancelledToken_ShouldThrow` and `AsyncUnitResultExtensionsTests.AsyncMethods_WithCancelledToken_ShouldThrow` (the implementation calls `ThrowIfCancellationRequested()` before awaiting in each operator — verified at the source lines).
+- *"Que los delegates nulos tengan comportamiento coherente"* — value tier was covered (`AsyncMethods_WithNullArguments_ShouldThrow`); the unit tier's async battery **did not exist** and now does: `CrossTierSemanticsTests.Unit_AsyncMethods_WithNullDelegatesShouldThrow`, one assertion per operator per source type.
+- *"Que no existan conversiones implícitas con resultados anidados"* — **not a test gap**: the overlay analyzer is named exactly for this — `RESULT005` (`NestedResultAnalyzer`, `src/ResulTus.Analyzers/NestedResultAnalyzer.cs:40`), with analyzer tests in `tests/ResulTus.Analyzers.Tests/`. Named; verified.
+
+**Gaps that are REAL API facts, not test work (owner decision required — not implemented):**
+
+1. The typed tier `Result<TSuccess, TError>` has **zero** asynchronous operators. `README.md`'s packages table reads "the `Task`/`ValueTask` overloads with cancellation" without scoping them to unit+value, so a reader expects them on all three tiers. Either the operators land (typed `MapAsync`, etc. with `CancellationTokenSharper`-aware delegates mirroring the value tier), or the README states the scope explicitly.
+2. `MapErrorAsync`, `OnFailureAsync` and async `Switch` do not exist in either async file — `TapAsync` covers only the success side, so a failure-side async terminal is missing in both tiers.
+3. The `Ensure` arity knob differs per tier (unit 2 shapes, value 3, typed 1) — matches the record `EnsureFactoryAndProjectionTests` for value; the typed tier's missing factory shape is at most a symmetry question, likely right to leave alone since typed errors carry no projection machinery.
+
+The sweep changed no library code: every behavioral claim already held, and the new file pins them. Suite after the sweep: **685 passed, 0 failed** (670 + 15).
 
 ### L2 — T1 and T2 executed and observed (2026-11-09)
 
