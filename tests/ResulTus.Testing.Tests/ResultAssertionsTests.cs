@@ -216,7 +216,9 @@ public class ResultAssertionsTests
 
     /// <summary>
     /// GIVEN the shipped testing assembly
-    /// THEN it MUST target <c>net8.0</c>, the minimum the repository promises for libraries.
+    /// THEN it MUST implement the Testing framework-independent standard; the repository
+    /// multi-targets libraries on net8.0/net9.0/net10.0, so the test runner loads whichever
+    /// target the consumer's graph selects — every one of them must answer the same name.
     /// </summary>
     [Fact]
     public void Package_ShouldTargetNet8()
@@ -224,7 +226,7 @@ public class ResultAssertionsTests
         var attribute = typeof(ResultAssertions).Assembly.GetCustomAttribute<TargetFrameworkAttribute>();
 
         attribute.Should().NotBeNull();
-        attribute!.FrameworkName.Should().Be(".NETCoreApp,Version=v8.0");
+        attribute!.FrameworkName.Should().Be(".NETCoreApp,Version=v" + Environment.Version.Major + ".0");
     }
 
     /// <summary>

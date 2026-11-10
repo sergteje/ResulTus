@@ -429,7 +429,7 @@ Origen array, N = 1.000 elementos totalmente exitosos:
 
 ## Compatibilidad de runtime
 
-Las bibliotecas apuntan a `net8.0`. El trimming y el Native AOT están **verificados por un publish-and-run observado** en cada push de CI (job `aot-smoke`, runner `windows-latest`; p. ej. la corrida [42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212)): una aplicación de consola, publicada tanto trimmed como nativamente, ejecuta los tipos core del resultado y la superficie AOT-safe de System.Text.Json — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — pasando todas sus aserciones. En aplicaciones AOT, registra los convertidores por esa superficie; el registro por fábrica sigue siendo el camino ordinario para apps que no compilan AOT.
+Las bibliotecas apuntan a `net8.0`, `net9.0` y `net10.0`; los analizadores y el generador de código apuntan a `netstandard2.0`. El trimming y el Native AOT están **verificados por un publish-and-run observado** en cada push de CI (job `aot-smoke`, runner `windows-latest`; p. ej. la corrida [42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212)): una aplicación de consola, publicada tanto trimmed como nativamente, ejecuta los tipos core del resultado y la superficie AOT-safe de System.Text.Json — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — pasando todas sus aserciones. En aplicaciones AOT, registra los convertidores por esa superficie; el registro por fábrica sigue siendo el camino ordinario para apps que no compilan AOT.
 
 ## Respuestas HTTP como resultados
 

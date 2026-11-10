@@ -9,6 +9,10 @@ on:
   push:
     tags: [ 'v*' ]
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   ARTIFACTS: packaging
 
@@ -27,9 +31,23 @@ jobs:
       - name: Pack
         run: dotnet pack ResulTus.slnx -c Release -o ${{ env.ARTIFACTS }}
 
-      - name: Push packages and symbols
+      - name: Push packages and symbols to nuget.org
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           dotnet nuget push "${{ env.ARTIFACTS }}/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
           dotnet nuget push "${{ env.ARTIFACTS }}/*.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      # GitHub Packages mirror: makes every package appear on the repository's
+      # Packages tab. Only .nupkg — GitHub Packages does not host .snupkg. The
+      # run's own token carries packages:write; no secret to configure.
+      - name: Push packages to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget add source github \
+            --username ${{ github.repository_owner }} \
+            --password "$GITHUB_TOKEN" \
+            --store-password-in-clear-text \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push "${{ env.ARTIFACTS }}/*.nupkg" --source github --skip-duplicate

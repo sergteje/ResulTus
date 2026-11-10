@@ -8,6 +8,16 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Changed
+
+- **Multi-targeting net8.0 / net9.0 / net10.0** — all eleven production libraries now compile and
+  package for the three runtimes (the analyzers and the source generator keep their
+  `netstandard2.0`); `Directory.Build.props` no longer pins a single `TargetFramework`. Both README
+  editions state the targets. The published 0.0.2 predates this change; a `v0.0.3` tag publishes
+  the multi-targeted package set, and the release workflow now also mirrors the packages to
+  GitHub Packages (`GITHUB_TOKEN`, `.nupkg` only — GitHub Packages does not host symbol
+  packages) so they appear on the repository's Packages tab.
+
 ### Added
 
 - **Incremental source generator pipeline** — `ErrorFactoryGenerator` no longer groups every
