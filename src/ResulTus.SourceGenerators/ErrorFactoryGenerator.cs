@@ -15,6 +15,14 @@ namespace ResulTus.SourceGenerators;
 /// The pipeline is anchored on <c>[ErrorFactory]</c> rather than on <c>[ResultErrors]</c> so a
 /// method that carries the attribute on a type that never opted in is still seen — and diagnosed —
 /// instead of silently disappearing.
+/// <para>
+/// No candidate is ever grouped: every candidate flows on its own into the report and the emit
+/// steps. Because <see cref="FactoryCandidate"/> compares by content (strings and spans, never
+/// symbol references), an edit to one declaration re-runs only that one candidate; the others
+/// come back through the cache untouched. A build produces the same files either way — the
+/// compiler keys generated files by hint name, so the per-candidate registration cannot reorder
+/// them.
+/// </para>
 /// </remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class ErrorFactoryGenerator : IIncrementalGenerator
@@ -39,29 +47,30 @@ public sealed class ErrorFactoryGenerator : IIncrementalGenerator
                 ErrorFactoryAttribute,
                 static (node, _) => node is MethodDeclarationSyntax,
                 static (attributeContext, cancellationToken)
-                    => FactoryExtraction.Extract(attributeContext, cancellationToken))
-            .Collect();
+                    => FactoryExtraction.Extract(attributeContext, cancellationToken));
 
-        context.RegisterSourceOutput(candidates, static (productionContext, all) =>
+        context.RegisterSourceOutput(candidates, static (productionContext, candidate) =>
         {
-            foreach (var candidate in all)
+            if (candidate.Diagnostic is not { } diagnostic)
             {
-                if (candidate.Diagnostic is not null)
-                {
-                    productionContext.ReportDiagnostic(
-                        Diagnostic.Create(
-                            UnusableDeclaration,
-                            candidate.Diagnostic.Location,
-                            candidate.Diagnostic.Message));
-                }
+                return;
             }
 
-            // The pipeline does not promise an order, so it is fixed here: a build must produce the
-            // same files in the same order every time.
-            foreach (var model in all
-                .Where(candidate => candidate.Model is not null)
-                .Select(candidate => candidate.Model!)
-                .OrderBy(model => model.HintName, System.StringComparer.Ordinal))
+            var location = Location.Create(
+                diagnostic.Path ?? string.Empty,
+                diagnostic.SourceSpan,
+                diagnostic.LineSpan);
+            productionContext.ReportDiagnostic(Diagnostic.Create(
+                UnusableDeclaration,
+                location,
+                diagnostic.Message));
+        });
+
+        var emitted = candidates.Select(
+            static (candidate, cancellationToken) => candidate.Model);
+        context.RegisterSourceOutput(emitted, static (productionContext, model) =>
+        {
+            if (model is not null)
             {
                 productionContext.AddSource(
                     model.HintName,

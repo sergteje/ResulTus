@@ -2,6 +2,7 @@
 
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace ResulTus.SourceGenerators;
 
@@ -57,8 +58,15 @@ internal sealed record FactoryShape(
 /// A declaration the generator cannot complete, with the reason and the place to point at.
 /// </summary>
 /// <param name="Message">The reason, which names the offending member.</param>
-/// <param name="Location">Where the diagnostic is reported.</param>
-internal sealed record FactoryDiagnostic(string Message, Location Location);
+/// <param name="Path">The file the diagnostic points at, or <c>null</c> for no source tree.</param>
+/// <param name="SourceSpan">The absolute text span inside that file.</param>
+/// <param name="LineSpan">The same span as line and column positions.</param>
+/// <remarks>
+/// The raw <see cref="Location"/> is decomposed because incremental pipelines cache by comparing
+/// their output values: a <c>Location</c> compares by reference and would invalidate the cache on
+/// every keystroke, while the three pieces here compare by value.
+/// </remarks>
+internal sealed record FactoryDiagnostic(string Message, string? Path, TextSpan SourceSpan, LinePositionSpan LineSpan);
 
 /// <summary>
 /// The outcome of reading one <c>[ErrorFactory]</c> declaration.
@@ -85,7 +93,14 @@ internal sealed record FactoryCandidate(FactoryModel? Model, FactoryDiagnostic? 
     /// <param name="location">Where to report it.</param>
     /// <returns>The candidate.</returns>
     internal static FactoryCandidate Unusable(string message, Location location)
-        => new(null, new FactoryDiagnostic(message, location));
+    {
+        var lineSpan = location.GetLineSpan();
+        return new(null, new FactoryDiagnostic(
+            message,
+            location.SourceTree?.FilePath,
+            location.SourceSpan,
+            lineSpan.Span));
+    }
 
     /// <summary>
     /// Creates the candidate for a target the generator does not handle at all.

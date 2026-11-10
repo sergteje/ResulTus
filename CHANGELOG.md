@@ -10,14 +10,30 @@ defines it, means the public API may still change between minor releases.
 
 ### Added
 
-- **Analyzer false-positive battery** — six curated silent-expectation sources (lookalike `Result`
-  types in user namespaces, `Nullable<T>.GetValueOrDefault`, ordinary tuple discards, third-party
-  identity binds, nested lookalikes, stateful `Ensure` predicates) pin the analyzers' symbol gates:
-  code that a name-based search would mistake for misuse must never reach a complaint.
+- **Incremental source generator pipeline** — `ErrorFactoryGenerator` no longer groups every
+  candidate with `Collect()`: each `[ErrorFactory]` declaration flows on its own into the report
+  and emit steps, so editing one declaration re-runs only that candidate's stage. The
+  caching contract (candidates and diagnostics compare by content; `Location` decomposed into
+  file, span and line positions) is pinned by `IncrementalCachingContractTests`; all generated
+  behavior is covered by the existing 50 generator tests.
+
+### Changed
+
 - **Benchmark charter generation columns** — the creation and matching comparison tables in
   `docs/performance.md` now publish the `Gen0` column quoted from the stored run artifacts, with
   the rule stated that `Gen1`/`Gen2` were zero in every measured run and their column absence is
   the record.
+- **Collections allocation probes** measure warmup and window on a dedicated thread, so residue
+  from the test host's scheduling queues can no longer masquerade as library allocation under
+  `-c Release`. (Changes no library behavior; the probes were the only readers of their own
+  measurements.)
+
+### Added (analyzers)
+
+- **Analyzer false-positive battery** — six curated silent-expectation sources (lookalike `Result`
+  types in user namespaces, `Nullable<T>.GetValueOrDefault`, ordinary tuple discards, third-party
+  identity binds, nested lookalikes, stateful `Ensure` predicates) pin the analyzers' symbol gates:
+  code that a name-based search would mistake for misuse must never reach a complaint.
 
 ## [0.0.2] - 2026-11-10
 
@@ -30,8 +46,7 @@ defines it, means the public API may still change between minor releases.
   green) — the publish-and-run proof the 0.0.1 notes could not make. `samples/AotSmoke` is the
   checked-in guard: its only serializer surface compiles through the AOT-safe
   `ResultJsonConverter<T>(JsonTypeInfo<T>)` route, and the repo's own analyzers reject anything
-  else with `IL2026`/`IL3050`.
-- **Async parity across the three tiers** — the typed tier (`Result<TSuccess, TError>`) gained
+  else with `IL2026`/`IL3050`.- **Async parity across the three tiers** — the typed tier (`Result<TSuccess, TError>`) gained
   its own `Task`/`ValueTask` pipeline operators (`Map`, `Bind`, `MapError`, `Ensure`, `Recover`,
   `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`, `Finally`), and the unit and value tiers
   gained the missing error-side terminals (`MapErrorAsync`, `OnFailureAsync`, `SwitchAsync`) plus

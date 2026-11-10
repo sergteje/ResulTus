@@ -35,7 +35,7 @@ Scope carried over, item by item, with what is already true today:
 | T1 | S1 | undecided | pending | — |
 | T2 | S2 | undecided | pending | — |
 | T3 | S3 | undecided | pending | — |
-| T4 | S4 | undecided | pending | — |
+| T4 | S4 | undecided | pending | coverage baseline measured, gate decision open — see L3 |
 | T5 | S5 | undecided | pending | — |
 
 ## Log
@@ -109,3 +109,25 @@ Scope carried over, item by item, with what is already true today:
 > - [ ] BenchmarkDotNet suite runs and reports comparative results
 > - [ ] DocFX site builds without errors
 > - [ ] Code coverage >= 95% (measured by coverlet or similar)
+
+### L3 — S1 and S2 shipped days ago; S5's coverage has a measured baseline (2026-11-10)
+
+- **S1 done**: `ci.yml` runs build + the full suite on every push to `main` and every pull request (first observed run 42631408235, green).
+- **S2 done**: `release.yml` published 0.0.2 to nuget.org on the `v0.0.2` tag (run 42867362862, 26 push confirmations).
+- **S3 (benchmarks reporting) is the remaining open item; S4 (DocFX) stays parked** until a documentation site is a product want.
+- **S5 measured, not installed**: the coverlet collector ran per test project under `-c Release`, reading each module's own `<package>` element from the cobertura output:
+
+| Package | Lines | Branches |
+| --- | ---: | ---: |
+| ResulTus | 92.62% | 95.00% |
+| ResulTus.Extensions | 98.63% | 96.23% |
+| ResulTus.Collections | 83.88% | 77.73% |
+| ResulTus.Serialization | 96.92% | 92.19% |
+| ResulTus.AspNetCore | 71.87% | 83.33% |
+| ResulTus.HttpClient | 83.02% | 61.22% |
+| ResulTus.Logging | 100.00% | 95.45% |
+| ResulTus.Diagnostics | 100.00% | 100.00% |
+| ResulTus.Validation | 100.00% | 100.00% |
+| ResulTus.Testing | 87.87% | 83.33% |
+
+The proposal's 95% target reads against the repo aggregate of these numbers, and five packages sit under it. Installing the gate today would fail the build by design and hide nothing — these are the measured numbers, not estimates. Closing the gaps (AspNetCore, Collections, Testing, HttpClient first) is test work, not configuration. The gate becomes a step in `ci.yml` the day the owner fixes the definition (repo-aggregate lines or per-package minimum) and tickets the current gaps. The analyzers and the source generator are deliberately excluded: Roslyn projects earn coverage in their contract suites, not line percentages.
