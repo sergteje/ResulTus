@@ -38,10 +38,10 @@ any public member fails CI with a diff until the change is reviewed deliberately
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | inline | pending | strategy doc |
-| T2 | S4 | inline | pending | snapshot tool |
-| T3 | S2 | inline | pending | snapshots |
-| T4 | S3 | inline | pending | contract test + CI |
+| T1 | S1 | inline | done | `odd/specs/versioning.md` |
+| T2 | S4 | inline | done | scripts/ApiSnapshot tool |
+| T3 | S2 | inline | done | PublicApi/or a snapshot per assembly (-11) |
+| T4 | S3 | inline | done | ResulTus.ApiCompat.Tests in the slnx, green in CI |
 
 ## Log
 
