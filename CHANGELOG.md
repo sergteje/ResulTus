@@ -8,45 +8,45 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
-### Added
+## [1.0.0] - 2026-11-10
 
-- **CI coverage gate at 90% lines per package** — `ci.yml` grew a `coverage-gate` job that runs
-  each dedicated test project with the coverlet collector, scopes the counts to the package's own
-  module, prints one row per package and fails below 90% lines. Every package passes today
-  (measured: Core/AspNetCore/Testing 100%, Collections 98.53%, Extensions 98.64%, Serialization
-  96.93%, HttpClient 93.21%, Logging/Diagnostics/Validation/FluentValidation 100%). Analyzers and
-  the source generator are excluded by design: Roslyn projects earn coverage in their contract
-  suites. The gate script lives at `scripts/coverage-gate.ps1`.
-- **README badges** — CI status, NuGet downloads and the current package version badge at the
-  top of both README editions, next to the brand mark.
+The stable contract. From this version on, the public surface is the committed snapshot under
+`tests/ResulTus.ApiCompat.Tests/PublicApi`: a member that added, changed or disappeared without
+a `MAJOR` version bump fails CI by design. The rules live in
+[`odd/specs/versioning.md`](odd/specs/versioning.md).
 
 ### Added
 
+- **The public-API contract** — the surface of every shipped assembly is snapshotted per file
+  under `tests/ResulTus.ApiCompat.Tests/PublicApi` and enforced per commit:
+  `tests/ResulTus.ApiCompat.Tests` re-derives it by reflection and diffs until the change is
+  deliberately reviewed and the snapshot regenerated with `scripts/ApiSnapshot -- --write`.
+  The versioning strategy — the 0.x freedom, the 1.0 promise, the `[Obsolete]` deprecation
+  ladder, the same-tag-per-package rule — lives at `odd/specs/versioning.md`.
+- **CI coverage gate at 90% lines per package** — `ci.yml` runs a `coverage-gate` job over each
+  dedicated test project, scopes counts to the package's own module and fails below 90% lines.
+  Measured at the cut: Core/AspNetCore/Testing/Logging/Diagnostics/Validation/FluentValidation
+  and the source generator sit at or near 100%, Collections 98.53%, Extensions 98.64%,
+  Serialization 96.93%, HttpClient 93.21% (the minimum).
+- **README badges** — CI status, NuGet downloads and the current package version at the top of
+  both README editions, next to the brand mark.
 - **Coverage lift to the contract level** — the IEnumerable overload family of Collections, the
-  validation bridge of AspNetCore, the/problem model edges of HttpClient, and the exception
-  surface of Testing are pinned by Given/When/Then tests. Per-module measurement corrected the
-  earlier diluted numbers: Core, AspNetCore, Logging, Diagnostics, Validation and
-  FluentValidation reach 100% lines; Collections 98.53%, Testing 100%, HttpClient 93.21%.
-- **HttpClient member-shape guard** — the problem parser rejects a non-integer `status` member
-  with the documented `JsonException` instead of an escaped `InvalidOperationException`.
+  validation bridge of AspNetCore, the problem model edges of HttpClient and the exception
+  surface of Testing are pinned by Given/When/Then tests.
 
 ### Fixed
 
 - **HttpClient extension members compare by content** — `HttpProblemDetails` equality read
   `JsonElement` references rather than parsed content, so two documents parsed separately with
-  identical comparison members were unequal. `ElementsEqual` now uses content-aware deep
-  comparison per target framework, and the extension hash uses the canonical raw text.
+  identical members compared unequal. Equality and hashing now use content per the parsed
+  document, and the problem parser rejects a non-integer `status` member with the documented
+  `JsonException` instead of an escaped `InvalidOperationException`.
 
 ### Changed
 
-- **Multi-targeting net8.0 / net9.0 / net10.0** — all eleven production libraries now compile and
-  package for the three runtimes (the analyzers and the source generator keep their
-  `netstandard2.0`); `Directory.Build.props` no longer pins a single `TargetFramework`. Both README
-  editions state the targets. The published 0.0.2 predates this change; a `v0.0.3` tag publishes
-  the multi-targeted package set, and the release workflow now also mirrors the packages to
-  GitHub Packages (`GITHUB_TOKEN`, `.nupkg` only — GitHub Packages does not host symbol
-  packages) so they appear on the repository's Packages tab. The published 0.0.3 predates the
-  coverage-lift series.
+- **Multi-targeting net8.0 / net9.0 / net10.0** — the eleven production libraries compile and
+  package for the three runtimes (the analyzers and the source generator keep
+  `netstandard2.0`); `Directory.Build.props` no longer pins a single `TargetFramework`.
 
 ## [0.0.3] - 2026-11-10
 
@@ -195,7 +195,8 @@ First versioned release. Thirteen packages, one result type shared by all of the
 - Benchmarks are reproducible through `tests/ResulTus.Benchmarks/`; every recorded number and its
   measurement stamp live in [`docs/performance.md`](docs/performance.md).
 
-[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/sergteje/ResulTus/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/sergteje/ResulTus/releases/tag/v1.0.0
 [0.0.3]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.3
 [0.0.2]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.2
 [0.0.1]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.1
