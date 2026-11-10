@@ -1,0 +1,30 @@
+﻿T: ResulTus.Logging.ResultLoggingAsyncExtensions
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogSuccessAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogFailureAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogErrorAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogWarningAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogInformationAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogAllAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogAllAsync(System.Threading.Tasks.Task<ResulTus.Result> task, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogSuccessAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogFailureAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogErrorAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogWarningAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogInformationAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogAllAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Task<Result<T>>
+M: ResulTus.Logging.ResultLoggingAsyncExtensions.LogAllAsync(Task<Result<T>> task, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> Task<Result<T>>
+T: ResulTus.Logging.ResultLoggingExtensions
+M: ResulTus.Logging.ResultLoggingExtensions.LogSuccess(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogFailure(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogError(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogWarning(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogInformation(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(ResulTus.Result result, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> ResulTus.Result
+M: ResulTus.Logging.ResultLoggingExtensions.LogSuccess(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogFailure(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogError(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogWarning(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogInformation(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> Result<T>

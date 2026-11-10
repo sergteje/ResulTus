@@ -1,0 +1,42 @@
+﻿T: ResulTus.HttpClient.HttpClientError
+M: ResulTus.HttpClient.HttpClientError.ctor(ResulTus.HttpClient.HttpClientFailureKind kind, System.Nullable<System.Net.HttpStatusCode> status, ResulTus.HttpClient.HttpProblemDetails problemDetails, System.Exception exception)
+P: ResulTus.HttpClient.HttpClientFailureKind ResulTus.HttpClient.HttpClientError.Kind { get; }
+P: System.Nullable<System.Net.HttpStatusCode> ResulTus.HttpClient.HttpClientError.Status { get; }
+P: ResulTus.HttpClient.HttpProblemDetails ResulTus.HttpClient.HttpClientError.ProblemDetails { get; }
+P: System.Exception ResulTus.HttpClient.HttpClientError.Exception { get; }
+M: ResulTus.HttpClient.HttpClientError.Transport(System.Exception exception) -> ResulTus.HttpClient.HttpClientError
+M: ResulTus.HttpClient.HttpClientError.Timeout(System.Exception exception) -> ResulTus.HttpClient.HttpClientError
+M: ResulTus.HttpClient.HttpClientError.StatusError(System.Net.HttpStatusCode status, ResulTus.HttpClient.HttpProblemDetails problemDetails, System.Exception exception) -> ResulTus.HttpClient.HttpClientError
+M: ResulTus.HttpClient.HttpClientError.InvalidResponse(System.Nullable<System.Net.HttpStatusCode> status, System.Exception exception) -> ResulTus.HttpClient.HttpClientError
+M: ResulTus.HttpClient.HttpClientError.Equals(ResulTus.HttpClient.HttpClientError other) -> System.Boolean
+M: ResulTus.HttpClient.HttpClientError.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.HttpClient.HttpClientError.GetHashCode() -> System.Int32
+O: ResulTus.HttpClient.HttpClientError.op_Equality(ResulTus.HttpClient.HttpClientError left, ResulTus.HttpClient.HttpClientError right) -> System.Boolean
+O: ResulTus.HttpClient.HttpClientError.op_Inequality(ResulTus.HttpClient.HttpClientError left, ResulTus.HttpClient.HttpClientError right) -> System.Boolean
+T: ResulTus.HttpClient.HttpClientFailureKind
+F: System.Byte ResulTus.HttpClient.HttpClientFailureKind.value__
+F: ResulTus.HttpClient.HttpClientFailureKind ResulTus.HttpClient.HttpClientFailureKind.Transport
+F: ResulTus.HttpClient.HttpClientFailureKind ResulTus.HttpClient.HttpClientFailureKind.Timeout
+F: ResulTus.HttpClient.HttpClientFailureKind ResulTus.HttpClient.HttpClientFailureKind.StatusError
+F: ResulTus.HttpClient.HttpClientFailureKind ResulTus.HttpClient.HttpClientFailureKind.InvalidResponse
+T: ResulTus.HttpClient.HttpClientSendResultExtensions
+M: ResulTus.HttpClient.HttpClientSendResultExtensions.SendResultAsync(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<ResulTus.Result<System.Net.Http.HttpResponseMessage, ResulTus.HttpClient.HttpClientError>>
+M: ResulTus.HttpClient.HttpClientSendResultExtensions.SendResultAsync(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, JsonTypeInfo<TSuccess> jsonTypeInfo, System.Threading.CancellationToken cancellationToken) -> Task<Result<TSuccess, ResulTus.HttpClient.HttpClientError>>
+M: ResulTus.HttpClient.HttpClientSendResultExtensions.SendResultAsync(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.Json.JsonSerializerOptions options, System.Threading.CancellationToken cancellationToken) -> Task<Result<TSuccess, ResulTus.HttpClient.HttpClientError>>
+T: ResulTus.HttpClient.HttpProblemDetails
+M: ResulTus.HttpClient.HttpProblemDetails.ctor(System.String type, System.String title, System.Nullable<System.Int32> status, System.String detail, System.String instance, System.Collections.Generic.IReadOnlyDictionary<System.String, System.Text.Json.JsonElement> extensions)
+P: System.String ResulTus.HttpClient.HttpProblemDetails.Type { get; }
+P: System.String ResulTus.HttpClient.HttpProblemDetails.Title { get; }
+P: System.Nullable<System.Int32> ResulTus.HttpClient.HttpProblemDetails.Status { get; }
+P: System.String ResulTus.HttpClient.HttpProblemDetails.Detail { get; }
+P: System.String ResulTus.HttpClient.HttpProblemDetails.Instance { get; }
+P: System.Collections.Generic.IReadOnlyDictionary<System.String, System.Text.Json.JsonElement> ResulTus.HttpClient.HttpProblemDetails.Extensions { get; }
+M: ResulTus.HttpClient.HttpProblemDetails.Equals(ResulTus.HttpClient.HttpProblemDetails other) -> System.Boolean
+M: ResulTus.HttpClient.HttpProblemDetails.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.HttpClient.HttpProblemDetails.GetHashCode() -> System.Int32
+O: ResulTus.HttpClient.HttpProblemDetails.op_Equality(ResulTus.HttpClient.HttpProblemDetails left, ResulTus.HttpClient.HttpProblemDetails right) -> System.Boolean
+O: ResulTus.HttpClient.HttpProblemDetails.op_Inequality(ResulTus.HttpClient.HttpProblemDetails left, ResulTus.HttpClient.HttpProblemDetails right) -> System.Boolean
+T: ResulTus.HttpClient.HttpResponseMessageResultExtensions
+M: ResulTus.HttpClient.HttpResponseMessageResultExtensions.ToResultAsync(System.Net.Http.HttpResponseMessage response, JsonTypeInfo<TSuccess> jsonTypeInfo, System.Threading.CancellationToken cancellationToken) -> Task<Result<TSuccess, ResulTus.HttpClient.HttpClientError>>
+M: ResulTus.HttpClient.HttpResponseMessageResultExtensions.ToResultAsync(System.Net.Http.HttpResponseMessage response, System.Text.Json.JsonSerializerOptions options, System.Threading.CancellationToken cancellationToken) -> Task<Result<TSuccess, ResulTus.HttpClient.HttpClientError>>
+M: ResulTus.HttpClient.HttpResponseMessageResultExtensions.ToResultAsync(System.Net.Http.HttpResponseMessage response, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<ResulTus.Result<System.Net.Http.HttpResponseMessage, ResulTus.HttpClient.HttpClientError>>

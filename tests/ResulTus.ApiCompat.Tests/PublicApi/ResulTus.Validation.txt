@@ -1,0 +1,20 @@
+﻿T: ResulTus.Validation.DataAnnotationsValidationExtensions
+M: ResulTus.Validation.DataAnnotationsValidationExtensions.ValidateAnnotations(T instance) -> Result<T, ResulTus.Validation.ValidationErrors>
+T: ResulTus.Validation.ValidationErrors
+M: ResulTus.Validation.ValidationErrors.ctor(System.Collections.Generic.IReadOnlyList<ResulTus.Validation.ValidationIssue> issues)
+P: System.Collections.Generic.IReadOnlyList<ResulTus.Validation.ValidationIssue> ResulTus.Validation.ValidationErrors.Issues { get; }
+P: System.Boolean ResulTus.Validation.ValidationErrors.HasErrors { get; }
+M: ResulTus.Validation.ValidationErrors.ToDictionary() -> System.Collections.Generic.IReadOnlyDictionary<System.String, System.String[]>
+M: ResulTus.Validation.ValidationErrors.ToError(System.String code) -> ResulTus.Error
+T: ResulTus.Validation.ValidationIssue
+M: ResulTus.Validation.ValidationIssue.ctor(System.String Field, System.String Message, System.String Code)
+P: System.String ResulTus.Validation.ValidationIssue.Field { get; set; }
+P: System.String ResulTus.Validation.ValidationIssue.Message { get; set; }
+P: System.String ResulTus.Validation.ValidationIssue.Code { get; set; }
+M: ResulTus.Validation.ValidationIssue.ToString() -> System.String
+O: ResulTus.Validation.ValidationIssue.op_Inequality(ResulTus.Validation.ValidationIssue left, ResulTus.Validation.ValidationIssue right) -> System.Boolean
+O: ResulTus.Validation.ValidationIssue.op_Equality(ResulTus.Validation.ValidationIssue left, ResulTus.Validation.ValidationIssue right) -> System.Boolean
+M: ResulTus.Validation.ValidationIssue.GetHashCode() -> System.Int32
+M: ResulTus.Validation.ValidationIssue.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Validation.ValidationIssue.Equals(ResulTus.Validation.ValidationIssue other) -> System.Boolean
+M: ResulTus.Validation.ValidationIssue.Deconstruct(out System.String Field, out System.String Message, out System.String Code) -> System.Void

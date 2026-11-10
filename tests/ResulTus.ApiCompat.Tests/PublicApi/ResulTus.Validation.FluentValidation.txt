@@ -1,0 +1,3 @@
+﻿T: ResulTus.Validation.FluentValidation.FluentValidationExtensions
+M: ResulTus.Validation.FluentValidation.FluentValidationExtensions.Validate(T instance, IValidator<T> validator) -> Result<T, ResulTus.Validation.ValidationErrors>
+M: ResulTus.Validation.FluentValidation.FluentValidationExtensions.ValidateAsync(T instance, IValidator<T> validator, System.Threading.CancellationToken cancellationToken) -> Task<Result<T, ResulTus.Validation.ValidationErrors>>

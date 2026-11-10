@@ -1,0 +1,11 @@
+﻿T: ResulTus.Testing.ResultAssertionException
+M: ResulTus.Testing.ResultAssertionException.ctor()
+M: ResulTus.Testing.ResultAssertionException.ctor(System.String message)
+M: ResulTus.Testing.ResultAssertionException.ctor(System.String message, System.Exception innerException)
+T: ResulTus.Testing.ResultAssertions
+M: ResulTus.Testing.ResultAssertions.ShouldSucceed(ResulTus.Result result) -> ResulTus.Result
+M: ResulTus.Testing.ResultAssertions.ShouldFail(ResulTus.Result result) -> ResulTus.Error
+M: ResulTus.Testing.ResultAssertions.ShouldSucceed(Result<T> result) -> T
+M: ResulTus.Testing.ResultAssertions.ShouldFail(Result<T> result) -> ResulTus.Error
+M: ResulTus.Testing.ResultAssertions.ShouldSucceed(Result<TSuccess, TError> result) -> TSuccess
+M: ResulTus.Testing.ResultAssertions.ShouldFail(Result<TSuccess, TError> result) -> TError

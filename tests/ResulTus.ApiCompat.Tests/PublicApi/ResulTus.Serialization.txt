@@ -1,0 +1,23 @@
+﻿T: ResulTus.Serialization.ErrorJsonConverter
+M: ResulTus.Serialization.ErrorJsonConverter.ctor()
+M: ResulTus.Serialization.ErrorJsonConverter.Write(System.Text.Json.Utf8JsonWriter writer, ResulTus.Error value, System.Text.Json.JsonSerializerOptions options) -> System.Void
+M: ResulTus.Serialization.ErrorJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> ResulTus.Error
+T: ResulTus.Serialization.ErrorTypeJsonConverter
+M: ResulTus.Serialization.ErrorTypeJsonConverter.ctor()
+M: ResulTus.Serialization.ErrorTypeJsonConverter.Write(System.Text.Json.Utf8JsonWriter writer, ResulTus.ErrorType value, System.Text.Json.JsonSerializerOptions options) -> System.Void
+M: ResulTus.Serialization.ErrorTypeJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> ResulTus.ErrorType
+T: ResulTus.Serialization.ResultJsonConverter<T>
+M: ResulTus.Serialization.ResultJsonConverter<T>.ctor()
+M: ResulTus.Serialization.ResultJsonConverter<T>.ctor(JsonTypeInfo<T> valueTypeInfo)
+M: ResulTus.Serialization.ResultJsonConverter<T>.Write(System.Text.Json.Utf8JsonWriter writer, Result<T> value, System.Text.Json.JsonSerializerOptions options) -> System.Void
+M: ResulTus.Serialization.ResultJsonConverter<T>.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> Result<T>
+T: ResulTus.Serialization.ResultJsonConverterFactory
+M: ResulTus.Serialization.ResultJsonConverterFactory.ctor()
+M: ResulTus.Serialization.ResultJsonConverterFactory.CanConvert(System.Type typeToConvert) -> System.Boolean
+M: ResulTus.Serialization.ResultJsonConverterFactory.CreateConverter(System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> System.Text.Json.Serialization.JsonConverter
+T: ResulTus.Serialization.ResultJsonSerializerOptionsExtensions
+M: ResulTus.Serialization.ResultJsonSerializerOptionsExtensions.AddResulTusConverters(System.Text.Json.JsonSerializerOptions options) -> System.Text.Json.JsonSerializerOptions
+T: ResulTus.Serialization.UnitResultJsonConverter
+M: ResulTus.Serialization.UnitResultJsonConverter.ctor()
+M: ResulTus.Serialization.UnitResultJsonConverter.Write(System.Text.Json.Utf8JsonWriter writer, ResulTus.Result value, System.Text.Json.JsonSerializerOptions options) -> System.Void
+M: ResulTus.Serialization.UnitResultJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> ResulTus.Result

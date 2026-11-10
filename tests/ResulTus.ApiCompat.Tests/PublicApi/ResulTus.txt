@@ -1,0 +1,93 @@
+﻿T: ResulTus.Error
+P: System.String ResulTus.Error.Code { get; }
+P: System.String ResulTus.Error.Message { get; }
+P: ResulTus.ErrorType ResulTus.Error.Type { get; }
+P: ResulTus.Error ResulTus.Error.None { get; }
+M: ResulTus.Error.Equals(ResulTus.Error other) -> System.Boolean
+M: ResulTus.Error.GetHashCode() -> System.Int32
+M: ResulTus.Error.Failure(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Validation(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.NotFound(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Conflict(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Unauthorized(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Forbidden(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Timeout(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.Cancelled(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.FromException(System.Exception exception) -> ResulTus.Error
+M: ResulTus.Error.Unexpected(System.String code, System.String message) -> ResulTus.Error
+M: ResulTus.Error.ToString() -> System.String
+O: ResulTus.Error.op_Inequality(ResulTus.Error left, ResulTus.Error right) -> System.Boolean
+O: ResulTus.Error.op_Equality(ResulTus.Error left, ResulTus.Error right) -> System.Boolean
+M: ResulTus.Error.Equals(System.Object obj) -> System.Boolean
+T: ResulTus.ErrorFactoryAttribute
+M: ResulTus.ErrorFactoryAttribute.ctor(System.String code, ResulTus.ErrorType type, System.String message)
+P: System.String ResulTus.ErrorFactoryAttribute.Code { get; }
+P: ResulTus.ErrorType ResulTus.ErrorFactoryAttribute.Type { get; }
+P: System.String ResulTus.ErrorFactoryAttribute.Message { get; }
+T: ResulTus.ErrorType
+F: System.Byte ResulTus.ErrorType.value__
+F: ResulTus.ErrorType ResulTus.ErrorType.None
+F: ResulTus.ErrorType ResulTus.ErrorType.Failure
+F: ResulTus.ErrorType ResulTus.ErrorType.Validation
+F: ResulTus.ErrorType ResulTus.ErrorType.NotFound
+F: ResulTus.ErrorType ResulTus.ErrorType.Conflict
+F: ResulTus.ErrorType ResulTus.ErrorType.Unauthorized
+F: ResulTus.ErrorType ResulTus.ErrorType.Forbidden
+F: ResulTus.ErrorType ResulTus.ErrorType.Timeout
+F: ResulTus.ErrorType ResulTus.ErrorType.Cancelled
+F: ResulTus.ErrorType ResulTus.ErrorType.Unexpected
+T: ResulTus.Result
+P: System.Boolean ResulTus.Result.IsSuccess { get; }
+P: System.Boolean ResulTus.Result.IsFailure { get; }
+M: ResulTus.Result.Success() -> ResulTus.Result
+M: ResulTus.Result.Failure(ResulTus.Error error) -> ResulTus.Result
+O: ResulTus.Result.op_Implicit(ResulTus.Error error) -> ResulTus.Result
+M: ResulTus.Result.Match(Func<TResult> onSuccess, Func<ResulTus.Error, TResult> onFailure) -> TResult
+M: ResulTus.Result.Deconstruct(out System.Boolean isSuccess, out ResulTus.Error error) -> System.Void
+M: ResulTus.Result.TryGetError(out ResulTus.Error error) -> System.Boolean
+M: ResulTus.Result.Try(Func<T> action) -> Result<T>
+M: ResulTus.Result.Try(Func<T> action, System.Func<System.Exception, ResulTus.Error> map) -> Result<T>
+M: ResulTus.Result.Try(System.Action action) -> ResulTus.Result
+M: ResulTus.Result.Try(System.Action action, System.Func<System.Exception, ResulTus.Error> map) -> ResulTus.Result
+M: ResulTus.Result.ToString() -> System.String
+O: ResulTus.Result.op_Inequality(ResulTus.Result left, ResulTus.Result right) -> System.Boolean
+O: ResulTus.Result.op_Equality(ResulTus.Result left, ResulTus.Result right) -> System.Boolean
+M: ResulTus.Result.GetHashCode() -> System.Int32
+M: ResulTus.Result.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Result.Equals(ResulTus.Result other) -> System.Boolean
+T: ResulTus.Result<T>
+P: System.Boolean ResulTus.Result<T>.IsSuccess { get; }
+P: System.Boolean ResulTus.Result<T>.IsFailure { get; }
+M: ResulTus.Result<T>.Success(T value) -> ResulTus.Result<T>
+M: ResulTus.Result<T>.Failure(ResulTus.Error error) -> ResulTus.Result<T>
+O: ResulTus.Result<T>.op_Implicit(T value) -> ResulTus.Result<T>
+O: ResulTus.Result<T>.op_Implicit(ResulTus.Error error) -> ResulTus.Result<T>
+M: ResulTus.Result<T>.Match(Func<T, TResult> onSuccess, Func<ResulTus.Error, TResult> onFailure) -> TResult
+M: ResulTus.Result<T>.Deconstruct(out System.Boolean isSuccess, out T value, out ResulTus.Error error) -> System.Void
+M: ResulTus.Result<T>.TryGetValue(out T value, out ResulTus.Error error) -> System.Boolean
+M: ResulTus.Result<T>.TryGetValue(out T value) -> System.Boolean
+M: ResulTus.Result<T>.GetValueOrDefault(T defaultValue) -> T
+M: ResulTus.Result<T>.GetValueOr(Func<ResulTus.Error, T> fallback) -> T
+M: ResulTus.Result<T>.ToString() -> System.String
+O: ResulTus.Result<T>.op_Inequality(ResulTus.Result<T> left, ResulTus.Result<T> right) -> System.Boolean
+O: ResulTus.Result<T>.op_Equality(ResulTus.Result<T> left, ResulTus.Result<T> right) -> System.Boolean
+M: ResulTus.Result<T>.GetHashCode() -> System.Int32
+M: ResulTus.Result<T>.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Result<T>.Equals(ResulTus.Result<T> other) -> System.Boolean
+T: ResulTus.Result<TSuccess, TError>
+P: System.Boolean ResulTus.Result<TSuccess, TError>.IsSuccess { get; }
+P: System.Boolean ResulTus.Result<TSuccess, TError>.IsFailure { get; }
+M: ResulTus.Result<TSuccess, TError>.Success(TSuccess value) -> ResulTus.Result<TSuccess, TError>
+M: ResulTus.Result<TSuccess, TError>.Failure(TError error) -> ResulTus.Result<TSuccess, TError>
+O: ResulTus.Result<TSuccess, TError>.op_Implicit(TSuccess value) -> ResulTus.Result<TSuccess, TError>
+O: ResulTus.Result<TSuccess, TError>.op_Implicit(TError error) -> ResulTus.Result<TSuccess, TError>
+M: ResulTus.Result<TSuccess, TError>.Match(Func<TSuccess, TResult> onSuccess, Func<TError, TResult> onFailure) -> TResult
+M: ResulTus.Result<TSuccess, TError>.Deconstruct(out System.Boolean isSuccess, out TSuccess value, out TError error) -> System.Void
+M: ResulTus.Result<TSuccess, TError>.ToString() -> System.String
+O: ResulTus.Result<TSuccess, TError>.op_Inequality(ResulTus.Result<TSuccess, TError> left, ResulTus.Result<TSuccess, TError> right) -> System.Boolean
+O: ResulTus.Result<TSuccess, TError>.op_Equality(ResulTus.Result<TSuccess, TError> left, ResulTus.Result<TSuccess, TError> right) -> System.Boolean
+M: ResulTus.Result<TSuccess, TError>.GetHashCode() -> System.Int32
+M: ResulTus.Result<TSuccess, TError>.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Result<TSuccess, TError>.Equals(ResulTus.Result<TSuccess, TError> other) -> System.Boolean
+T: ResulTus.ResultErrorsAttribute
+M: ResulTus.ResultErrorsAttribute.ctor()

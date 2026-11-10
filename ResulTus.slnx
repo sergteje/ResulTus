@@ -15,6 +15,7 @@
     <Project Path="src/ResulTus.HttpClient/ResulTus.HttpClient.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ResulTus.ApiCompat.Tests/ResulTus.ApiCompat.Tests.csproj" />
     <Project Path="tests/ResulTus.Tests/ResulTus.Tests.csproj" />
     <Project Path="tests/ResulTus.Extensions.Tests/ResulTus.Extensions.Tests.csproj" />
     <Project Path="tests/ResulTus.Collections.Tests/ResulTus.Collections.Tests.csproj" />

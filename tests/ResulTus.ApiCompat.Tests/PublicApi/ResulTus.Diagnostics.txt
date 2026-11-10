@@ -1,0 +1,57 @@
+﻿T: ResulTus.Diagnostics.ResultDiagnostics
+F: System.String ResulTus.Diagnostics.ResultDiagnostics.SourceName
+F: System.String ResulTus.Diagnostics.ResultDiagnostics.OperationStartedEvent
+F: System.String ResulTus.Diagnostics.ResultDiagnostics.OperationCompletedEvent
+P: System.Diagnostics.ActivitySource ResulTus.Diagnostics.ResultDiagnostics.ActivitySource { get; }
+P: System.Diagnostics.DiagnosticListener ResulTus.Diagnostics.ResultDiagnostics.Listener { get; }
+T: ResulTus.Diagnostics.ResultDiagnosticsExtensions
+M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.Measure(System.Func<ResulTus.Result> operation, System.String operationName) -> ResulTus.Diagnostics.TimedUnitResult
+M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.Measure(Func<Result<T>> operation, System.String operationName) -> TimedResult<T>
+M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.MeasureAsync(System.Func<System.Threading.Tasks.Task<ResulTus.Result>> operation, System.String operationName) -> System.Threading.Tasks.Task<ResulTus.Diagnostics.TimedUnitResult>
+M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.MeasureAsync(Func<Task<Result<T>>> operation, System.String operationName) -> Task<TimedResult<T>>
+T: ResulTus.Diagnostics.ResultOperationCompleted
+M: ResulTus.Diagnostics.ResultOperationCompleted.ctor(System.String OperationName, System.TimeSpan Elapsed, System.Boolean IsSuccess, ResulTus.ErrorType ErrorType, System.String ErrorCode)
+P: System.String ResulTus.Diagnostics.ResultOperationCompleted.OperationName { get; set; }
+P: System.TimeSpan ResulTus.Diagnostics.ResultOperationCompleted.Elapsed { get; set; }
+P: System.Boolean ResulTus.Diagnostics.ResultOperationCompleted.IsSuccess { get; set; }
+P: ResulTus.ErrorType ResulTus.Diagnostics.ResultOperationCompleted.ErrorType { get; set; }
+P: System.String ResulTus.Diagnostics.ResultOperationCompleted.ErrorCode { get; set; }
+M: ResulTus.Diagnostics.ResultOperationCompleted.ToString() -> System.String
+O: ResulTus.Diagnostics.ResultOperationCompleted.op_Inequality(ResulTus.Diagnostics.ResultOperationCompleted left, ResulTus.Diagnostics.ResultOperationCompleted right) -> System.Boolean
+O: ResulTus.Diagnostics.ResultOperationCompleted.op_Equality(ResulTus.Diagnostics.ResultOperationCompleted left, ResulTus.Diagnostics.ResultOperationCompleted right) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationCompleted.GetHashCode() -> System.Int32
+M: ResulTus.Diagnostics.ResultOperationCompleted.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationCompleted.Equals(ResulTus.Diagnostics.ResultOperationCompleted other) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationCompleted.Deconstruct(out System.String OperationName, out System.TimeSpan Elapsed, out System.Boolean IsSuccess, out ResulTus.ErrorType ErrorType, out System.String ErrorCode) -> System.Void
+T: ResulTus.Diagnostics.ResultOperationStarted
+M: ResulTus.Diagnostics.ResultOperationStarted.ctor(System.String OperationName)
+P: System.String ResulTus.Diagnostics.ResultOperationStarted.OperationName { get; set; }
+M: ResulTus.Diagnostics.ResultOperationStarted.ToString() -> System.String
+O: ResulTus.Diagnostics.ResultOperationStarted.op_Inequality(ResulTus.Diagnostics.ResultOperationStarted left, ResulTus.Diagnostics.ResultOperationStarted right) -> System.Boolean
+O: ResulTus.Diagnostics.ResultOperationStarted.op_Equality(ResulTus.Diagnostics.ResultOperationStarted left, ResulTus.Diagnostics.ResultOperationStarted right) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationStarted.GetHashCode() -> System.Int32
+M: ResulTus.Diagnostics.ResultOperationStarted.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationStarted.Equals(ResulTus.Diagnostics.ResultOperationStarted other) -> System.Boolean
+M: ResulTus.Diagnostics.ResultOperationStarted.Deconstruct(out System.String OperationName) -> System.Void
+T: ResulTus.Diagnostics.TimedResult<T>
+M: ResulTus.Diagnostics.TimedResult<T>.ctor(Result<T> Result, System.TimeSpan Elapsed)
+P: Result<T> ResulTus.Diagnostics.TimedResult<T>.Result { get; set; }
+P: System.TimeSpan ResulTus.Diagnostics.TimedResult<T>.Elapsed { get; set; }
+M: ResulTus.Diagnostics.TimedResult<T>.ToString() -> System.String
+O: ResulTus.Diagnostics.TimedResult<T>.op_Inequality(ResulTus.Diagnostics.TimedResult<T> left, ResulTus.Diagnostics.TimedResult<T> right) -> System.Boolean
+O: ResulTus.Diagnostics.TimedResult<T>.op_Equality(ResulTus.Diagnostics.TimedResult<T> left, ResulTus.Diagnostics.TimedResult<T> right) -> System.Boolean
+M: ResulTus.Diagnostics.TimedResult<T>.GetHashCode() -> System.Int32
+M: ResulTus.Diagnostics.TimedResult<T>.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Diagnostics.TimedResult<T>.Equals(ResulTus.Diagnostics.TimedResult<T> other) -> System.Boolean
+M: ResulTus.Diagnostics.TimedResult<T>.Deconstruct(out Result<T> Result, out System.TimeSpan Elapsed) -> System.Void
+T: ResulTus.Diagnostics.TimedUnitResult
+M: ResulTus.Diagnostics.TimedUnitResult.ctor(ResulTus.Result Result, System.TimeSpan Elapsed)
+P: ResulTus.Result ResulTus.Diagnostics.TimedUnitResult.Result { get; set; }
+P: System.TimeSpan ResulTus.Diagnostics.TimedUnitResult.Elapsed { get; set; }
+M: ResulTus.Diagnostics.TimedUnitResult.ToString() -> System.String
+O: ResulTus.Diagnostics.TimedUnitResult.op_Inequality(ResulTus.Diagnostics.TimedUnitResult left, ResulTus.Diagnostics.TimedUnitResult right) -> System.Boolean
+O: ResulTus.Diagnostics.TimedUnitResult.op_Equality(ResulTus.Diagnostics.TimedUnitResult left, ResulTus.Diagnostics.TimedUnitResult right) -> System.Boolean
+M: ResulTus.Diagnostics.TimedUnitResult.GetHashCode() -> System.Int32
+M: ResulTus.Diagnostics.TimedUnitResult.Equals(System.Object obj) -> System.Boolean
+M: ResulTus.Diagnostics.TimedUnitResult.Equals(ResulTus.Diagnostics.TimedUnitResult other) -> System.Boolean
+M: ResulTus.Diagnostics.TimedUnitResult.Deconstruct(out ResulTus.Result Result, out System.TimeSpan Elapsed) -> System.Void

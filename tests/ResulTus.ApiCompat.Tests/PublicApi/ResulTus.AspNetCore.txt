@@ -1,0 +1,16 @@
+﻿T: ResulTus.AspNetCore.ResultActionResultExtensions
+M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(ResulTus.Result result) -> Microsoft.AspNetCore.Mvc.IActionResult
+M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(ResulTus.Result result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> Microsoft.AspNetCore.Mvc.IActionResult
+M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(Result<T> result) -> ActionResult<T>
+M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(Result<T> result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> ActionResult<T>
+T: ResulTus.AspNetCore.ResultHttpResultExtensions
+M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(ResulTus.Result result) -> Microsoft.AspNetCore.Http.IResult
+M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(ResulTus.Result result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> Microsoft.AspNetCore.Http.IResult
+M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(Result<T> result) -> Microsoft.AspNetCore.Http.IResult
+M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(Result<T> result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> Microsoft.AspNetCore.Http.IResult
+T: ResulTus.AspNetCore.ResultHttpStatus
+M: ResulTus.AspNetCore.ResultHttpStatus.GetStatusCode(ResulTus.Error error) -> System.Int32
+M: ResulTus.AspNetCore.ResultHttpStatus.GetStatusCode(ResulTus.ErrorType type) -> System.Int32
+T: ResulTus.AspNetCore.ValidationResultHttpExtensions
+M: ResulTus.AspNetCore.ValidationResultHttpExtensions.ToHttpResult(Result<T, ResulTus.Validation.ValidationErrors> result) -> Microsoft.AspNetCore.Http.IResult
+M: ResulTus.AspNetCore.ValidationResultHttpExtensions.ToActionResult(Result<T, ResulTus.Validation.ValidationErrors> result) -> ActionResult<T>

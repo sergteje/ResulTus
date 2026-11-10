@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>false</IsAotCompatible>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);IL2026;IL2070;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ResulTus\ResulTus.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Extensions\ResulTus.Extensions.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Collections\ResulTus.Collections.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Serialization\ResulTus.Serialization.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.AspNetCore\ResulTus.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.HttpClient\ResulTus.HttpClient.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Logging\ResulTus.Logging.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Diagnostics\ResulTus.Diagnostics.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Validation\ResulTus.Validation.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Validation.FluentValidation\ResulTus.Validation.FluentValidation.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Testing\ResulTus.Testing.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.Analyzers\ResulTus.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.SourceGenerators\ResulTus.SourceGenerators.csproj" />
+  </ItemGroup>
+
+</Project>
