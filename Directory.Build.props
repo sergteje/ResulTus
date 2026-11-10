@@ -19,7 +19,7 @@
 
   <PropertyGroup>
     <Description>ResulTus — High-performance Result Pattern library for .NET</Description>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <Authors>ResulTus Contributors</Authors>
     <Company>ResulTus</Company>
     <Copyright>Copyright (c) ResulTus. All rights reserved.</Copyright>

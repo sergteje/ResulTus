@@ -8,19 +8,41 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-11-10
+
 ### Added
 
-- **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke application both trimmed and natively on `windows-latest` (CI run `42653755212`, both jobs green) — the publish-and-run proof the 0.0.1 notes could not make.
-- **Packaging** — the package icon and the canonical README are carried inside every `nupkg` (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
-- **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines live in `assets/branding/`, now supplied as owner artwork (brand suite v2.0) and consumed by both README editions.
-
-### Added (extensions surface)
-
-- **Async parity across the three tiers** — the typed tier (`Result<TSuccess, TError>`) gained its own `Task`/`ValueTask` pipeline operators (`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`, `Finally`), and the unit and value tiers gained the missing error-side terminals (`MapErrorAsync`, `OnFailureAsync`, `SwitchAsync`) plus the `Ensure` error-factory shapes. Cancellation-aware delegates match the existing shapes; a cancelled token surfaces as `OperationCanceledException`, never as a failure. The typed tier keeps one `Ensure` shape, documented in the API surface. Coverage: `CrossTierSemanticsTests` (Task/ValueTask/sync parity, success and failure paths, plus null and cancelled batteries).
+- **CI/CD** — GitHub Actions: a `ci.yml` job builds the solution and runs the full test suite on
+  every push to `main` and on every pull request, a `release.yml` job builds, tests and publishes
+  to NuGet on every new `v*` tag, and a Native AOT job publishes and runs the AOT smoke
+  application both trimmed and natively on `windows-latest` (CI run `42653755212`, both jobs
+  green) — the publish-and-run proof the 0.0.1 notes could not make. `samples/AotSmoke` is the
+  checked-in guard: its only serializer surface compiles through the AOT-safe
+  `ResultJsonConverter<T>(JsonTypeInfo<T>)` route, and the repo's own analyzers reject anything
+  else with `IL2026`/`IL3050`.
+- **Async parity across the three tiers** — the typed tier (`Result<TSuccess, TError>`) gained
+  its own `Task`/`ValueTask` pipeline operators (`Map`, `Bind`, `MapError`, `Ensure`, `Recover`,
+  `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`, `Finally`), and the unit and value tiers
+  gained the missing error-side terminals (`MapErrorAsync`, `OnFailureAsync`, `SwitchAsync`) plus
+  the `Ensure` error-factory shapes. Cancellation-aware delegates match the existing shapes; a
+  cancelled token surfaces as `OperationCanceledException`, never as a failure. The typed tier
+  keeps one `Ensure` shape, documented in the API surface and in both README editions. Every
+  synchronization twin's semantics are pinned by `CrossTierSemanticsTests` (Task/ValueTask/sync
+  parity on success and failure paths, plus null and cancelled batteries) — the battery also
+  caught and fixed a divergence in the first `OnFailureAsync` implementation.
+- **Packaging** — the package icon and the canonical README are carried inside every `nupkg`
+  (`PackageIcon`, `PackageReadmeFile`), and search tags were added to the shared metadata.
+- **Brand identity** — the official mark, the dark/light/print variants and the usage guidelines
+  live in `assets/branding/`, supplied as owner artwork (brand suite v2.0), packaged as the icon
+  and consumed by both README editions.
 
 ### Verified
 
-- **Trimming and Native AOT** are run-verified in CI (`aot-smoke`, run `42653755212`, green): a console application published both trimmed and natively executes the core result types plus the AOT-safe System.Text.Json surface, passing every assertion. Both README editions carry the runtime-compatibility section.
+- **Trimming and Native AOT** are run-verified in CI (`aot-smoke`, run `42653755212`, green): a
+  console application published both trimmed and natively executes the core result types plus the
+  AOT-safe System.Text.Json surface, passing every assertion. Both README editions carry the
+  runtime-compatibility section; the 0.0.1 notes' "not proven by a publish-and-run result" is
+  superseded by this release.
 
 ## [0.0.1] - 2026-11-08
 
@@ -73,5 +95,6 @@ First versioned release. Thirteen packages, one result type shared by all of the
 - Benchmarks are reproducible through `tests/ResulTus.Benchmarks/`; every recorded number and its
   measurement stamp live in [`docs/performance.md`](docs/performance.md).
 
-[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.2
 [0.0.1]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.1
