@@ -8,15 +8,39 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-11-10
+
 ### Changed
 
 - **Multi-targeting net8.0 / net9.0 / net10.0** — all eleven production libraries now compile and
-  package for the three runtimes (the analyzers and the source generator keep their
-  `netstandard2.0`); `Directory.Build.props` no longer pins a single `TargetFramework`. Both README
-  editions state the targets. The published 0.0.2 predates this change; a `v0.0.3` tag publishes
-  the multi-targeted package set, and the release workflow now also mirrors the packages to
-  GitHub Packages (`GITHUB_TOKEN`, `.nupkg` only — GitHub Packages does not host symbol
-  packages) so they appear on the repository's Packages tab.
+  package for the three runtimes (the analyzers and the source generator keep `netstandard2.0`);
+  `Directory.Build.props` no longer pins a single `TargetFramework`. Both README editions state
+  the targets, and the release workflow also mirrors the packages to GitHub Packages
+  (`GITHUB_TOKEN`, `.nupkg` only) so they appear on the repository's Packages tab.
+
+### Added
+
+- **CI/CD** — GitHub Actions (`ci.yml` build+suite on push/PR, `release.yml` NuGet publish on
+  tags, `aot-smoke` Native AOT publish-and-run) with the packaging identity (icon, readme, tags)
+  and the owner's brand suite v2.0 recorded in the same body.
+- **Incremental source generator pipeline** — `ErrorFactoryGenerator` no longer groups every
+  candidate with `Collect()`: each `[ErrorFactory]` declaration flows on its own into the report
+  and emit steps, so editing one declaration re-runs only that candidate's stage. The caching
+  contract (candidates and diagnostics compare by content; `Location` decomposed into file, span
+  and line positions) is pinned by `IncrementalCachingContractTests`.
+- **Analyzer false-positive battery** — six curated silent-expectation sources (lookalike `Result`
+  types in user namespaces, `Nullable<T>.GetValueOrDefault`, ordinary tuple discards, third-party
+  identity binds, nested lookalikes, stateful `Ensure` predicates) pin the analyzers' symbol
+  gates: code that a name-based search would mistake for misuse must never reach a complaint.
+- **Benchmark charter generation columns** — the creation and matching comparison tables publish
+  the `Gen0` column quoted from the stored run artifacts, with the rule stated that
+  `Gen1`/`Gen2` were zero in every measured run and their column absence is the record.
+
+### Changed (collection probes)
+
+- The Collections allocation probes measure warmup and window on a dedicated thread, so residue
+  from the test host's scheduling queues can no longer masquerade as library allocation under
+  `-c Release`.
 
 ### Added
 
@@ -131,6 +155,7 @@ First versioned release. Thirteen packages, one result type shared by all of the
 - Benchmarks are reproducible through `tests/ResulTus.Benchmarks/`; every recorded number and its
   measurement stamp live in [`docs/performance.md`](docs/performance.md).
 
-[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/sergteje/ResulTus/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.3
 [0.0.2]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.2
 [0.0.1]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.1
