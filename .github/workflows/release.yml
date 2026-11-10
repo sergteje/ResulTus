@@ -45,9 +45,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          dotnet nuget add source github \
+          dotnet nuget add source \
+            --name github \
             --username ${{ github.repository_owner }} \
             --password "$GITHUB_TOKEN" \
             --store-password-in-clear-text \
-            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           dotnet nuget push "${{ env.ARTIFACTS }}/*.nupkg" --source github --skip-duplicate
