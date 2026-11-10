@@ -1,5 +1,9 @@
 # ResulTus
 
+[![CI](https://github.com/sergteje/ResulTus/actions/workflows/ci.yml/badge.svg?branch=main&label=CI)](https://github.com/sergteje/ResulTus/actions/workflows/ci.yml)
+[![Downloads](https://img.shields.io/nuget/dt/ResulTus?label=downloads)](https://www.nuget.org/packages/ResulTus)
+[![NuGet](https://img.shields.io/nuget/v/ResulTus?label=nuget)](https://www.nuget.org/packages/ResulTus)
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-dark.png">
   <img src="assets/branding/logo-light.png" alt="ResulTus - Make every result count." width="540">

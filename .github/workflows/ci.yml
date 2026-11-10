@@ -14,9 +14,26 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Build
-        run: dotnet build ResulTus.slnx
+        run: dotnet build ResulTus.slnx -c Release
       - name: Test
-        run: dotnet test ResulTus.slnx --no-build
+        run: dotnet test ResulTus.slnx -c Release --no-build
+
+  # The coverage gates the owner fixed at 90% lines per package, measured per module from
+  # the dedicated test runs (transitively referenced modules are excluded) — the script
+  # prints one row per package and fails the job below threshold. Analyzers and the source
+  # generator are excluded by design: Roslyn projects earn coverage in their own suites.
+  coverage-gate:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build (Release)
+        run: dotnet build ResulTus.slnx -c Release
+      - name: Coverage gate (90% lines per package)
+        run: pwsh -File scripts/coverage-gate.ps1 -Threshold 0.90
 
   # Publish-and-run proof for the claims annotated since 0.0.1: a console app
   # walking the AOT-safe System.Text.Json path is published trimmed and then

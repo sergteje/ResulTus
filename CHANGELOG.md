@@ -10,6 +10,18 @@ defines it, means the public API may still change between minor releases.
 
 ### Added
 
+- **CI coverage gate at 90% lines per package** — `ci.yml` grew a `coverage-gate` job that runs
+  each dedicated test project with the coverlet collector, scopes the counts to the package's own
+  module, prints one row per package and fails below 90% lines. Every package passes today
+  (measured: Core/AspNetCore/Testing 100%, Collections 98.53%, Extensions 98.64%, Serialization
+  96.93%, HttpClient 93.21%, Logging/Diagnostics/Validation/FluentValidation 100%). Analyzers and
+  the source generator are excluded by design: Roslyn projects earn coverage in their contract
+  suites. The gate script lives at `scripts/coverage-gate.ps1`.
+- **README badges** — CI status, NuGet downloads and the current package version badge at the
+  top of both README editions, next to the brand mark.
+
+### Added
+
 - **Coverage lift to the contract level** — the IEnumerable overload family of Collections, the
   validation bridge of AspNetCore, the/problem model edges of HttpClient, and the exception
   surface of Testing are pinned by Given/When/Then tests. Per-module measurement corrected the
