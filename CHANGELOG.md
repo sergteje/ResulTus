@@ -8,6 +8,34 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Coverage lift to the contract level** — the IEnumerable overload family of Collections, the
+  validation bridge of AspNetCore, the/problem model edges of HttpClient, and the exception
+  surface of Testing are pinned by Given/When/Then tests. Per-module measurement corrected the
+  earlier diluted numbers: Core, AspNetCore, Logging, Diagnostics, Validation and
+  FluentValidation reach 100% lines; Collections 98.53%, Testing 100%, HttpClient 93.21%.
+- **HttpClient member-shape guard** — the problem parser rejects a non-integer `status` member
+  with the documented `JsonException` instead of an escaped `InvalidOperationException`.
+
+### Fixed
+
+- **HttpClient extension members compare by content** — `HttpProblemDetails` equality read
+  `JsonElement` references rather than parsed content, so two documents parsed separately with
+  identical comparison members were unequal. `ElementsEqual` now uses content-aware deep
+  comparison per target framework, and the extension hash uses the canonical raw text.
+
+### Changed
+
+- **Multi-targeting net8.0 / net9.0 / net10.0** — all eleven production libraries now compile and
+  package for the three runtimes (the analyzers and the source generator keep their
+  `netstandard2.0`); `Directory.Build.props` no longer pins a single `TargetFramework`. Both README
+  editions state the targets. The published 0.0.2 predates this change; a `v0.0.3` tag publishes
+  the multi-targeted package set, and the release workflow now also mirrors the packages to
+  GitHub Packages (`GITHUB_TOKEN`, `.nupkg` only — GitHub Packages does not host symbol
+  packages) so they appear on the repository's Packages tab. The published 0.0.3 predates the
+  coverage-lift series.
+
 ## [0.0.3] - 2026-11-10
 
 ### Changed
