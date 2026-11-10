@@ -299,17 +299,5 @@ public class UnitResultCollectionOverloadTests
     }
 
     private static long Measure(Func<int> operation, int iterations)
-    {
-        _ = operation();
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        var checksum = 0;
-        for (var index = 0; index < iterations; index++)
-        {
-            checksum += operation();
-        }
-
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        GC.KeepAlive(checksum);
-        return allocated;
-    }
+        => AllocationProbe.Measure(operation, warmups: MeasurementIterations, iterations: iterations);
 }
