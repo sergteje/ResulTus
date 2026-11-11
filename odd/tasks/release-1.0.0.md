@@ -25,8 +25,8 @@ nuget.org, and the version number every consumer treats as a stability statement
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S1, S2 | inline | done | `6c4fe7c` |
-| T2 | S3 | inline | pending | `permissions: contents: write` fix pushed (`d35ccd0`) — see L2 |
-| T3 | S4 | inline | pending | see L2 |
+| T2 | S3 | inline | done | `permissions: contents: write` fix pushed (`d35ccd0`) — see L2 |
+| T3 | S4 | inline | done | see L3 |
 
 ## Log
 
@@ -69,3 +69,19 @@ notes, completing the observable set.
 package page, and the releases/API listing) to confirm nuget.org's index lists 1.0.0, then mark
 T2/T3 done in this record. Nothing else remains: the tags v0.0.1–v1.0.0, the four release
 objects, both feeds, and the covenant are live.
+
+### L3 — S4 close-out: 1.0.0 fully indexed, feature complete (2026-11-11)
+
+The four observables re-read and confirmed:
+
+- Flat container (`https://api.nuget.org/v3-flatcontainer/resultus/index.json`): lists
+  `0.0.2`, `0.0.3`, `1.0.0`.
+- Search index (`azuresearch-usnc.nuget.org/query?q=packageid:ResulTus`): lists `ResulTus` with
+  `1.0.0` among its versions.
+- Package page (`https://www.nuget.org/packages/ResulTus/1.0.0`): HTTP 200.
+- Releases/API listing (`api.github.com/repos/sergteje/ResulTus/releases`): `v1.0.0` object
+  present alongside `v0.0.1`–`v0.0.3`.
+
+T2/T3 marked done. The indexing-latency hypothesis from L2 was confirmed — no intervention was
+needed; the version simply took the same staggering 0.0.2 and 0.0.3 took. The feature document is
+complete: nothing pending remains for the 1.0.0 release.
