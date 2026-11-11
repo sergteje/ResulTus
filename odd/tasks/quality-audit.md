@@ -37,7 +37,7 @@ cannot make (symmetry, naming, deprecation ladder readiness).
 | T1 | S3, S2 | inline | done | `probes green` — see L2 |
 | T2 | S1 | inline | done | `ad9b56e` — see L3 |
 | T3 | S4 | inline | done | see L3 |
-| T4 | S5 | inline | pending | async-overload allocation probes |
+| T4 | S5 | inline | done | see L4 |
 | T5 | S6 | delegated writer (scratch solution) | pending | generators/analyzers under a large synthetic solution |
 | T6 | S7 | inline | pending | long-term API stability judgment |
 
@@ -98,3 +98,21 @@ doc work, not a behavior change; folded into T6's API-stability pass.
 **Verdict for S1/S4: no defect.** Lesson recorded for the remaining audit units: value
 equality only asserts laws within one type instantiation; laws that change `T` assert state +
 carried error.
+
+### L4 — T4 done: the async overloads allocate nothing on the sync-completing path (2026-11-12)
+
+`tests/ResulTus.Extensions.Tests/AsyncAllocationAuditTests.cs` — 3 chain probes (generic, unit,
+typed tiers, success and failure states each), 10 000 iterations each over
+`GC.GetAllocatedBytesForCurrentThread`, **0 B everywhere**. Each chain composes
+`MapAsync` → `EnsureAsync`/`RecoverAsync` → `BindAsync` → `TapAsync` → `MapErrorAsync` →
+`MatchAsync` over an already-completed `ValueTask` with a synchronously-completing mapper and
+static delegates (no closures), so the zero reading certifies every operator in the chain —
+allocations cannot cancel. The `Task`-accepting wrapper overload adds nothing beyond the
+already-completed task.
+
+The async design holds: `async ValueTask` cores whose state machines complete synchronously
+allocate nothing, and the `Task` overloads wrap without re-boxing. **Verdict for S5: no
+defect.** Probe-authoring notes for the record: the unit tier's `MapAsync` mapper takes only a
+`CancellationToken`, and after a unit-tier `MapAsync` the receiver is `ValueTask<Result<int>>`,
+so the follow-up operators bind the generic tier's extensions — explicit lambda parameter types
+are the only way to keep overload resolution deterministic in these chains.
