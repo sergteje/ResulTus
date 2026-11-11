@@ -18,10 +18,10 @@ env:
 
 jobs:
   pack-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           # global.json selects 11.0.x to compile every TFM (net8.0..net11.0);
           # 10.0.x provides the runtime the net10.0 test projects execute on.
@@ -34,6 +34,29 @@ jobs:
         run: dotnet test ResulTus.slnx -c Release --no-build
       - name: Pack
         run: dotnet pack ResulTus.slnx -c Release -o ${{ env.ARTIFACTS }}
+
+      # The tag is the covenant: the shared <Version> (the single source every
+      # package takes its version from) must equal the pushed tag, and every
+      # produced artifact must carry it in its filename — or nothing is
+      # published. A drift would otherwise publish the wrong version under the
+      # right release object.
+      - name: Verify the tag matches every packaged version
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          declared="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)"
+          if [ -z "$declared" ] || [ "$declared" != "$expected" ]; then
+            echo "::error::Directory.Build.props declares version '${declared:-none}' but the pushed tag is 'v$expected'"
+            exit 1
+          fi
+          mismatch=0
+          for pkg in "$ARTIFACTS"/*.nupkg "$ARTIFACTS"/*.snupkg; do
+            name="$(basename "$pkg")"
+            case "$name" in
+              *."$expected".nupkg | *."$expected".snupkg) ;;
+              *) echo "::error::$name does not carry the tag version '$expected'"; mismatch=1 ;;
+            esac
+          done
+          [ "$mismatch" -eq 0 ] || exit 1
 
       - name: Push packages and symbols to nuget.org
         env:

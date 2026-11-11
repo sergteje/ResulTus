@@ -1,0 +1,13 @@
+# Keeps dependencies and the GitHub Actions we pin current. Weekly checks;
+# every PR still has to pass the full CI suite before merge.
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
