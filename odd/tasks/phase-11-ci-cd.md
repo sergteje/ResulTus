@@ -232,8 +232,14 @@ minimal `docs/index.md`, `docs/.gitignore`, and a `docs` CI job (checkout, setup
 `dotnet tool restore`, `dotnet tool run docfx -- docs/docfx.json`). Writer verification: tool
 restore exit 0, full docfx pipeline exit 0 ("Build succeeded. 0 warning(s) 0 error(s)", 59 HTML
 pages), `git check-ignore` confirms `docs/_site`/`docs/api` ignored. Publishing to GitHub Pages
-remains out of scope until the owner asks. Risk: item 5 (new CI job in the delivery pipeline) —
-assessment ran at high, native review and the independent verifier follow this entry.
+remains out of scope until the owner asks. assessed tier and outcome: 786425f high (escalated item 5; owner granted native review), 79846e1
+medium/under_budget (covered by the slice review), cd209c7 passive, 6d72b95 passive-delta. The
+independent verifier returned S4 MET (five probes pass, no blockers; scratch removed). The native
+compact review (lenses readability + reliability, lineage `review-185a679d835b947c`) returned
+**approved** with zero blockers and nine advisory findings (benchmark `_checksum` dead sink,
+unanchored substring checks in `DocfxSiteConfigTests`, floating SDK in the `docs` job, duplicated
+Roslyn exclusion rule) — acknowledged, authority burned; the reviewed boundary advances to
+`6d72b95`. Advisory findings are follow-up work, not corrections.
 
 **Phase-11 status:** T1–T5 all done. The proposal's five success criteria are realized: CI (S1),
 tag release (S2), benchmark comparative results (S3, realized as the HttpClient macro suite the
