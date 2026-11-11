@@ -14,7 +14,9 @@ Each line quotes the retired proposal's success criteria verbatim; they have not
 - **S2** — "Release workflow publishes NuGet packages on `v*` tag".
 - **S3** — "BenchmarkDotNet suite runs and reports comparative results".
 - **S4** — "DocFX site builds without errors".
-- **S5** — "Code coverage >= 95% (measured by coverlet or similar)".
+- **S5** — "Code coverage >= 95% (measured by coverlet or similar)". *(Renegotiated by the
+  owner: the gate is fixed at 90% lines per package — commit `a2fe88a`, README badges at that
+  target; see L3 postscript and L4.)*
 
 Scope carried over, item by item, with what is already true today:
 
@@ -32,11 +34,11 @@ Scope carried over, item by item, with what is already true today:
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | undecided | pending | — |
-| T2 | S2 | undecided | pending | — |
-| T3 | S3 | undecided | pending | — |
-| T4 | S4 | undecided | pending | coverage baseline measured, gate decision open — see L3 |
-| T5 | S5 | undecided | pending | — |
+| T1 | S1 | inline | done | `265c144` (workflow added), `d70133e` (explicit permissions) |
+| T2 | S2 | inline | done | `265c144`, `5e4c9ee`, `d70133e`; observed runs 42867362862 (0.0.2), 0.0.3, 1.0.0 |
+| T3 | S3 | delegated writer (2 sessions: surface gap on `Program.cs`, then run + document) | done | `79846e1` — see L6 |
+| T4 | S4 | delegated writer (1 session) | done | `786425f` — see L6; independent verifier in progress |
+| T5 | S5 | inline (verification) | done | gaps closed `6492691`/`0b4c05f`/`109400e`; gate `a2fe88a`; local rerun green — see L5 |
 
 ## Log
 
@@ -160,3 +162,81 @@ The remaining sub-95% gaps are inside compiler-generated async state corridors (
 coverage is contract-driven. A 25-cent measurement error poked under the release — the
 05-cci.yml gate at 95% per-package lines would be RED on HttpClient's lifted-locals arithmetic
 today, so the gate discussion stays open with the owner until that story is told. Suite: 753/0.
+
+### L4 — close-out of the remaining phase-11 items (2026-11-11)
+
+> L1 — owner request (verbatim): "venga 1,2 y 3 si tienes que delegar delega si tienes que meter
+> al background mete al background"
+
+The owner approved the three remaining items in one batch: (1) coverage gaps, (2) HttpClient
+macro benchmarks, (3) the DocFX site.
+
+- **Coverage (S5/T5):** the per-module correction already closed the gaps (L3 postscript) and
+  the owner fixed the gate at 90% lines per package (`a2fe88a`, README badges included). The
+  remaining work is verification only: rerun `scripts/coverage-gate.ps1` locally against a
+  Release build to confirm every package passes its row. S5's renegotiated criterion is the
+  90% per-package gate; the proposal's original 95% aggregate is superseded by the owner's
+  decision, recorded here.
+- **HttpClient macro benchmarks (S3/T3):** `tests/ResulTus.Benchmarks/` is net10.0-only today
+  and references no `ResulTus.HttpClient`. The parked decision — net10-only rows vs a
+  net8/9/10 runtime matrix for the macro benchmark — was asked to the owner this session;
+  the writer launches once the answer lands.
+- **DocFX (S4/T4):** nothing exists yet. One bounded writer creates the local-tool manifest,
+  `docfx.json`, a minimal articles set, and a CI job proving the site builds without errors
+  (S4's verbatim criterion). Publishing to GitHub Pages is deliberately out of scope until the
+  owner asks for it.
+
+Risk lines — DocFX/CI unit: item 5 (a new CI job is delivery-environment surface); benchmark
+unit: item 6 until written, then reassessed.
+
+### L5 — T5 closed: the gate passes locally at the owner's 90% (2026-11-11)
+
+`dotnet build ResulTus.slnx -c Release` (0 errors) followed by
+`powershell -NoProfile -File scripts/coverage-gate.ps1 -Threshold 0.90` locally — all eleven
+packages PASS:
+
+| Package | Lines | Gate |
+| --- | ---: | --- |
+| ResulTus | 100.00% | PASS |
+| ResulTus.Extensions | 98.64% | PASS |
+| ResulTus.Collections | 98.53% | PASS |
+| ResulTus.Serialization | 96.93% | PASS |
+| ResulTus.AspNetCore | 98.44% | PASS |
+| ResulTus.HttpClient | 93.21% | PASS |
+| ResulTus.Logging / Diagnostics / Validation / Testing / FluentValidation | 100.00% | PASS |
+
+One environmental note for the record: the local machine has no `pwsh` (PowerShell 7), so
+`pwsh -File scripts/coverage-gate.ps1` fails locally with CommandNotFound; the same invocation
+is fine on the ubuntu CI runner. Locally, `powershell -File` runs the script unchanged. T5 is
+done at the renegotiated criterion: 90% lines per package, gate green.
+
+### L6 — T3 and T4 shipped; the three phase-11 remaining items are all realized (2026-11-11)
+
+**T3 done (`79846e1`).** `HttpClientMacroBenchmark` — four macro methods over a fake
+`HttpMessageHandler` (zero network), `[MemoryDiagnoser]`, AOT-safe `JsonTypeInfo<Widget>` route in
+both camps, fresh `HttpRequestMessage` per invocation (single-use — the first run failed on this and
+was corrected). Registration in `Program.cs` required an orchestrator-granted surface extension
+(the fixed class list needs one `Run<T>` line; `--filter` silently skips unregistered classes).
+Observed run (BDN 0.15.8, DefaultJob, i7-6700, net10.0): failure path **545.2 ns / 1.13 KB** vs raw
+`EnsureSuccessStatusCode` **3,536.4 ns / 1.27 KB** — 6.5x, non-overlapping ranges; success is a tie
+within noise (CIs overlap). `MultimodalDistribution` on three of four rows is recorded in
+`docs/performance.md`, not hidden; the failure-path verdict does not rest on those means. Decision
+002 (`docs/decisions/002-benchmarks-net10-only.md`) records the owner's net10-only choice — the
+benchmark host is not multi-targeted. Risk: none — additive benchmark + observed numbers; no
+production surface changed.
+
+**T4 done (`786425f`).** DocFX site builds without errors: local tool manifest (docfx 2.81.0),
+`docs/docfx.json` (metadata for the 11 production libraries pinned to net10.0; the two netstandard2.0
+Roslyn components excluded — forcing net10.0 breaks their `PrivateAssets` compiler reference),
+minimal `docs/index.md`, `docs/.gitignore`, and a `docs` CI job (checkout, setup-dotnet 10,
+`dotnet tool restore`, `dotnet tool run docfx -- docs/docfx.json`). Writer verification: tool
+restore exit 0, full docfx pipeline exit 0 ("Build succeeded. 0 warning(s) 0 error(s)", 59 HTML
+pages), `git check-ignore` confirms `docs/_site`/`docs/api` ignored. Publishing to GitHub Pages
+remains out of scope until the owner asks. Risk: item 5 (new CI job in the delivery pipeline) —
+assessment ran at high, native review and the independent verifier follow this entry.
+
+**Phase-11 status:** T1–T5 all done. The proposal's five success criteria are realized: CI (S1),
+tag release (S2), benchmark comparative results (S3, realized as the HttpClient macro suite the
+owner chose), DocFX site (S4), coverage (S5, renegotiated by the owner to the 90% per-package
+gate). Remaining open by choice: GitHub Pages publishing (S4 extension), and the bench-interpretation
+baseline coverage for the macro suite grows as the owner asks for rows.
