@@ -57,3 +57,19 @@ jobs:
         run: dotnet publish samples/AotSmoke/ResulTus.AotSmoke.csproj -c Release -r win-x64 /p:PublishAot=true -o publish-aot
       - name: Run (Native AOT)
         run: ./publish-aot/ResulTus.AotSmoke.exe
+
+  # Proof for S4: the DocFX API-reference site builds without errors. Metadata
+  # pins net10.0 so the multi-targeting libraries resolve to one deterministic
+  # surface; the two Roslyn components (netstandard2.0) are excluded because
+  # forcing net10.0 breaks their PrivateAssets compiler reference.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore local tools
+        run: dotnet tool restore
+      - name: Build DocFX site
+        run: dotnet tool run docfx -- docs/docfx.json
