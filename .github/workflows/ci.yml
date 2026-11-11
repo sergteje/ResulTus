@@ -15,7 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # SDK 11 compiles every TFM (net8.0..net11.0); SDK 10 provides the
+          # runtime the net10.0 test projects execute on.
+          dotnet-version: |
+            11.0.x
+            10.0.x
       - name: Build
         run: dotnet build ResulTus.slnx -c Release
       - name: Test
@@ -32,7 +36,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # Same pair as build-and-test: SDK 11 compiles all TFMs, SDK 10 runs
+          # the net10.0 test projects the gate measures.
+          dotnet-version: |
+            11.0.x
+            10.0.x
       - name: Build (Release)
         run: dotnet build ResulTus.slnx -c Release
       - name: Coverage gate (90% lines per package)
@@ -48,7 +56,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # global.json requires 11.0.x (it publishes the net10.0 sample fine);
+          # 10.0.x guarantees the .NET 10 runtime the trimmed publish executes on.
+          dotnet-version: |
+            11.0.x
+            10.0.x
       - name: Publish (trimmed)
         run: dotnet publish samples/AotSmoke/ResulTus.AotSmoke.csproj -c Release /p:PublishTrimmed=true -o publish-trimmed
       - name: Run (trimmed)
@@ -68,7 +80,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          # global.json requires 11.0.x (it compiles every TFM); the docfx
+          # metadata builds with the net10.0 pin under this SDK.
+          dotnet-version: '11.0.x'
       - name: Restore local tools
         run: dotnet tool restore
       - name: Build DocFX site

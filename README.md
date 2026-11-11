@@ -433,7 +433,7 @@ Array source, N = 1,000 fully successful elements:
 
 ## Runtime compatibility
 
-Libraries target `net8.0`, `net9.0` and `net10.0`; the analyzers and the source generator target
+Libraries target `net8.0`, `net9.0`, `net10.0` and `net11.0`; the analyzers and the source generator target
 `netstandard2.0`. Trimming and Native AOT are **verified by an observed publish-and-run** on every
 CI push (job `aot-smoke`, runner `windows-latest`; e.g. run [42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212)): a console application published both trimmed and natively executes the core result types and the AOT-safe System.Text.Json surface — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — passing every assertion. Register converters through that surface in AOT applications; the factory-based convenience registration remains the ordinary path for non-AOT apps.
 

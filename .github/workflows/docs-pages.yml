@@ -1,0 +1,51 @@
+# Publishes the DocFX API-reference site to GitHub Pages. The CI `docs` job
+# proves the build on every push; this workflow deploys it when the inputs the
+# site depends on change on main.
+name: Docs pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - 'src/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - '.config/**'
+      - 'global.json'
+      - '.github/workflows/docs-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          # global.json requires 11.0.x; the docfx metadata builds with the
+          # net10.0 pin under this SDK.
+          dotnet-version: '11.0.x'
+      - name: Restore local tools
+        run: dotnet tool restore
+      - name: Build DocFX site
+        run: dotnet tool run docfx -- docs/docfx.json
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

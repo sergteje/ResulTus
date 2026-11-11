@@ -8,6 +8,12 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Target `net11.0`** — the eleven production libraries multi-target `net8.0` / `net9.0` /
+  `net10.0` / `net11.0`; the analyzers and the source generator stay `netstandard2.0`. Net8
+  consumers are unaffected (the TFM group is additive; removing one would be a breaking change).
+
 ## [1.0.0] - 2026-11-10
 
 The stable contract. From this version on, the public surface is the committed snapshot under
@@ -20,7 +26,8 @@ a `MAJOR` version bump fails CI by design. The rules live in
 - **The public-API contract** — the surface of every shipped assembly is snapshotted per file
   under `tests/ResulTus.ApiCompat.Tests/PublicApi` and enforced per commit:
   `tests/ResulTus.ApiCompat.Tests` re-derives it by reflection and diffs until the change is
-  deliberately reviewed and the snapshot regenerated with `scripts/ApiSnapshot -- --write`.
+  deliberately reviewed and the snapshot regenerated with
+  `dotnet run --project scripts/ApiSnapshot -- --write`.
   The versioning strategy — the 0.x freedom, the 1.0 promise, the `[Obsolete]` deprecation
   ladder, the same-tag-per-package rule — lives at `odd/specs/versioning.md`.
 - **CI coverage gate at 90% lines per package** — `ci.yml` runs a `coverage-gate` job over each
