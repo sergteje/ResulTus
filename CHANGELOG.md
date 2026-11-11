@@ -8,6 +8,12 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Target `net11.0`** — the eleven production libraries multi-target `net8.0` / `net9.0` /
+  `net10.0` / `net11.0`; the analyzers and the source generator stay `netstandard2.0`. Net8
+  consumers are unaffected (the TFM group is additive; removing one would be a breaking change).
+
 ## [1.0.0] - 2026-11-10
 
 The stable contract. From this version on, the public surface is the committed snapshot under
