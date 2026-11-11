@@ -246,3 +246,43 @@ tag release (S2), benchmark comparative results (S3, realized as the HttpClient 
 owner chose), DocFX site (S4), coverage (S5, renegotiated by the owner to the 90% per-package
 gate). Remaining open by choice: GitHub Pages publishing (S4 extension), and the bench-interpretation
 baseline coverage for the macro suite grows as the owner asks for rows.
+
+### L7 — the owner's 2/3/4 batch, plus net11 (2026-11-11)
+
+The owner approved the follow-up batch ("venga 2,3,4"): the review advisories, GitHub Pages
+publishing, and CONTRIBUTING.md — then added net11 mid-session ("vamos a hacer que funcione
+también en net 11").
+
+- **Advisories applied (`a460661`).** The benchmark's dead `_checksum` accumulator removed with
+  the keep-alive contract restated on the sink fields (the reliability reviewer's WARNING stands:
+  the correct long-term guard is BenchmarkDotNet's `Consume` API — follow-up work); the
+  DocfxSiteConfigTests now anchor assertions inside the extracted `docs` job block, derive the
+  metadata scope from the config's own exclude list against the eleven named shipped libraries,
+  and fail with a clear diagnostic when the repository root cannot be located; the `docs` CI job
+  pins its SDK at feature-band level. Suite green (824 tests), focused 4/4.
+- **net11.0 multi-targeting (`2c7528c`).** The eleven production libraries now compile
+  `net8.0;net9.0;net10.0;net11.0`; analyzers and the source generator stay `netstandard2.0`.
+  Because an older SDK cannot target net11 (NETSDK1045), `global.json` moved to `11.0.100`
+  (latestFeature) and every workflow that invokes dotnet now installs SDK 11 — the test
+  projects still run on the .NET 10 runtime, so the workflows install `11.0.x` + `10.0.x`
+  (the `docs` job needs only 11). Local verification: multi-TFM build 0 warnings / 0 errors,
+  full suite green, **ApiCompat 11/11 — the public surface is unchanged**, so the 1.0 promise
+  holds. README (both editions) and CHANGELOG `[Unreleased]` updated at parity. The owner's
+  decision to **keep net8** stands: removing a TFM group would break net8 consumers (no NuGet
+  fallback), i.e. a breaking change for a 1.0.0 stable; it is recorded as a future MAJOR-release
+  decision, not silently taken. Note: net10.0 binaries already ran on the .NET 11 runtime via
+  roll-forward; targeting net11.0 gives net11 consumers a build against net11 ref assemblies.
+- **CONTRIBUTING.md (`66f6877`).** The last never-executed item of the original phase-11
+  proposal: build/test commands, the code rules (allocation hard rule, typing, surface
+  contract, AOT honesty), test discipline, coverage gate, docs parity rules, benchmark
+  charter, and the conventional-commits policy.
+- **GitHub Pages (`718547a`).** `docs-pages.yml` builds the site and deploys it with
+  `upload-pages-artifact` + `deploy-pages` on changes to its inputs on main (plus
+  `workflow_dispatch`); Pages was enabled on the repository with `build_type: workflow` — the
+  site lives at https://sergteje.github.io/ResulTus/ once the first deploy lands.
+
+Assessed tiers and outcomes for this batch: `a460661` high and `2c7528c` high — reviewed as one
+slice (`review-0a79a1dd840f2a5f`, lenses risk + reliability), owner granted, reduction
+**approved** with zero blockers (two reliability advisories recorded: the benchmark sink
+keep-alive guard via `Consume`, and the glob-normalization coupling in the metadata test);
+authority burned. `66f6877` passive; `718547a` assessed on commit.
