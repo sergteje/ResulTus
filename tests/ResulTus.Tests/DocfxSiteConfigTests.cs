@@ -11,13 +11,39 @@ namespace ResulTus.Tests;
 /// </summary>
 public class DocfxSiteConfigTests
 {
+    /// <summary>
+    /// The eleven shipped libraries whose metadata scope the DocFX site must cover.
+    /// Named here so a drift failure reports exactly which project leaked in or out.
+    /// </summary>
+    private static readonly string[] ShippedLibraries =
+    [
+        "ResulTus",
+        "ResulTus.AspNetCore",
+        "ResulTus.Collections",
+        "ResulTus.Diagnostics",
+        "ResulTus.Extensions",
+        "ResulTus.HttpClient",
+        "ResulTus.Logging",
+        "ResulTus.Serialization",
+        "ResulTus.Testing",
+        "ResulTus.Validation",
+        "ResulTus.Validation.FluentValidation",
+    ];
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "ResulTus.slnx")))
             directory = directory.Parent;
-        directory.Should().NotBeNull("the test must run inside the repository");
-        return directory!.FullName;
+        if (directory is null)
+        {
+            throw new InvalidOperationException(
+                "The DocFX contract tests walk up from the test assembly to ResulTus.slnx and "
+                + "found nothing; they require the test output to live inside the repository tree "
+                + $"(started from '{AppContext.BaseDirectory}').");
+        }
+
+        return directory.FullName;
     }
 
     private static string ReadRepoFile(params string[] relativeSegments) =>
@@ -39,27 +65,34 @@ public class DocfxSiteConfigTests
 
     /// <summary>
     /// GIVEN docs/docfx.json
-    /// THEN metadata MUST pin net10.0, exclude both netstandard2.0 Roslyn projects,
-    ///      and the remaining src projects MUST be exactly eleven.
+    /// THEN metadata MUST pin net10.0, exclude only existing src projects, and the
+    ///      resulting metadata scope MUST be exactly the eleven shipped libraries —
+    ///      so a new or renamed project cannot leak into (or vanish from) the site.
     /// </summary>
     [Fact]
-    public void DocfxMetadata_ShouldPinNet10AndExcludeRoslynProjects()
+    public void DocfxMetadata_ShouldCoverExactlyTheShippedLibraries()
     {
         using var config = JsonDocument.Parse(ReadRepoFile("docs", "docfx.json"));
         var metadata = config.RootElement.GetProperty("metadata")[0];
         metadata.GetProperty("properties").GetProperty("TargetFramework").GetString().Should().Be("net10.0");
 
-        var exclude = metadata.GetProperty("src")[0].GetProperty("exclude")
-            .EnumerateArray().Select(e => e.GetString()).ToArray();
-        exclude.Should().Contain("**/ResulTus.Analyzers/**");
-        exclude.Should().Contain("**/ResulTus.SourceGenerators/**");
+        var excluded = metadata.GetProperty("src")[0].GetProperty("exclude")
+            .EnumerateArray().Select(e => e.GetString()!)
+            .Select(glob => glob.Replace("**/", string.Empty).Replace("/**", string.Empty))
+            .ToArray();
 
-        var srcProjects = Directory
+        var allSrcProjects = Directory
             .GetFiles(Path.Combine(RepositoryRoot(), "src"), "*.csproj", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
-            .Where(name => name is not "ResulTus.Analyzers" and not "ResulTus.SourceGenerators")
             .ToArray();
-        srcProjects.Should().HaveCount(11);
+
+        excluded.Should().NotBeEmpty();
+        excluded.Should().OnlyContain(name => allSrcProjects.Contains(name),
+            "every docfx exclusion glob must name a real src project");
+
+        var scope = allSrcProjects.Where(name => !excluded.Contains(name)).Order().ToArray();
+        scope.Should().BeEquivalentTo(ShippedLibraries,
+            "the metadata scope must be exactly the shipped libraries; anything else leaked in or out");
     }
 
     /// <summary>
@@ -77,19 +110,56 @@ public class DocfxSiteConfigTests
 
     /// <summary>
     /// GIVEN the CI workflow
-    /// THEN a <c>docs</c> job MUST restore the local tool and build docs/docfx.json,
-    ///      with the three pre-existing jobs and the read-only permission intact.
+    /// THEN the <c>docs</c> job itself MUST restore the local tool and build docs/docfx.json
+    ///      (anchored inside that job's block, not anywhere in the file), with the three
+    ///      pre-existing jobs and the read-only top-level permission intact.
     /// </summary>
     [Fact]
     public void CiWorkflow_ShouldBuildDocfxSiteInDocsJob()
     {
         var workflow = ReadRepoFile(".github", "workflows", "ci.yml").Replace("\r\n", "\n");
-        workflow.Should().Contain("permissions:\n  contents: read");
+
         workflow.Should().Contain("  build-and-test:");
         workflow.Should().Contain("  coverage-gate:");
         workflow.Should().Contain("  aot-smoke:");
-        workflow.Should().Contain("  docs:");
-        workflow.Should().Contain("run: dotnet tool restore");
-        workflow.Should().Contain("run: dotnet tool run docfx -- docs/docfx.json");
+
+        var docsJob = ExtractBlock(workflow, "  docs:", "  ");
+        docsJob.Should().Contain("dotnet tool restore",
+            "the docs job must restore the committed local tool manifest");
+        docsJob.Should().Contain("dotnet tool run docfx -- docs/docfx.json",
+            "the docs job must build the site");
+
+        var permissions = ExtractBlock(workflow, "permissions:", string.Empty);
+        permissions.Should().Contain("contents: read");
+    }
+
+    /// <summary>
+    /// Returns the lines of one YAML block: from its declaration line to the next line at the
+    /// declaration's own indentation level, so assertions cannot pass on text that merely
+    /// appears somewhere else in the file.
+    /// </summary>
+    private static string ExtractBlock(string workflow, string declaration, string siblingIndent)
+    {
+        var lines = workflow.Split('\n');
+        var start = Array.FindIndex(lines, l => l == declaration.TrimEnd(':') + ":"
+            || l == declaration);
+        if (start < 0)
+        {
+            throw new InvalidOperationException($"Block '{declaration}' was not found in the workflow.");
+        }
+
+        var block = new List<string> { lines[start] };
+        for (var i = start + 1; i < lines.Length; i++)
+        {
+            if (lines[i].StartsWith(siblingIndent, StringComparison.Ordinal)
+                && !lines[i].StartsWith(siblingIndent + " ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            block.Add(lines[i]);
+        }
+
+        return string.Join('\n', block);
     }
 }

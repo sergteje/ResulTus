@@ -23,11 +23,11 @@ namespace ResulTus.Benchmarks;
 /// check and <see cref="JsonSerializer"/> read, or <c>EnsureSuccessStatusCode()</c> on failure. The
 /// value type is deserialized through the AOT-safe source-generated <see cref="JsonTypeInfo{T}"/> route
 /// in both camps, so the comparison isolates the result-producing wrapper rather than the JSON engine.
-/// </remarks>
-/// <remarks>
 /// Every method builds a fresh <see cref="HttpRequestMessage"/> per invocation because an
 /// <see cref="HttpRequestMessage"/> can only be sent once; the shared request creation is paid
-/// identically by both camps and is therefore excluded from the comparison.
+/// identically by both camps and is therefore excluded from the comparison. Benchmark results are
+/// stored in instance fields, which keep the produced values alive for BenchmarkDotNet's
+/// consumption without any extra accumulator.
 /// </remarks>
 [MemoryDiagnoser]
 public class HttpClientMacroBenchmark
@@ -41,7 +41,6 @@ public class HttpClientMacroBenchmark
     private Widget? _sinkRawSuccess;
     private HttpClientError? _sinkResulTusFailure;
     private Exception? _sinkRawFailure;
-    private int _checksum;
 
     /// <summary>
     /// Builds the two fake-handler clients and the source-generated metadata.
@@ -58,19 +57,14 @@ public class HttpClientMacroBenchmark
     }
 
     /// <summary>
-    /// Disposes the clients and reads every sink so the stores made by the benchmark methods cannot
-    /// be removed by the JIT.
+    /// Disposes the two fake-handler clients. The produced values stay alive as instance-field
+    /// state of the benchmark object, so no extra accumulator is needed.
     /// </summary>
     [GlobalCleanup]
     public void Cleanup()
     {
         _successClient.Dispose();
         _failureClient.Dispose();
-
-        _checksum += _sinkResulTusSuccess?.Name.Length ?? 0;
-        _checksum += _sinkRawSuccess?.Name.Length ?? 0;
-        _checksum += _sinkResulTusFailure is null ? 0 : (int)_sinkResulTusFailure.Kind;
-        _checksum += _sinkRawFailure?.Message.Length ?? 0;
     }
 
     /// <summary>
