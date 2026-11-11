@@ -4,6 +4,13 @@ Thank you for considering a contribution. ResulTus is a high-performance `Result
 .NET with a measured, documented design — reading [`docs/performance.md`](docs/performance.md)
 and [`README.md`](README.md) first will make every other rule below obvious.
 
+## Prerequisites
+
+- **.NET SDK 11** (`global.json` pins 11.0.x with `rollForward: latestFeature`) — it compiles
+  every target framework the libraries multi-target.
+- **The .NET 10 runtime** — the test projects target `net10.0`, and an SDK 11 installation does
+  not provide that runtime. Installing the .NET 10 SDK alongside 11 (what CI does) covers it.
+
 ## Build and test
 
 ```bash
@@ -48,7 +55,7 @@ The surface of every shipped assembly is snapshotted under
 `tests/ResulTus.ApiCompat.Tests/PublicApi` and enforced per commit: a member that is added,
 changed or removed without a deliberate snapshot regeneration fails CI. If your change
 deliberately alters the public surface, regenerate the snapshots with
-`scripts/ApiSnapshot -- --write` and explain the change in the pull request — the versioning
+`dotnet run --project scripts/ApiSnapshot -- --write` and explain the change in the pull request — the versioning
 strategy that governs when this requires a MAJOR bump lives in
 [`odd/specs/versioning.md`](odd/specs/versioning.md).
 

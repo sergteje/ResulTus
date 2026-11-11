@@ -9,6 +9,8 @@ on:
     paths:
       - 'docs/**'
       - 'src/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
       - '.config/**'
       - 'global.json'
       - '.github/workflows/docs-pages.yml'
