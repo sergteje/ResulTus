@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ResulTus\ResulTus.csproj" />
     <ProjectReference Include="..\..\src\ResulTus.Collections\ResulTus.Collections.csproj" />
+    <ProjectReference Include="..\..\src\ResulTus.HttpClient\ResulTus.HttpClient.csproj" />
     <ProjectReference Include="..\..\src\ResulTus.Logging\ResulTus.Logging.csproj" />
     <ProjectReference Include="..\..\src\ResulTus.Serialization\ResulTus.Serialization.csproj" />
     <ProjectReference Include="..\..\src\ResulTus.Validation\ResulTus.Validation.csproj" />

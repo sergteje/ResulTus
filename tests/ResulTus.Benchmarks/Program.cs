@@ -32,3 +32,4 @@ BenchmarkRunner.Run<ValidationOperationBenchmark>(config);
 ArrayTraversalBenchmark.PrintLayoutTable();
 BenchmarkRunner.Run<ArrayTraversalBenchmark>(config);
 BenchmarkRunner.Run<GenericTierTraversalBenchmark>(config);
+BenchmarkRunner.Run<HttpClientMacroBenchmark>(config);

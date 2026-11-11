@@ -409,6 +409,60 @@ BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET 
 
 **Readout:** `ToDictionary` materializes the grouped dictionary and per-field message arrays. `ToError` creates the summary message string and a value-type `Error`.
 
+### HttpClient macro — end-to-end result pipeline vs raw HttpClient — measured 2026-11-11
+
+`HttpClientMacroBenchmark` drives a real `HttpClient` over a hand-written fake `HttpMessageHandler`
+(deterministic, zero network) and measures the whole result-producing pipeline end to end. The ResulTus
+rows send through `SendResultAsync<Widget>` and consume a `Result<Widget, HttpClientError>`; the raw rows
+perform the equivalent manual status check + JSON read on success and `EnsureSuccessStatusCode()` on
+failure. Both camps deserialize through the same AOT-safe source-generated `JsonTypeInfo<Widget>` and
+build a fresh `HttpRequestMessage` per invocation (an `HttpRequestMessage` is single-use), so the shared
+request creation and JSON engine are excluded from the comparison.
+
+Net10-only by decision: the host is `net10.0` and the benchmark is not multi-targeted — see
+[Decision 002](decisions/002-benchmarks-net10-only.md).
+
+BenchmarkDotNet 0.15.8, `DefaultJob`, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime
+10.0.14. One complete run:
+
+| Method | Mean | Gen0 | Allocated |
+| --- | ---: | ---: | ---: |
+| ResulTus_Success | 1,216.8 ns | 0.3662 | 1.5 KB |
+| Raw_Success | 1,139.2 ns | 0.2823 | 1.16 KB |
+| **ResulTus_Failure** | **545.2 ns** | 0.2751 | **1.13 KB** |
+| Raw_Failure | 3,536.4 ns | 0.3090 | 1.27 KB |
+
+**Readout — the failure path is the story, and it is not close.** On a non-success status the ResulTus
+pipeline returns a failure carrying a structured `HttpClientError` in **545.2 ns / 1.13 KB**, while the
+idiomatic raw baseline throws and catches an `HttpRequestException` in **3,536.4 ns / 1.27 KB** — about
+**6.5x slower** and allocating ~0.14 KB more. The two distributions do not touch: the raw failure's
+observed range (2.997–4.680 µs) sits entirely above ResulTus's (0.457–0.627 µs), so by §2 this is a fact,
+not a coin flip. The cost is the throw/catch machinery and stack-trace capture, not the byte count — the
+exception is only slightly larger than the `HttpClientError` object, but walking the stack and dispatching
+the throw is what costs ~3 µs.
+
+**Success is a tie, within noise.** `ResulTus_Success` (1,216.8 ns / 1.5 KB) against `Raw_Success`
+(1,139.2 ns / 1.16 KB): the 99.9% confidence intervals overlap (1.167–1.266 µs vs 1.099–1.180 µs), so by
+§2 the difference does not count. The ~0.34 KB delta is the `Result<Widget, HttpClientError>` wrapper plus
+the extra async hop (`SendCoreAsync` then `ToResultAsync`), paid on top of the shared request + JSON cost
+both camps already bear.
+
+**Measurement traps, recorded so they are not repeated.**
+
+- **`HttpRequestMessage` is single-use.** The first version reused one request across iterations and
+  failed every row with `InvalidOperationException: The request message was already sent.` Each method now
+  builds a fresh request per invocation, which is why the request creation is shared and excluded.
+- **`MultimodalDistribution` on three of four rows** (`ResulTus_Success` mValue 3.56, `Raw_Success` 4,
+  `Raw_Failure` 4.08). By §2 a multimodal mean is invalid until the bimodality is explained. The likely
+  cause is periodic Gen0 collections from the ~1.1–1.5 KB/op allocation plus async scheduling noise on
+  this 4-core i7-6700; `ResulTus_Failure` (mValue 2.59) carries no warning. The failure-path verdict does
+  not rest on those means: the raw failure's minimum (2.997 µs) exceeds ResulTus's maximum (0.627 µs), so
+  the 6.5x direction is robust regardless.
+- **The §2 zero-allocation floor does not apply here.** This is a satellite pipeline baseline, not a core
+  result operation. `HttpClientError` is a class by design — it owns an `Exception` and a
+  `ProblemDetails` document — and the raw baseline allocates its own exception, so the allocation column
+  is a comparative baseline, never a zero-allocation claim.
+
 ## 5. Reproduction
 
 ```bash
