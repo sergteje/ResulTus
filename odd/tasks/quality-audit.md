@@ -35,8 +35,8 @@ cannot make (symmetry, naming, deprecation ladder readiness).
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S3, S2 | inline | done | `probes green` — see L2 |
-| T2 | S1 | inline | pending | internal-state bug hunt probes |
-| T3 | S4 | inline | pending | composition-law probes (Map/Bind/Recover/TryGet) |
+| T2 | S1 | inline | done | `ad9b56e` — see L3 |
+| T3 | S4 | inline | done | see L3 |
 | T4 | S5 | inline | pending | async-overload allocation probes |
 | T5 | S6 | delegated writer (scratch solution) | pending | generators/analyzers under a large synthetic solution |
 | T6 | S7 | inline | pending | long-term API stability judgment |
@@ -76,3 +76,25 @@ audit value is the pin: these states cannot silently change anymore.
 **Verdict for S2/S3: no defect.** The pinned suite is the guarantee. One residual note for S7:
 the null-success state deserves a sentence in the XML remarks of `Success(T)`/the type remarks —
 doc work, not a behavior change; folded into T6's API-stability pass.
+
+### L3 — T2 and T3 done: record semantics and the composition laws hold; one probe-design lesson recorded (2026-11-12)
+
+- **T2 — S1, no defect** (`ad9b56e`): `tests/ResulTus.Tests/InternalStateAuditTests.cs`, 7
+  probes green on first run. The state flag separates success from failure regardless of carried
+  fields; equality follows the payload within a state; `GetHashCode` matches equality; a
+  `Result<Error>` keeps the payload state and the error state distinct; the unit tier mirrors the
+  generic contract; a success never reports a stale error; typed-tier error comparison uses the
+  `Error` value semantics.
+- **T3 — S4, no defect**: `tests/ResulTus.Extensions.Tests/CompositionLawAuditTests.cs`, 12
+  law probes across all three tiers. Functor identity and composition (`Map`), monad
+  associativity and short-circuit (`Bind` — binders never run on a failure, the first failure
+  wins a chain), `MapError` identity, recovery idempotence and failure propagation,
+  `Ensure` idempotence and failure short-circuit, side-effect operators returning the original
+  value. First run was RED (3 of 12) — the defect was in the probes, not the library: the
+  short-circuit law was asserted as cross-type equality (`Result<int>.Failure` vs
+  `Result<string>.Failure`), which is not the law's form; the correct form is the preserved
+  state plus the preserved error, and that is what now passes.
+
+**Verdict for S1/S4: no defect.** Lesson recorded for the remaining audit units: value
+equality only asserts laws within one type instantiation; laws that change `T` assert state +
+carried error.
