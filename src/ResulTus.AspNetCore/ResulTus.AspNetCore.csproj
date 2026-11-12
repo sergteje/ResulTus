@@ -17,4 +17,9 @@
     <ProjectReference Include="..\ResulTus.Validation\ResulTus.Validation.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
 </Project>

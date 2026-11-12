@@ -18,7 +18,7 @@
 
   <PropertyGroup>
     <Description>ResulTus — High-performance Result Pattern library for .NET</Description>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>ResulTus Contributors</Authors>
     <Company>ResulTus</Company>
     <Copyright>Copyright (c) ResulTus. All rights reserved.</Copyright>
@@ -34,9 +34,6 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)assets\branding\icon.png"
-          Pack="true"
-          PackagePath="" />
-    <None Include="$(MSBuildThisFileDirectory)README.md"
           Pack="true"
           PackagePath="" />
   </ItemGroup>
