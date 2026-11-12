@@ -70,6 +70,13 @@ public readonly record struct Result<TSuccess, TError>
     /// </summary>
     /// <param name="value">The success value.</param>
     /// <returns>A <see cref="Result{TSuccess, TError}"/> with <see cref="IsSuccess"/> = <c>true</c>.</returns>
+    /// <remarks>
+    /// A success may carry a null value when <typeparamref name="TSuccess"/> is a nullable
+    /// reference type: the parameter accepts any value at runtime, and the nullability
+    /// annotation carries the intent. Consumers read the state through
+    /// <see cref="Match{TResult}"/> or <see cref="Deconstruct"/> and never assume a success
+    /// value is non-null.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<TSuccess, TError> Success(TSuccess value) => new(value);
 

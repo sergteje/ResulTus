@@ -67,6 +67,14 @@ public readonly record struct Result<T>
     /// </summary>
     /// <param name="value">The success value.</param>
     /// <returns>A <see cref="Result{T}"/> with <see cref="IsSuccess"/> = <c>true</c>.</returns>
+    /// <remarks>
+    /// A success may carry a null value: <typeparamref name="T"/> is unconstrained, so
+    /// <c>Success(null)</c> is representable for every <typeparamref name="T"/>, and a
+    /// nullable <typeparamref name="T"/> makes null a sanctioned success state (pinned by
+    /// <c>DefaultAndNullStateAuditTests</c>). The nullability annotation carries the
+    /// intent; consumers read the state through <see cref="TryGetValue(out T?, out Error)"/>
+    /// or <see cref="Match{TResult}"/> and never assume a success value is non-null.
+    /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T> Success(T value) => new Result<T>(value);
 

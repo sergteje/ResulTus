@@ -39,7 +39,7 @@ cannot make (symmetry, naming, deprecation ladder readiness).
 | T3 | S4 | inline | done | see L3 |
 | T4 | S5 | inline | done | see L4 |
 | T5 | S6 | delegated writer (scratch solution) | done | see L5 |
-| T6 | S7 | inline | pending | long-term API stability judgment |
+| T6 | S7 | inline | done | XML contract + verdict — see L6 |
 
 ## Log
 
@@ -139,3 +139,40 @@ analyzer-clean projects and a reflection verifier.
 **Verdict for S6: no defect.** One instruction inaccuracy noted and corrected in passing: wiring
 the generator/analyzer as Roslyn components requires `OutputItemType="Analyzer"
 ReferenceOutputAssembly="false"` — `IsRoslynComponent=true` alone does not auto-wire it.
+
+### L6 — T6 done: the surface is ready to stay stable for years (2026-11-12)
+
+**Contract documentation closed the one gap** (`Success(T)` remarks in both tiers now state the
+null-success contract: representable for every T, the nullability annotation carries the intent,
+consumers read state through `TryGetValue`/`Match` and never assume non-null). Rebuild: 0
+warnings / 0 errors; XML-only change, the committed surface snapshots are untouched.
+
+**The S7 judgment, area by area:**
+
+- **Mechanical enforcement exists and is proven.** The public surface of every shipped assembly
+  is snapshotted (`tests/ResulTus.ApiCompat.Tests/PublicApi`) and re-derived by reflection per
+  commit; the versioning spec (`odd/specs/versioning.md`) governs the MAJOR/minor/patch ladder.
+  A silent surface drift cannot happen.
+- **Symmetry across the three tiers holds.** T3's law probes exercise identical law forms on
+  `Result`, `Result<T>` and `Result<TS,TE>`; T4's allocation chains do the same for the async
+  shapes — the operator verb set (`Map`, `MapError`, `Bind`, `Recover`, `Ensure`, `Tap`,
+  `OnSuccess`/`OnFailure`, `Switch`, `Finally`) is the same on every tier, sync and async.
+- **Naming is consistent**: verbs, no abbreviations, one extension class per tier, and the
+  analyzers recognize the tiers by metadata name so future renames would be caught by the
+  analyzer suite, not silently missed.
+- **No deprecation debt**: zero `[Obsolete]` members — the ladder of `odd/specs/versioning.md`
+  is unused and available.
+- **Every public member is XML-documented** (build-enforced), and the argument-validation
+  members document their exceptions.
+
+**Verdict for S7: ready.** The honest limit, recorded: the 1.0 promise guards signatures, not
+semantics — but the audit found no semantics change needed either (S1–S6 all clean), so there
+is nothing pending on the ladder.
+
+### L7 — feature close (2026-11-12)
+
+Seven specs, seven verdicts: **S1–S6 no defect** (certified by 28 pinned audit probes + the S6
+scale audit), **S7 ready** (judgment + one doc gap closed). No fixes were required anywhere;
+the audit's probe-first method caught two would-be false findings (the cross-type equality form
+in T3, the `Success(null)` throw proposal in T1) before they became wrong "fixes" against a
+1.0-stable contract. Full suite green at close.
