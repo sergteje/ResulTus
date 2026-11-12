@@ -435,7 +435,8 @@ Array source, N = 1,000 fully successful elements:
 
 Libraries target `net8.0`, `net9.0`, `net10.0` and `net11.0`; the analyzers and the source generator target
 `netstandard2.0`. Trimming and Native AOT are **verified by an observed publish-and-run** on every
-CI push (job `aot-smoke`, runner `windows-latest`; e.g. run [42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212)): a console application published both trimmed and natively executes the core result types and the AOT-safe System.Text.Json surface — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — passing every assertion. Register converters through that surface in AOT applications; the factory-based convenience registration remains the ordinary path for non-AOT apps.
+CI push (jobs `aot-smoke` and `aot-smoke-linux`, runners `windows-latest` and `ubuntu-24.04`; e.g. run
+[43127928009](https://github.com/sergteje/ResulTus/actions/runs/43127928009)): a console application published both trimmed and natively — on Windows and on Linux — executes the core result types, the AOT-safe System.Text.Json surface — `ResultJsonConverter<T>(JsonTypeInfo<T>)` — and the end-to-end `JsonSerializer` route through a source-generated carrier with the converter registered on the context's options, passing every assertion. Register converters through that surface in AOT applications; the factory-based convenience registration remains the ordinary path for non-AOT apps.
 
 ## HTTP responses as results
 
