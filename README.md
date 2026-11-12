@@ -28,23 +28,23 @@ Those four facts are a trade, stated openly: the 32 B default tier and its array
 
 | Package | Purpose |
 | --- | --- |
-| `ResulTus` | The core types: `Result`, `Result<T>`, `Result<TSuccess, TError>`, `Error`, `ErrorType`. |
-| `ResulTus.Extensions` | The fluent operators (`Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally`, `Switch`) and conversions, synchronous and asynchronous. |
-| `ResulTus.Collections` | Collection operations over sequences, arrays and read-only lists of results (`Traverse`, `Sequence`, `Fold`, `Partition`). |
-| `ResulTus.Logging` | Structured `ILogger` extensions that emit the outcome as named fields, not a rendered string. |
-| `ResulTus.Serialization` | `System.Text.Json` converters for `Result<T>`, `Error` and `ErrorType` with a fixed, strict wire format. |
-| `ResulTus.Diagnostics` | Opt-in `Activity`/`DiagnosticListener` timing and tracing around result-producing operations. |
-| `ResulTus.AspNetCore` | Converts results into ASP.NET Core action results and RFC 9457 ProblemDetails. |
-| `ResulTus.HttpClient` | Turns HTTP responses, ProblemDetails documents and transport failures into `Result<TSuccess, HttpClientError>`. |
-| `ResulTus.Validation` | Structured `ValidationErrors`/`ValidationIssue` and DataAnnotations validation. |
-| `ResulTus.Validation.FluentValidation` | Runs an `IValidator<T>` and returns a `Result<T, ValidationErrors>` carrying every failure. |
-| `ResulTus.Analyzers` | Roslyn analyzers (`RESULT001`–`RESULT006`) that turn result misuse into build-time diagnostics. |
-| `ResulTus.SourceGenerators` | The `[ErrorFactory]` source generator (`RESULTGEN001`). |
-| `ResulTus.Testing` | Framework-agnostic result assertions for tests (`ShouldSucceed`, `ShouldFail`). |
+| [`ResulTus`](src/ResulTus/README.md) | The core types: `Result`, `Result<T>`, `Result<TSuccess, TError>`, `Error`, `ErrorType`. |
+| [`ResulTus.Extensions`](src/ResulTus.Extensions/README.md) | The fluent operators (`Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally`, `Switch`) and conversions, synchronous and asynchronous. |
+| [`ResulTus.Collections`](src/ResulTus.Collections/README.md) | Collection operations over sequences, arrays and read-only lists of results (`Traverse`, `Sequence`, `Fold`, `Partition`). |
+| [`ResulTus.Logging`](src/ResulTus.Logging/README.md) | Structured `ILogger` extensions that emit the outcome as named fields, not a rendered string. |
+| [`ResulTus.Serialization`](src/ResulTus.Serialization/README.md) | `System.Text.Json` converters for `Result<T>`, `Error` and `ErrorType` with a fixed, strict wire format. |
+| [`ResulTus.Diagnostics`](src/ResulTus.Diagnostics/README.md) | Opt-in `Activity`/`DiagnosticListener` timing and tracing around result-producing operations. |
+| [`ResulTus.AspNetCore`](src/ResulTus.AspNetCore/README.md) | Converts results into ASP.NET Core action results and RFC 9457 ProblemDetails. |
+| [`ResulTus.HttpClient`](src/ResulTus.HttpClient/README.md) | Turns HTTP responses, ProblemDetails documents and transport failures into `Result<TSuccess, HttpClientError>`. |
+| [`ResulTus.Validation`](src/ResulTus.Validation/README.md) | Structured `ValidationErrors`/`ValidationIssue` and DataAnnotations validation. |
+| [`ResulTus.Validation.FluentValidation`](src/ResulTus.Validation.FluentValidation/README.md) | Runs an `IValidator<T>` and returns a `Result<T, ValidationErrors>` carrying every failure. |
+| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Roslyn analyzers (`RESULT001`–`RESULT006`) that turn result misuse into build-time diagnostics. |
+| [`ResulTus.SourceGenerators`](src/ResulTus.SourceGenerators/README.md) | The `[ErrorFactory]` source generator (`RESULTGEN001`). |
+| [`ResulTus.Testing`](src/ResulTus.Testing/README.md) | Framework-agnostic result assertions for tests (`ShouldSucceed`, `ShouldFail`). |
 
 MIT licensed. Source: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 
-Every package above is **Stable** and shipped at 1.1.0 on [nuget.org](https://www.nuget.org/profiles/sergteje) — there are no preview or planned entries in the table. The core plus `ResulTus.Extensions` are all you need to start:
+Every package above is **Stable** and shipped at 1.1.1 on [nuget.org](https://www.nuget.org/profiles/sergteje) — there are no preview or planned entries in the table. Every package ships its own focused README (linked in the table and packed into the `.nupkg`). The core plus `ResulTus.Extensions` are all you need to start:
 
 ```bash
 dotnet add package ResulTus
