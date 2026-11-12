@@ -38,7 +38,7 @@ cannot make (symmetry, naming, deprecation ladder readiness).
 | T2 | S1 | inline | done | `ad9b56e` — see L3 |
 | T3 | S4 | inline | done | see L3 |
 | T4 | S5 | inline | done | see L4 |
-| T5 | S6 | delegated writer (scratch solution) | pending | generators/analyzers under a large synthetic solution |
+| T5 | S6 | delegated writer (scratch solution) | done | see L5 |
 | T6 | S7 | inline | pending | long-term API stability judgment |
 
 ## Log
@@ -116,3 +116,26 @@ defect.** Probe-authoring notes for the record: the unit tier's `MapAsync` mappe
 `CancellationToken`, and after a unit-tier `MapAsync` the receiver is `ValueTask<Result<int>>`,
 so the follow-up operators bind the generic tier's extensions — explicit lambda parameter types
 are the only way to keep overload resolution deterministic in these chains.
+
+### L5 — T5 done: the generator and analyzers hold at scale; no finding (2026-11-12)
+
+Delegated scratch audit (outside the worktree; scratch removed after the report): a synthetic
+solution of **30 class libraries × 200 `[ErrorFactory]` methods = 6 000 factories**, cycling all
+nine `ErrorType` members with interpolated placeholders, plus analyzer-negative and
+analyzer-clean projects and a reflection verifier.
+
+- Cold build: **29.72 s**, exit 0, 0 errors; 6 000 generated `.g.cs` files, unique hint names,
+  no duplicate-diagnostics storms.
+- Incremental stress: touching ONE of the 6 000 declarations → rebuild **4.74 s** (~84%
+  reduction); only the touched project recompiled, only ONE generated file changed content, and
+  the 200 files of the untouched project kept their mtimes — the per-candidate incremental
+  pipeline holds at scale.
+- Correctness: reflection-verified invocation of all 6 000 factories — exact code, exact
+  `ErrorType`, exact interpolated message; failures = 0.
+- Analyzers: exactly 100 RESULT005 + 100 RESULT003 for 200 negative cases, zero spurious
+  diagnostics, zero on the clean project, and both analyzers skip generated code when
+  coexisting with the generator.
+
+**Verdict for S6: no defect.** One instruction inaccuracy noted and corrected in passing: wiring
+the generator/analyzer as Roslyn components requires `OutputItemType="Analyzer"
+ReferenceOutputAssembly="false"` — `IsRoslynComponent=true` alone does not auto-wire it.
