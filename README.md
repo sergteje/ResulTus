@@ -44,9 +44,37 @@ Those four facts are a trade, stated openly: the 32 B default tier and its array
 
 MIT licensed. Source: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 
+Every package above is **Stable** and shipped at 1.1.0 on [nuget.org](https://www.nuget.org/profiles/sergteje) — there are no preview or planned entries in the table. The core plus `ResulTus.Extensions` are all you need to start:
+
+```bash
+dotnet add package ResulTus
+dotnet add package ResulTus.Extensions
+```
+
+The same pattern installs any other package in the table (`dotnet add package ResulTus.Serialization`, `ResulTus.AspNetCore`, …).
+
 ## Quick start
 
-Every code block below is statement-level; the usings, types and helpers in this one setup are implied by all of them.
+In 30 seconds, with just those two packages:
+
+```csharp
+using ResulTus;
+using ResulTus.Extensions;
+
+Result<int> parsed = int.TryParse("42", out var value)
+    ? Result<int>.Success(value)
+    : Result<int>.Failure(Error.Validation("NOT_A_NUMBER"));
+
+Result<string> message = parsed.Map(v => $"Value: {v}");
+
+string output = message.Match(
+    onSuccess: v => v,
+    onFailure: e => e.Code);                // "Value: 42"
+
+Result<int> notFound = Error.NotFound("USER_NOT_FOUND");   // failure, no exception
+```
+
+Success and failure are two states of one struct — no exceptions, no heap. The rest of this tour builds on one setup; every code block below is statement-level and the usings, types and helpers in it are implied by all of them.
 
 ```csharp
 using System.Net.Http;
@@ -306,7 +334,7 @@ These are the recorded rows, grouped by series. Every number is quoted verbatim 
 | FluentResults_Create_Success | 18.7471 ns | **112 B** |
 | FluentResults_Create_Failure | 40.6202 ns | **240 B** |
 
-[Full section](docs/performance.md#result-creation--measured-2026-10-29). Every row below 1 ns is a tie by the noise-floor rule; the meaningful result is `Create_Failure` at **0.0192 ns and 0 B**, against ErrorOr's 88 B and FluentResults' 240 B — they must allocate an error object, ResulTus does not.
+[Full section](docs/performance.md#result-creation--measured-2026-10-29). Every Mean below 1 ns is a tie by the noise-floor rule — at that scale the latency column measures nothing real, and the signal is the **Allocated column**: creating a failure costs **0 B** in ResulTus against ErrorOr's **88 B** and FluentResults' **240 B** — they must allocate an error object, ResulTus does not. The latency differences between sub-nanosecond rows are not interpretable and are not claims.
 
 ### Matching — measured 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403
 

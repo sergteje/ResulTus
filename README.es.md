@@ -44,9 +44,37 @@ Esos cuatro hechos son un intercambio, declarado abiertamente: el tier por defec
 
 Licencia MIT. Código fuente: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 
+Todos los paquetes de la tabla son **estables** y están publicados en 1.1.0 en [nuget.org](https://www.nuget.org/profiles/sergteje) — no hay entradas en preview ni planificadas. El core más `ResulTus.Extensions` son todo lo necesario para empezar:
+
+```bash
+dotnet add package ResulTus
+dotnet add package ResulTus.Extensions
+```
+
+El mismo patrón instala cualquier otro paquete de la tabla (`dotnet add package ResulTus.Serialization`, `ResulTus.AspNetCore`, …).
+
 ## Primeros pasos
 
-Cada bloque de código siguiente es de nivel de sentencia; los usings, tipos y helpers de este bloque de preparación se sobreentienden en todos ellos.
+En 30 segundos, con solo esos dos paquetes:
+
+```csharp
+using ResulTus;
+using ResulTus.Extensions;
+
+Result<int> parsed = int.TryParse("42", out var value)
+    ? Result<int>.Success(value)
+    : Result<int>.Failure(Error.Validation("NOT_A_NUMBER"));
+
+Result<string> message = parsed.Map(v => $"Value: {v}");
+
+string output = message.Match(
+    onSuccess: v => v,
+    onFailure: e => e.Code);                // "Value: 42"
+
+Result<int> notFound = Error.NotFound("USER_NOT_FOUND");   // fallo, sin excepción
+```
+
+Éxito y fallo son dos estados de una misma estructura — sin excepciones, sin heap. El resto de este recorrido se apoya en un bloque de preparación; cada bloque de código siguiente es de nivel de sentencia y los usings, tipos y helpers de ese bloque se sobreentienden en todos ellos.
 
 ```csharp
 using System.Net.Http;
@@ -196,7 +224,7 @@ Result<int> fetched = await FetchAsync(21)
 Cada operador sincrónico tiene su gemelo `Async` sobre `Task` y `ValueTask`, en los tres tiers —
 `Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`,
 `Finally` — con delegates conscientes del token y el token honrado antes del trabajo awaitado. El
-tier tipado toma una sola forma de `Ensure` (el valor de error que ya tenés); los tiers unit y
+tier tipado toma una sola forma de `Ensure` (el valor de error que ya se tiene); los tiers unit y
 `Result<T>` llevan además las formas con fábrica de error. Un token cancelado se manifiesta como
 `OperationCanceledException`, nunca como un fallo.
 
@@ -306,7 +334,7 @@ Estas son las filas registradas, agrupadas por serie. Cada número se cita liter
 | FluentResults_Create_Success | 18.7471 ns | **112 B** |
 | FluentResults_Create_Failure | 40.6202 ns | **240 B** |
 
-[Sección completa](docs/performance.md#result-creation--measured-2026-10-29). Toda fila por debajo de 1 ns es un empate según la regla del umbral de ruido; el resultado significativo es `Create_Failure` con **0.0192 ns y 0 B**, frente a los 88 B de ErrorOr y los 240 B de FluentResults — ellos deben asignar un objeto de error, ResulTus no.
+[Sección completa](docs/performance.md#result-creation--measured-2026-10-29). Todo Mean por debajo de 1 ns es un empate según la regla del umbral de ruido — a esa escala la columna de latencia no mide nada real, y la señal está en la columna **Allocated**: crear un fallo cuesta **0 B** en ResulTus frente a los **88 B** de ErrorOr y los **240 B** de FluentResults - ellos deben asignar un objeto de error, ResulTus no. Las diferencias de latencia entre filas subnanosegundo no son interpretables y no son afirmaciones.
 
 ### Evaluación con `Match` — medido el 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403
 
