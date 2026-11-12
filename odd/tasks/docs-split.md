@@ -5,7 +5,7 @@ deep content into focused `docs/` guides — **documenting only what exists in t
 external review proposed a 29-section structure whose Union/Option/State-Monad/Events/Async-Streams
 sections describe features that do not exist (verified: zero occurrences in the repo); this feature
 supersedes that proposal with a real-feature scope. Branch: `main`. Delivery strategy: work-unit
-commits per unit; LinkedIn promotion happens only after this lands. Test runner: doc snippets are
+commits per unit; promotion is the owner's decision and lives outside the repository. Test runner: doc snippets are
 compile-verified in throwaway projects (repo rule: every code block in a document must compile).
 
 Risk: none (documentation only; the README numbers are already observed and charter-governed).
