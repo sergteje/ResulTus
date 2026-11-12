@@ -70,6 +70,24 @@ jobs:
       - name: Run (Native AOT)
         run: ./publish-aot/ResulTus.AotSmoke.exe
 
+  # The same publish-and-run proof on Linux: the AOT guarantee must not depend on a
+  # single platform. ubuntu runners ship the clang toolchain Native AOT needs.
+  aot-smoke-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+      - name: Install Native AOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+      - name: Publish (Native AOT)
+        run: dotnet publish samples/AotSmoke/ResulTus.AotSmoke.csproj -c Release -r linux-x64 /p:PublishAot=true -o publish-aot
+      - name: Run (Native AOT)
+        run: ./publish-aot/ResulTus.AotSmoke
+
   # Proof for S4: the DocFX API-reference site builds without errors. Metadata
   # pins net10.0 so the multi-targeting libraries resolve to one deterministic
   # surface; the two Roslyn components (netstandard2.0) are excluded because

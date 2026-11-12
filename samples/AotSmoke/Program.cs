@@ -57,6 +57,29 @@ if (successResult.Match(value => value * 2, _ => -1) != 82)
     Fail("Match did not transform the success payload");
 }
 
+// The full JsonSerializer route: a source-generated carrier whose reachable graph includes the
+// closed generic result, with the ResulTus converter registered on the context's options. This is
+// the same shape the serialization suite's SourceGeneratedCarrier test proves; here it runs
+// under actual trimming and Native AOT. The bare options overload (Serialize<TValue>(value,
+// options)) is deliberately absent: it carries RequiresUnreferencedCode/RequiresDynamicCode and
+// is not the AOT-safe consumer route for a custom Result converter.
+var carrierOptions = new JsonSerializerOptions();
+carrierOptions.Converters.Add(converter);
+var carrierContext = new SmokeJsonContext(carrierOptions);
+var carrier = new ConsumerCarrier(1, successResult);
+
+var carrierJson = JsonSerializer.Serialize(carrier, carrierContext.ConsumerCarrier);
+if (!string.Equals(carrierJson, """{"Tag":1,"Result":{"isSuccess":true,"value":41}}""", StringComparison.Ordinal))
+{
+    Fail($"carrier JsonSerializer.Serialize wrote '{carrierJson}'");
+}
+
+var carrierBack = JsonSerializer.Deserialize(carrierJson, carrierContext.ConsumerCarrier);
+if (carrierBack is null || carrierBack.Tag != 1 || carrierBack.Result != successResult)
+{
+    Fail("carrier JsonSerializer.Deserialize changed the payload");
+}
+
 Console.WriteLine("aot-smoke: all assertions passed");
 return 0;
 
@@ -99,4 +122,8 @@ static void Fail(string reason)
 }
 
 [JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(ConsumerCarrier))]
 internal sealed partial class SmokeJsonContext : JsonSerializerContext;
+
+/// <summary>A carrier payload making the closed generic result reachable for the context.</summary>
+internal sealed record ConsumerCarrier(int Tag, Result<int> Result);
