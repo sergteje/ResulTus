@@ -73,3 +73,13 @@ separate feature.
   generates on install.
 - **T3**: fixes recorded in the unreleased `[1.1.1]` `### Fixed` section; suite run pending in the
   commit step; push and release remain the owner's decisions.
+
+### L3 — closed (2026-11-12)
+
+- **Suite**: `dotnet test ResulTus.slnx` — everything passes except the same 3 pre-existing
+  `AsyncAllocationAuditTests` failures already verified at baseline during `package-readmes`.
+- **Commits**: 7cef626 (guide fixes), 43c47bf (pack routing), 100b55d (CHANGELOG), c20e04d
+  (feature document). Branch `fix/tooling-packaging` sits on top of `feat/package-readmes` because
+  the `[1.1.1]` CHANGELOG section is shared; both features land in the same unreleased release.
+- **Native assessment** of the slice 52ddbd5..c20e04d: risk `medium` (executable change:
+  `ResulTus.Analyzers.csproj`), `review_due: false`, reason `under_budget`.
