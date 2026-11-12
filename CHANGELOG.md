@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
 defines it, means the public API may still change between minor releases.
 
+## [1.1.1] - 2026-11-12
+
+### Changed
+
+- **Every package ships its own focused README** — the 13 packable packages carry a per-package
+  README (`src/<Package>/README.md`) packed into the `.nupkg`, instead of the shared canonical
+  root README. Each readme documents only the shipped API of its package, links to the repository
+  with absolute GitHub URLs so they resolve on nuget.org, and every snippet compiles against the
+  real sources. The root README stays the canonical entry point; its packages table now links
+  each package's readme.
+
 ## [1.1.0] - 2026-11-12
 
 ### Added
