@@ -2,7 +2,7 @@
 
 `ResulTus.HttpClient` is the optional client-side adapter for the `ResulTus` result type. It turns three things into a `Result` instead of an exception: an HTTP response, an RFC 9457 ProblemDetails document, and a transport failure. It never retries, never throws for ordinary HTTP failures, and never touches the caller's `HttpClient` or `HttpRequestMessage` beyond what it was handed.
 
-The adapter is framework-independent: it targets `net8.0`, references only `ResulTus` and the built-in HTTP/JSON APIs, and does not reference ASP.NET Core. Its ProblemDetails type is a minimal RFC 9457 reader, not `Microsoft.AspNetCore.Mvc.ProblemDetails`.
+The adapter is framework-independent: it targets `net8.0`, `net9.0`, `net10.0` and `net11.0`, references only `ResulTus` and the built-in HTTP/JSON APIs, and does not reference ASP.NET Core. Its ProblemDetails type is a minimal RFC 9457 reader, not `Microsoft.AspNetCore.Mvc.ProblemDetails`.
 
 All types live in the `ResulTus.HttpClient` namespace. Every operation returns a `Result<TSuccess, HttpClientError>`, except the raw-response operations, which return `Result<HttpResponseMessage, HttpClientError>`. The error carries four pieces of context:
 
@@ -173,7 +173,7 @@ if (result.IsFailure)
             break;
 
         case HttpClientFailureKind.StatusError:
-            Console.WriteLine($"HTTP {(int)error.Status!}: {error.ProblemDetails?.Title}");
+            Console.WriteLine($"HTTP {(int)(error.Status ?? default)}: {error.ProblemDetails?.Title}");
             break;
 
         case HttpClientFailureKind.InvalidResponse:
