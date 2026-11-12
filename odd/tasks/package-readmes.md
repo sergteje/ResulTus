@@ -109,3 +109,6 @@ the package alone does not activate the rules.
   they reproduce identically at baseline b25c9e5 in a clean worktree; this feature touches no
   source code. Reported to the owner as a base-only follow-up, not a defect of this change.
 - No publish, push or pull request was performed — those remain the owner's decisions.
+- **Native assessment** of the slice b25c9e5..d54229d: risk `medium` (executable change:
+  `Directory.Build.props`), `review_due: false`, reason `under_budget` — the review stays pending
+  in the slice until a later commit reaches the budget.
