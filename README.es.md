@@ -171,11 +171,26 @@ Result<int> back = JsonSerializer.Deserialize<Result<int>>(json, options)!;
 
 El formato de cable es fijo: `isSuccess`, `value` y `error` se emiten en camelCase y nunca siguen una política de nombres configurada, de modo que el mismo resultado se serializa de forma idéntica en todas partes.
 
-## Fluida por diseño
+## Guías
 
-Los operadores componen porque todos comparten una misma forma: un fallo cortocircuita la cadena sin tocarla, y nada asigna en ninguna de las dos rutas más allá del delegado que pasa el llamador. Cada ejemplo es una forma que un lector escribiría realmente, y cada uno compila contra los ensamblados reales.
+Los recorridos en profundidad viven en guías enfocadas, cada una verificada contra el código publicado:
 
-Una cadena de validación que se lee como una frase — `Map` → `Bind` → `Ensure` → `Recover` → `Tap` → `Match`:
+| Guía | Contenido |
+| --- | --- |
+| [`docs/getting-started.md`](docs/getting-started.md) | Instalación, el arranque de 30 segundos, el bloque de preparación completo. |
+| [`docs/core-concepts.md`](docs/core-concepts.md) | `Error`, los tres tiers, los contratos de default y de null-success, conversiones. |
+| [`docs/functional-operations.md`](docs/functional-operations.md) | Todos los operadores sincrónicos y asíncronos, las leyes de composición, el contrato de asignaciones. |
+| [`docs/collections.md`](docs/collections.md) | Las operaciones de colección por tier, y los dos `Combine`. |
+| [`docs/error-handling.md`](docs/error-handling.md) | Errores tipados, generación con `[ErrorFactory]`, validación, los analizadores. |
+| [`docs/serialization.md`](docs/serialization.md) | El formato de cable de `System.Text.Json`, registro, y las rutas AOT-safe. |
+| [`docs/observability.md`](docs/observability.md) | Campos de logging estructurado, timing opcional con `Activity`/`DiagnosticListener`. |
+| [`docs/testing.md`](docs/testing.md) | `ShouldSucceed`/`ShouldFail` y las convenciones de testing del repo. |
+| [`docs/performance.md`](docs/performance.md) | Todos los números medidos, su sello y la metodología. |
+| [`docs/httpclient.md`](docs/httpclient.md) | La guía del módulo HTTP. |
+
+## Los operadores en una cadena
+
+Los operadores componen porque todos comparten una misma forma: un fallo cortocircuita la cadena sin tocarla, y nada asigna en ninguna de las dos rutas más allá del delegado que pasa el llamador. Una cadena de validación que se lee como una frase — `Map` → `Bind` → `Ensure` → `Recover` → `Tap` → `Match`:
 
 ```csharp
 string outcome = Parse("21")
@@ -191,28 +206,7 @@ string outcome = Parse("21")
         onFailure: error => $"rejected: {error.Code}");     // Match
 ```
 
-Una cadena que transforma el error — `MapError` → `Recover` → `Finally`:
-
-```csharp
-Result<int> cleaned = Parse("-3")
-    .MapError(error => Error.Validation("INVALID_AGE", error.Message)) // MapError
-    .Recover(_ => 0)                                                   // Recover
-    .Finally((value, error) =>                                         // Finally
-        Console.WriteLine($"ended {value} / {error.Code}"));
-```
-
-El `Result` unitario para un comando que no devuelve nada:
-
-```csharp
-Result saved = SaveRecord(42);
-
-if (saved.IsSuccess)
-{
-    Console.WriteLine("saved");
-}
-```
-
-`await` compone con los mismos operadores, sobre `Task` y `ValueTask`:
+`await` compone con los mismos operadores sobre `Task` y `ValueTask`:
 
 ```csharp
 Result<int> fetched = await FetchAsync(21)
@@ -221,43 +215,15 @@ Result<int> fetched = await FetchAsync(21)
     .RecoverAsync((error, token) => ValueTask.FromResult(0));
 ```
 
-Cada operador sincrónico tiene su gemelo `Async` sobre `Task` y `ValueTask`, en los tres tiers —
-`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`,
-`Finally` — con delegates conscientes del token y el token honrado antes del trabajo awaitado. El
-tier tipado toma una sola forma de `Ensure` (el valor de error que ya se tiene); los tiers unit y
-`Result<T>` llevan además las formas con fábrica de error. Un token cancelado se manifiesta como
-`OperationCanceledException`, nunca como un fallo.
-
-Una cadena de colecciones — `Traverse` → `Fold` → `Partition` sobre una lista real:
-
-```csharp
-// Traverse maps every id through a fallible fetch, stopping at the first failure.
-Result<IReadOnlyList<int>> rows = new[] { 1, 2, 3 }.Traverse(FetchRow);
-
-// Fold reduces a sequence of results to one accumulator without allocating.
-Result<int> total = new[] { FetchRow(1), FetchRow(2), FetchRow(3) }
-    .Fold(0, static (sum, value) => sum + value);
-
-// Partition splits a mixed batch so neither side is lost.
-(int[] succeeded, Error[] failed) = new[] { FetchRow(1), FetchRow(2) }.Partition();
-```
-
-El tier genérico transporta un error de dominio por los mismos operadores sin perder el fallo tipado:
-
-```csharp
-Result<int, DomainError> handled = Find("ok")
-    .Map(value => value * 2)
-    .Bind(value => value < 100
-        ? Result<int, DomainError>.Success(value)
-        : Result<int, DomainError>.Failure(DomainError.Invalid))
-    .Ensure(value => value > 0, DomainError.Invalid)
-    .Recover(_ => 0)
-    .Tap(value => Console.WriteLine(value));
-
-string summary = handled.Match(
-    onSuccess: value => $"handled {value}",
-    onFailure: error => $"failed {error}");
-```
+Los operadores tienen gemelos `Async` sobre `Task` y `ValueTask` — `Map`, `Bind`, `MapError`,
+`Ensure`, `Recover`, `Tap`, `OnFailure`, `Switch`, `Match`, `Finally` — con delegates conscientes
+del token y el token honrado antes del trabajo awaitado. Dos asimetrías deliberadas:
+`OnSuccessAsync` existe solo en el tier tipado (los tiers unit y de valor exponen `TapAsync`), y el
+`BindAsync` del tier unitario solo produce valores. El tier tipado toma una sola forma de `Ensure`
+(el valor de error que ya se tiene); los tiers unit y `Result<T>` llevan además las formas con
+fábrica de error. Un token cancelado se manifiesta como `OperationCanceledException`, nunca como un
+fallo. La superficie completa de operadores, las leyes de composición y el contrato de asignaciones
+están en [`docs/functional-operations.md`](docs/functional-operations.md).
 
 ## Qué la diferencia
 

@@ -171,11 +171,26 @@ Result<int> back = JsonSerializer.Deserialize<Result<int>>(json, options)!;
 
 The wire shape is fixed: `isSuccess`, `value` and `error` are emitted in camelCase and never follow a configured naming policy, so the same result serializes identically everywhere.
 
-## Fluent by construction
+## Guides
 
-The operators compose because they all share one shape: a failure short-circuits the pipeline untouched, and nothing allocates on either path beyond the delegate the caller passes. Each example is a shape a reader would actually write, and each compiles against the built assemblies.
+The deep tours live in focused guides, each one verified against the shipped code:
 
-A validation pipeline that reads as a sentence — `Map` → `Bind` → `Ensure` → `Recover` → `Tap` → `Match`:
+| Guide | Content |
+| --- | --- |
+| [`docs/getting-started.md`](docs/getting-started.md) | Install, the 30-second start, the full tour setup. |
+| [`docs/core-concepts.md`](docs/core-concepts.md) | `Error`, the three tiers, the default and null-success contracts, conversions. |
+| [`docs/functional-operations.md`](docs/functional-operations.md) | Every sync and async operator, the composition laws, the allocation contract. |
+| [`docs/collections.md`](docs/collections.md) | The collection operations per tier, and the two `Combine`s. |
+| [`docs/error-handling.md`](docs/error-handling.md) | Typed errors, `[ErrorFactory]` code generation, validation, the analyzers. |
+| [`docs/serialization.md`](docs/serialization.md) | The `System.Text.Json` wire format, registration, and the AOT-safe routes. |
+| [`docs/observability.md`](docs/observability.md) | Structured logging fields, opt-in `Activity`/`DiagnosticListener` timing. |
+| [`docs/testing.md`](docs/testing.md) | `ShouldSucceed`/`ShouldFail` and the repo's test conventions. |
+| [`docs/performance.md`](docs/performance.md) | Every measured number, its stamp and the methodology. |
+| [`docs/httpclient.md`](docs/httpclient.md) | The HTTP module guide. |
+
+## The operators in one pipeline
+
+The operators compose because they all share one shape: a failure short-circuits the pipeline untouched, and nothing allocates on either path beyond the delegate the caller passes. A validation pipeline that reads as a sentence — `Map` → `Bind` → `Ensure` → `Recover` → `Tap` → `Match`:
 
 ```csharp
 string outcome = Parse("21")
@@ -191,28 +206,7 @@ string outcome = Parse("21")
         onFailure: error => $"rejected: {error.Code}");     // Match
 ```
 
-An error-transforming chain — `MapError` → `Recover` → `Finally`:
-
-```csharp
-Result<int> cleaned = Parse("-3")
-    .MapError(error => Error.Validation("INVALID_AGE", error.Message)) // MapError
-    .Recover(_ => 0)                                                   // Recover
-    .Finally((value, error) =>                                         // Finally
-        Console.WriteLine($"ended {value} / {error.Code}"));
-```
-
-The unit `Result` for a command that returns nothing:
-
-```csharp
-Result saved = SaveRecord(42);
-
-if (saved.IsSuccess)
-{
-    Console.WriteLine("saved");
-}
-```
-
-`await` composes with the same operators, over `Task` and `ValueTask`:
+`await` composes with the same operators over `Task` and `ValueTask`:
 
 ```csharp
 Result<int> fetched = await FetchAsync(21)
@@ -221,43 +215,14 @@ Result<int> fetched = await FetchAsync(21)
     .RecoverAsync((error, token) => ValueTask.FromResult(0));
 ```
 
-Every synchronous operator has its `Async` twin over `Task` and `ValueTask`, on all three tiers —
-`Map`, `Bind`, `MapError`, `Ensure`, `Recover`, `Tap`/`OnSuccess`, `OnFailure`, `Switch`, `Match`,
-`Finally` — with cancellation-aware delegates and the token honoured before the awaited work runs.
-The typed tier takes one `Ensure` shape (the error value you already hold); the unit and `Result<T>`
-tiers also carry the error-factory shapes. A cancelled token surfaces as
-`OperationCanceledException`, never as a failure.
-
-A collections pipeline — `Traverse` → `Fold` → `Partition` over a real list:
-
-```csharp
-// Traverse maps every id through a fallible fetch, stopping at the first failure.
-Result<IReadOnlyList<int>> rows = new[] { 1, 2, 3 }.Traverse(FetchRow);
-
-// Fold reduces a sequence of results to one accumulator without allocating.
-Result<int> total = new[] { FetchRow(1), FetchRow(2), FetchRow(3) }
-    .Fold(0, static (sum, value) => sum + value);
-
-// Partition splits a mixed batch so neither side is lost.
-(int[] succeeded, Error[] failed) = new[] { FetchRow(1), FetchRow(2) }.Partition();
-```
-
-The generic tier carries a domain error through the same operators without dropping the typed failure:
-
-```csharp
-Result<int, DomainError> handled = Find("ok")
-    .Map(value => value * 2)
-    .Bind(value => value < 100
-        ? Result<int, DomainError>.Success(value)
-        : Result<int, DomainError>.Failure(DomainError.Invalid))
-    .Ensure(value => value > 0, DomainError.Invalid)
-    .Recover(_ => 0)
-    .Tap(value => Console.WriteLine(value));
-
-string summary = handled.Match(
-    onSuccess: value => $"handled {value}",
-    onFailure: error => $"failed {error}");
-```
+The operators have `Async` twins over `Task` and `ValueTask` — `Map`, `Bind`, `MapError`, `Ensure`,
+`Recover`, `Tap`, `OnFailure`, `Switch`, `Match`, `Finally` — with cancellation-aware delegates and
+the token honoured before the awaited work runs. Two deliberate asymmetries: `OnSuccessAsync` exists
+on the typed tier only (the unit and value tiers expose `TapAsync`), and the unit tier's `BindAsync`
+is value-producing only. The typed tier takes one `Ensure` shape (the error value you already hold);
+the unit and `Result<T>` tiers also carry the error-factory shapes. A cancelled token surfaces as
+`OperationCanceledException`, never as a failure. The full operator surface, the composition laws and
+the zero-allocation contract are in [`docs/functional-operations.md`](docs/functional-operations.md).
 
 ## What sets it apart
 
