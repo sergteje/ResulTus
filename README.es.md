@@ -278,152 +278,9 @@ Una declaración que el generador no puede emitir se reporta como `RESULTGEN001`
 El conjunto de comparación está fijado en el charter: [ZeroResult](https://www.nuget.org/packages/ZeroResult), [ErrorOr](https://www.nuget.org/packages/ErrorOr), [FluentResults](https://www.nuget.org/packages/FluentResults) y [CSharpFunctionalExtensions](https://www.nuget.org/packages/CSharpFunctionalExtensions). Donde ResulTus gana, está medido; donde pierde, la pérdida se muestra en [Benchmarks](#benchmarks). Dos hechos conforman el cuadro honesto: ZeroResult llega a 16 B almacenando su *clase* `SingleError` detrás de una referencia, así que su ruta de fallo asigna salvo que el llamador reutilice una instancia en caché; y FluentResults está basada en clases, así que cada resultado es un objeto del heap.
 
 > Nota de verificación: ErrorOr y ZeroResult se contrastaron con sus README publicados el 2026-11-06; FluentResults y CSharpFunctionalExtensions se afirman como conocimiento de su API pública.
-
 ## Benchmarks
 
-Estas son las filas registradas, agrupadas por serie. Cada número se cita literalmente de [`docs/performance.md`](docs/performance.md), y cada tabla indica su sello de medición y enlaza su sección. Una serie sin filas registradas se omite, nunca se estima.
-
-### Creación — medido el 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403, Release, `DefaultJob`
-
-| Método | Media | Asignado |
-| --- | ---: | ---: |
-| **ResulTus_Create_Success** | 0.0118 ns | **0 B** |
-| **ResulTus_Create_Failure** | 0.0192 ns | **0 B** |
-| ResulTus_Create_Implicit_From_Value | 0.0130 ns | 0 B |
-| ResulTus_Create_Implicit_From_Error | 0.1153 ns | 0 B |
-| ZeroResult_Create_Success | 0.0150 ns | 0 B |
-| ZeroResult_Create_Failure | 0.3182 ns | 0 B |
-| CSharpFunctionalExtensions_Create_Success | 2.2914 ns | 0 B |
-| CSharpFunctionalExtensions_Create_Failure | 0.0544 ns | 0 B |
-| ErrorOr_Create_Success | 0.1295 ns | 0 B |
-| ErrorOr_Create_Failure | 11.6516 ns | **88 B** |
-| FluentResults_Create_Success | 18.7471 ns | **112 B** |
-| FluentResults_Create_Failure | 40.6202 ns | **240 B** |
-
-[Sección completa](docs/performance.md#result-creation--measured-2026-10-29). Todo Mean por debajo de 1 ns es un empate según la regla del umbral de ruido — a esa escala la columna de latencia no mide nada real, y la señal está en la columna **Allocated**: crear un fallo cuesta **0 B** en ResulTus frente a los **88 B** de ErrorOr y los **240 B** de FluentResults - ellos deben asignar un objeto de error, ResulTus no. Las diferencias de latencia entre filas subnanosegundo no son interpretables y no son afirmaciones.
-
-### Evaluación con `Match` — medido el 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403
-
-| Método | Media | Asignado |
-| --- | ---: | ---: |
-| **ResulTus_Match_Success** | 0.9235 ns | **0 B** |
-| **ResulTus_Match_Failure** | 1.3834 ns | **0 B** |
-| ErrorOr_Match_Success | **0.7175 ns** | 0 B |
-| ErrorOr_Match_Failure | **0.5482 ns** | 0 B |
-| ZeroResult_Match_Success | 0.9391 ns | 0 B |
-| ZeroResult_Match_Failure | **0.7818 ns** | 0 B |
-| CSharpFunctionalExtensions_Match_Success | 1.9599 ns | 0 B |
-| CSharpFunctionalExtensions_Match_Failure | 1.8911 ns | 0 B |
-| FluentResults_Match_Success | 21.4166 ns | **96 B** |
-| FluentResults_Match_Failure | 19.0831 ns | **88 B** |
-
-[Sección completa](docs/performance.md#result-matching--measured-2026-10-29). Las victorias asentadas son estructurales (2.1x/1.4x frente a CSharpFunctionalExtensions, 23x/14x frente a FluentResults con 0 B contra 96/88 B). ErrorOr y la ruta de fallo de ZeroResult quedan registrados como *sin resolver*: la magnitud no se reprodujo entre ejecuciones en este hardware, así que no se declara veredicto.
-
-### Asignación, ruta de éxito — medido el 2026-10-29, Intel Core i7-6700, .NET SDK 10.0.403
-
-| Método | Media | Asignado |
-| --- | ---: | ---: |
-| Error_NotFound_Allocation | 0.0031 ns | 0 B |
-| **ResulTus_Success_Allocation** | 0.0187 ns | **0 B** |
-| **ResulTus_Failure_Allocation** | 0.0000 ns | **0 B** |
-| ErrorOr_Success_Allocation | 0.0109 ns | 0 B |
-| ZeroResult_Success_Allocation | 0.0000 ns | 0 B |
-| ZeroResult_Failure_Allocation | 0.2633 ns | 0 B |
-| FluentResults_Success_Allocation | 16.8744 ns | **112 B** |
-
-[Sección completa](docs/performance.md#allocation--measured-2026-10-29). La columna de nanosegundos es código eliminado por el JIT, no una clasificación; la regla de asignación es el piso, y ResulTus asigna 0 B en el éxito y en el fallo.
-
-### Asignación, ruta de fallo desde un mensaje único — medido el 2026-11-06, Intel Core i7-6700, .NET SDK 10.0.403, BenchmarkDotNet 0.15.8
-
-| Método | Media ejecución A | Media ejecución B | Asignado | Ratio |
-| --- | ---: | ---: | ---: | ---: |
-| **ResulTus_Failure_Unique_Message** | 2.807 ns | 2.830 ns | **0 B** | 1.00 |
-| ErrorOr_Failure_Unique_Message | 15.159 ns | 14.955 ns | **88 B** | 5.3x |
-| ZeroResult_Failure_Unique_Message | 8.859 ns | 8.268 ns | **32 B** | 3.0x |
-| FluentResults_Failure_Unique_Message | 50.266 ns | 51.690 ns | **272 B** | 18x |
-| CSharpFunctionalExtensions_Failure_Unique_Message | 3.033 ns | 3.053 ns | **0 B** | 1.08x |
-
-[Sección completa](docs/performance.md#failure-path-from-a-unique-message--measured-2026-11-06). Es la comparación directa de la ruta de fallo con un mensaje distinto en cada invocación. ResulTus gana en asignación frente a tres de cuatro y empata con el cuarto: `CSharpFunctionalExtensions` no asigna nada porque su error es un `string` simple, mientras que ResulTus lleva `Code`, `Message` y `Type` en línea con el mismo 0 B.
-
-### Tamaño de la estructura — el tier por defecto de 32 B es una pérdida documentada
-
-Medido el 2026-10-29 ([§4.2](docs/performance.md#42-struct-size-is-a-design-problem-not-a-match-problem--resolved-2026-10-28)):
-
-| Tipo de elemento | Tipo | `SizeOf` |
-| --- | --- | ---: |
-| `ResulTus.Result<int>` | struct | 32 |
-| `ResulTus.Error` | struct | 24 |
-| `ResulTus.Result<int, EightByteError>` | struct | **13** |
-| `ErrorOr.ErrorOr<int>` | struct | 16 |
-| `ErrorOr.Error` | struct | 32 |
-| `ZeroResult.Result<int, SingleError>` | struct | 16 |
-| `ZeroResult.Errors.SingleError` | **class** | 8 |
-| `FluentResults.Result<int>` | **class** | 8 |
-| `CSharpFunctionalExtensions.Result<int>` | struct | 16 |
-
-`Result<int>` ocupa **32 B frente a los 16 B de ellos** — es el único de los cinco que mantiene un error rico en línea, y la razón por la que el 0 B en ambas rutas es posible. El tier genérico es el otro lado del intercambio: **13 B**, más compacto que cualquier competidor.
-
-### Recorrido de arrays — una pérdida documentada, mostrada como número
-
-Medido el 2026-10-29, `DefaultJob` ([§4.4](docs/performance.md#44-array-traversal-against-competitors--measured-2026-10-29)), ruta de éxito, ns por array completo:
-
-| N | ResulTus 32 B | ErrorOr 16 B | ZeroResult 16 B | CSharpFunctionalExtensions 16 B | FluentResults 8 B (clase) |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 000 | 804.9 | **644.4** | **551.6** | **546.7** | 20,806.2 — 96 KB asignados |
-| 7 000 | 5,711.2 | **4,239.4** | **4,506.9** | **4,221.4** | 159,103.7 — 672 KB asignados |
-| 10 000 | 8,886.7 | **6,526.1** | **6,178.2** | **6,338.7** | 250,669.9 — 960 KB asignados |
-
-En la ruta de éxito ResulTus es **1.25x–1.47x más lenta por elemento** que cada competidor de 16 bytes; en la ruta de fallo es 1.08x–1.26x más lenta. La causa es el paso de 32 B: dos elementos por línea de caché de 64 bytes en lugar de cuatro. Ese es el precio deliberado del error rico en línea, y se declara aquí, no en una nota al pie. FluentResults es la excepción que confirma la regla: 8 B por elemento y 25x–28x más lenta, porque cada elemento es un objeto del heap que además asigna por kilobytes.
-
-### Colecciones — medido el 2026-11-06, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14, BenchmarkDotNet 0.15.8
-
-Origen array, N = 1.000 elementos totalmente exitosos:
-
-| Método | Origen | Media | Asignado |
-| --- | --- | ---: | ---: |
-| Sequence | Array | 4.121 μs | 4,056 B |
-| Traverse | Array | 2.060 μs | 4,024 B |
-| Fold | Array | 1.128 μs | 0 B |
-| FirstFailure | Array | 863.2 ns | 0 B |
-| Partition | Array | 3.095 μs | 12,480 B |
-| Combine (`Result` unitario) | Array | 845.5 ns | 0 B |
-
-[Sección completa](docs/performance.md#collections--array-versus-list-at-n--1000--measured-2026-11-06). `Fold`, `FirstFailure` y `Combine` unitario no asignan nada; `Sequence` y `Traverse` asignan su array de salida. `Partition` en esta línea base todavía asigna 12,480 B porque hace crecer dos listas: el cambio posterior P1/T5 alquila búferes de un pool y lo reduce a **4,048 B**, los dos arrays de salida con tamaño exacto. `List<T>` es más lenta que `T[]` en las seis filas de la línea base. Dos mediciones posteriores quedan visibles aquí en lugar de enterradas: el `Traverse` indexado sobre array es más lento que su control `IEnumerable<T>` (7.447 μs frente a 3.055 μs, ahorrando 32 B), y el `Partition` con pool es reproduciblemente ~30% más lento sobre un origen `List<T>`. Ambas son diferencias estructurales documentadas en [§7](docs/performance.md#7-known-open-gaps), aceptadas porque el piso de asignación es obligatorio.
-
-### Serialización — medido el 2026-11-06, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14
-
-| Método | Media | Asignado |
-| --- | ---: | ---: |
-| Serialize `Result<int>` success | 177.8 ns | 80 B |
-| Serialize `Result<int>` failure | 310.9 ns | 224 B |
-| Deserialize `Result<int>` success | 212.3 ns | 0 B |
-| Deserialize `Result<int>` failure | 500.20 ns | 112 B |
-| Serialize `Result<int>[1000]` | 85.444 μs | 61,808 B |
-| Deserialize `Result<int>[1000]` | 159.317 μs | 97,680 B |
-| Serialize `Error` | 246.1 ns | 176 B |
-| Deserialize `Error` | 343.33 ns | 120 B |
-| Serialize `ErrorType` | 110.9 ns | 48 B |
-| Deserialize `ErrorType` | 81.57 ns | 0 B |
-
-[Sección completa](docs/performance.md#serialization--p0-baseline-and-p1-remeasurements--measured-2026-11-06). Una línea base satélite, no una clasificación entre bibliotecas: la deserialización exitosa de `Result<int>` asigna 0 B, y las filas de 1.000 elementos incluyen la cadena JSON o el array materializado.
-
-### Logging — medido el 2026-11-06, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14
-
-| Método | Habilitado | Media | Asignado |
-| --- | --- | ---: | ---: |
-| LogFailure | false | 5.057 ns | 0 B |
-| LogFailure | true | 26.054 ns | 64 B |
-
-[Sección completa](docs/performance.md#logging--enabled-versus-disabled-failure-logging--measured-2026-11-06). La ruta con el nivel deshabilitado asigna 0 B; la ruta habilitada asigna los 64 B del estado de logging estructurado, sin asignación de mensaje renderizado.
-
-### Validación — medido el 2026-11-06, Intel Core i7-6700, Windows 10 22H2, .NET SDK 10.0.403 / runtime 10.0.14
-
-| Método | Media | Asignado |
-| --- | ---: | ---: |
-| ToDictionary | 21.385 μs | 31,624 B |
-| ToError | 33.04 ns | 80 B |
-
-[Sección completa](docs/performance.md#validation-conversions--1000-issues--measured-2026-11-06). `ToDictionary` materializa el diccionario agrupado y los arrays de mensajes por campo sobre 1.000 incidencias; `ToError` crea el mensaje de resumen y un `Error` de tipo valor.
+Cada número vive en el [charter de performance](docs/performance.md): las filas registradas agrupadas por serie, cada tabla con su sello de medición, y las pérdidas mostradas junto a las ganancias — `Result<int>` en 32 B contra el tier de 16 B, el recorrido de arrays 1.25x-1.47x más lento en el camino de éxito. El charter es la autoridad; acá nada se cita por segunda vez.
 
 ## Compatibilidad de runtime
 
@@ -452,6 +309,13 @@ else
 ```
 
 `SendResultAsync` asigna los fallos de transporte a `HttpClientFailureKind.Transport`, los timeouts del cliente a `Timeout`, un estado no 2xx a `StatusError` (con el `HttpProblemDetails` ya analizado cuando está presente) y un cuerpo 2xx malformado a `InvalidResponse`. La cancelación del llamador es flujo de control, no un fallo HTTP: un token cancelado relanza `OperationCanceledException` y nunca se pliega en un `HttpClientError`.
+
+## Contribuir
+
+Las contribuciones son bienvenidas — leé [`CONTRIBUTING.md`](CONTRIBUTING.md) primero: cubre los
+prerequisitos (SDK 11 más el runtime de .NET 10), el flujo ODD con los feature documents
+`odd/tasks/*.md`, las reglas de allocations y coverage que deciden cómo se escribe el código acá,
+y las convenciones de tests, docs y commits.
 
 ## Licencia
 
