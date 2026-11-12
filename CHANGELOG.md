@@ -17,6 +17,20 @@ defines it, means the public API may still change between minor releases.
   real sources. The root README stays the canonical entry point; its packages table now links
   each package's readme.
 
+### Fixed
+
+- **The Roslyn components activate on install** — `ResulTus.Analyzers` and
+  `ResulTus.SourceGenerators` packed their assemblies under `lib/`, which NuGet treats as a plain
+  assembly reference, so installing either package alone loaded no analyzer and no generator. Both
+  now ship under `analyzers/dotnet/roslyn4.14/cs/`; verified with consumer smoke tests against the
+  packed packages (a discarded result reports `RESULT001`; an `[ErrorFactory]` member is generated
+  and runs).
+- **`docs/httpclient.md` snippet and target-framework claim** — the transport-failure example used
+  `(int)error.Status!`, which does not compile because `Status` is `HttpStatusCode?`; it now
+  unwraps the nullable. The guide stated the adapter targets `net8.0` only; it states the shipped
+  `net8.0`–`net11.0` matrix. All nine statement blocks of the guide compile against the real
+  sources.
+
 ## [1.1.0] - 2026-11-12
 
 ### Added

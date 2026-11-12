@@ -13,6 +13,13 @@
     <!-- The extended analyzer rules catch the mistakes that make a Roslyn component crash inside a
          consumer's build. They are errors here, not advice. -->
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- The component must land in the analyzers/ folder of the package, not in lib/: a dll in
+         lib/ becomes an assembly reference, and a generator is not a reference — the compiler
+         loads it. The Roslyn folder name follows the pinned Microsoft.CodeAnalysis.CSharp
+         version (4.14.0), which is also the minimum the generator is built against. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +32,12 @@
     <!-- The pipeline model and the emitter are the correctness core, and they are internal so
          consumers never see them. The test project drives them directly. -->
     <InternalsVisibleTo Include="ResulTus.SourceGenerators.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/roslyn4.14/cs/" />
   </ItemGroup>
 
 
