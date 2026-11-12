@@ -23,7 +23,7 @@ $projects = @(
 $failures = 0
 foreach ($entry in $projects) {
     $testProject = Join-Path $Root $entry.tests
-    dotnet test $testProject -c Release --no-build --nologo --collect "XPlat Code Coverage" 2>&1 | Out-Null
+    dotnet test $testProject -c Release --no-build --framework net10.0 --nologo --collect "XPlat Code Coverage" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { Write-Host "::error::$($entry.pkg): the own test project failed"; $failures++; continue }
 
     $file = Get-ChildItem (Join-Path $Root 'tests') -Recurse -Filter coverage.cobertura.xml |

@@ -2,7 +2,9 @@
 
 ResulTus is a high-performance `Result` library for .NET. Success and failure are one inline
 `readonly record struct`: zero heap allocation on the success path **and** on the failure path.
-Libraries target `net8.0`; test projects target `net10.0`.
+Libraries target `net8.0`, `net9.0`, `net10.0` and `net11.0`; test projects target `net10.0` and
+`net11.0` (the coverage gate measures on `net10.0`); the analyzers and the source generator target
+`netstandard2.0`.
 
 ## Build and test
 

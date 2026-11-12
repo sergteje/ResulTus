@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <RootNamespace>ResulTus.Testing.Tests</RootNamespace>
     <AssemblyName>ResulTus.Testing.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
