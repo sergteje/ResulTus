@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
 defines it, means the public API may still change between minor releases.
 
-## [Unreleased]
+## [1.1.0] - 2026-11-12
 
 ### Added
 
