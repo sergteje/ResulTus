@@ -25,9 +25,9 @@ namespace ResulTus.Benchmarks;
 /// in both camps, so the comparison isolates the result-producing wrapper rather than the JSON engine.
 /// Every method builds a fresh <see cref="HttpRequestMessage"/> per invocation because an
 /// <see cref="HttpRequestMessage"/> can only be sent once; the shared request creation is paid
-/// identically by both camps and is therefore excluded from the comparison. Benchmark results are
-/// stored in instance fields, which keep the produced values alive for BenchmarkDotNet's
-/// consumption without any extra accumulator.
+/// identically by both camps and is therefore excluded from the comparison. Each method returns
+/// its produced outcome — BenchmarkDotNet consumes returned values — so no keep-alive
+/// accumulator exists.
 /// </remarks>
 [MemoryDiagnoser]
 public class HttpClientMacroBenchmark
@@ -36,11 +36,6 @@ public class HttpClientMacroBenchmark
     private System.Net.Http.HttpClient _failureClient = null!;
     private Uri _uri = null!;
     private JsonTypeInfo<Widget> _widgetTypeInfo = null!;
-
-    private Widget? _sinkResulTusSuccess;
-    private Widget? _sinkRawSuccess;
-    private HttpClientError? _sinkResulTusFailure;
-    private Exception? _sinkRawFailure;
 
     /// <summary>
     /// Builds the two fake-handler clients and the source-generated metadata.
@@ -57,8 +52,9 @@ public class HttpClientMacroBenchmark
     }
 
     /// <summary>
-    /// Disposes the two fake-handler clients. The produced values stay alive as instance-field
-    /// state of the benchmark object, so no extra accumulator is needed.
+    /// Disposes the two fake-handler clients. Each benchmark method returns its produced
+    /// outcome — BenchmarkDotNet consumes returned values, so no extra keep-alive
+    /// accumulator is needed.
     /// </summary>
     [GlobalCleanup]
     public void Cleanup()
@@ -68,66 +64,66 @@ public class HttpClientMacroBenchmark
     }
 
     /// <summary>
-    /// Success through ResulTus: send and convert a 200 JSON body into a result.
+    /// Success through ResulTus: send and convert a 200 JSON body into a result, returning
+    /// the produced value so the engine consumes it.
     /// </summary>
     [Benchmark]
-    public async Task ResulTus_Success()
+    public async Task<Widget?> ResulTus_Success()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _uri);
         var result = await _successClient.SendResultAsync(request, _widgetTypeInfo);
         result.Deconstruct(out var isSuccess, out var value, out _);
-        if (isSuccess)
-        {
-            _sinkResulTusSuccess = value;
-        }
+        return isSuccess ? value : default;
     }
 
     /// <summary>
-    /// Success through raw HttpClient: manual status check and JSON read, the idiomatic baseline.
+    /// Success through raw HttpClient: manual status check and JSON read, returning the
+    /// deserialized value so the engine consumes it.
     /// </summary>
     [Benchmark]
-    public async Task Raw_Success()
+    public async Task<Widget?> Raw_Success()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _uri);
         using var response = await _successClient.SendAsync(request);
-        if (response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
         {
-            await using var stream = await response.Content.ReadAsStreamAsync();
-            _sinkRawSuccess = await JsonSerializer.DeserializeAsync(stream, _widgetTypeInfo);
+            return default;
         }
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        return await JsonSerializer.DeserializeAsync(stream, _widgetTypeInfo);
     }
 
     /// <summary>
     /// Failure through ResulTus: a non-success status becomes a failure carrying an
-    /// <see cref="HttpClientError"/>.
+    /// <see cref="HttpClientError"/>, returned so the engine consumes it.
     /// </summary>
     [Benchmark]
-    public async Task ResulTus_Failure()
+    public async Task<HttpClientError?> ResulTus_Failure()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _uri);
         var result = await _failureClient.SendResultAsync(request, _widgetTypeInfo);
         result.Deconstruct(out var isSuccess, out _, out var error);
-        if (!isSuccess)
-        {
-            _sinkResulTusFailure = error;
-        }
+        return isSuccess ? default : error;
     }
 
     /// <summary>
-    /// Failure through raw HttpClient: <c>EnsureSuccessStatusCode()</c> throws, the idiomatic baseline.
+    /// Failure through raw HttpClient: <c>EnsureSuccessStatusCode()</c> throws, and the
+    /// caught exception is returned so the engine consumes it.
     /// </summary>
     [Benchmark]
-    public async Task Raw_Failure()
+    public async Task<Exception?> Raw_Failure()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, _uri);
         using var response = await _failureClient.SendAsync(request);
         try
         {
             response.EnsureSuccessStatusCode();
+            return default;
         }
         catch (HttpRequestException exception)
         {
-            _sinkRawFailure = exception;
+            return exception;
         }
     }
 
@@ -163,7 +159,7 @@ public class HttpClientMacroBenchmark
 /// <summary>
 /// The payload deserialized from successful JSON bodies.
 /// </summary>
-internal sealed record Widget(string Name, int Count);
+public sealed record Widget(string Name, int Count);
 
 /// <summary>
 /// Source-generated metadata for <see cref="Widget"/>, exercising the Native AOT

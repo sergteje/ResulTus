@@ -79,16 +79,25 @@ public class DocfxSiteConfigTests
         var excluded = metadata.GetProperty("src")[0].GetProperty("exclude")
             .EnumerateArray().Select(e => e.GetString()!)
             .Select(glob => glob.Replace("**/", string.Empty).Replace("/**", string.Empty))
+            .Order()
             .ToArray();
 
         var allSrcProjects = Directory
             .GetFiles(Path.Combine(RepositoryRoot(), "src"), "*.csproj", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
+            .Order()
+            .ToArray();
+
+        // Single source of truth: the shipped-library list above plus the actual src tree
+        // define what must be excluded, so the config globs cannot drift from the test's
+        // expectation — a mismatch fails naming both sides.
+        var expectedExcluded = allSrcProjects
+            .Except(ShippedLibraries, StringComparer.Ordinal)
             .ToArray();
 
         excluded.Should().NotBeEmpty();
-        excluded.Should().OnlyContain(name => allSrcProjects.Contains(name),
-            "every docfx exclusion glob must name a real src project");
+        excluded.Should().BeEquivalentTo(expectedExcluded,
+            "the docfx exclusion globs must name exactly the src projects that are not shipped libraries");
 
         var scope = allSrcProjects.Where(name => !excluded.Contains(name)).Order().ToArray();
         scope.Should().BeEquivalentTo(ShippedLibraries,
