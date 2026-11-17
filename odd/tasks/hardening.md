@@ -292,3 +292,19 @@ CodeRabbit reviewed pull request 15 with fourteen inline findings, all labelled 
 **Release commands in the contribution docs (valid, and broader than the reviewer saw).** The pull-request template told contributors to run the suite without a configuration, which is the Debug run that reports the three allocation audits as failures. The template, `CONTRIBUTING.md` and `AGENTS.md` now name `-c Release` and say why.
 
 **Declined: "do not state that 1.2.0 is published before release".** The sentence lives in the readme that is packed into the 1.2.0 packages, and those packages do not exist before the tag. Saying "ships at 1.2.0" is false only in the window between the merge and the tag push, and the alternative - a second commit per release to restate the version - would leave the packed readme of an older package pointing at a newer version. The previous release used the same convention. The reasoning is posted on the thread rather than applied.
+
+### L19 - review round: seven latent defects in the snippet gate
+
+CodeRabbit found seven edge cases in `scripts/SnippetGate`. None manifested on the 126 blocks, which is precisely why each needed a probe: a gate that fails loudly is safe, a gate that silently skips is worse than no gate. All seven were reproduced and fixed in `3888a27`, and the handlers are recorded below.
+
+**Silent skip, the worst of them.** The fence reader matched exactly three backticks, so a four-backtick fence was ignored entirely: the gate reported success for content it never compiled. It now follows CommonMark, any opener of three or more backticks or tildes closed by at least as many of the same character. Reproducing it required showing the missing block count first (131 instead of 132), because an ignored fence produces no error at all.
+
+**Two documents compiling into one.** Paths that sanitize to the same identifier (`docs/error-handling.md` against `docs/error_handling.md`) overwrote each other and one document's blocks were never compiled; the duplicate key then crashed the run. The identifier now carries a hash of the exact relative path.
+
+**Four cases where a valid listing failed.** A hoisted `global using` collided with the harness import (CS8915); a listing that declares its own namespace got a second file-scoped namespace (CS8954); a blank line between two using directives left the second one inside the method (CS1001); and a raw string literal spanning lines let a brace inside it cut the member short (CS8999). Each is fixed at the reader: globals before the harness import, namespace-bearing listings into a namespace-free file with the namespace imported for the statements, trivia-tolerant hoisting, and a scanner that tracks raw-string state across lines.
+
+**One case where a valid environment failed.** Paths interpolated into the generated csproj and slnx were not XML-escaped, so a checkout under a directory containing `&` failed with MSB4025 before compiling anything. One escaper is now applied at every interpolation site, verified through a junction whose path contains an ampersand.
+
+**Method note worth keeping.** Batching all probes into one file hid the CS8915, CS8954 and CS1001 diagnostics behind the structural damage of the raw-string probe; one probe file per defect is what produced each message. The orchestrator independently confirmed the fence fix afterwards by breaking a listing inside a four-backtick fence and watching the gate fail, which is the only way to prove that fence is compiled rather than merely counted.
+
+**Verification after the round.** Solution build 0 warnings and 0 errors; Release suite 52 of 52 test-project runs green; per-package coverage 11 of 11 above 90% lines; snippet gate 24 documents, 126 blocks, none excluded. No probe file remains in the worktree.
