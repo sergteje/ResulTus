@@ -72,8 +72,10 @@ numbers instead; do not mix the two.
 - **No opinionated layers without a real use.** Retry policies, circuit breakers and similar
   stateful machinery stay out until the owner names a repeated real use. `Recover` already covers
   fallback.
-- **Never claim Native AOT or trimming support without observed proof.** The `JsonTypeInfo<T>`
-  overload is the AOT-safe route; that is a design claim, not a published publish-and-run result.
+- **AOT and trimming are proven by CI, not by prose.** The `aot-smoke` job publishes and runs a
+  trimmed sample and a Native AOT sample on Windows, and `aot-smoke-linux` publishes and runs a
+  Native AOT sample on Linux. The `JsonTypeInfo<T>` overload remains the AOT-safe serialization
+  route. Never claim support the workflows do not exercise.
 
 ## Tests
 

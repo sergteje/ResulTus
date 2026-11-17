@@ -119,6 +119,21 @@ or a problem document:
 | `StatusError` | A response arrived but its status was not 2xx |
 | `InvalidResponse` | A 2xx response arrived but its body could not be read as the expected JSON |
 
+### Construction helpers
+
+The failure kinds have named factories, so a caller or a test does not have to guess the constructor
+shape:
+
+| Factory | Produces | Arguments |
+| --- | --- | --- |
+| `HttpClientError.Transport(Exception? exception = null)` | A `Transport` failure | The optional originating exception |
+| `HttpClientError.Timeout(Exception? exception = null)` | A `Timeout` failure | The optional underlying timeout exception |
+| `HttpClientError.StatusError(HttpStatusCode status, HttpProblemDetails? problemDetails = null, Exception? exception = null)` | A `StatusError` failure | The required response status, plus an optional problem document and exception |
+| `HttpClientError.InvalidResponse(HttpStatusCode? status = null, Exception? exception = null)` | An `InvalidResponse` failure | The optional status and parsing exception |
+
+Every factory returns a failure; there is no success factory, because `HttpClientError` always
+represents a failure.
+
 There is deliberately no cancellation member: a cancelled caller token rethrows
 `OperationCanceledException` rather than being captured as an error. Timeout and cancellation stay
 apart because the runtime nests a `TimeoutException` inside the `TaskCanceledException` only when

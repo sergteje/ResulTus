@@ -30,19 +30,19 @@ Esos cuatro hechos son un intercambio, declarado abiertamente: el tier por defec
 
 | Paquete | Propósito |
 | --- | --- |
-| `ResulTus` | Los tipos centrales: `Result`, `Result<T>`, `Result<TSuccess, TError>`, `Error`, `ErrorType`. |
-| `ResulTus.Extensions` | Los operadores fluidos (`Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally`, `Switch`) y las conversiones, síncronas y asíncronas. |
-| `ResulTus.Collections` | Operaciones de colecciones sobre secuencias, arrays y listas de solo lectura de resultados (`Traverse`, `Sequence`, `Fold`, `Partition`). |
-| `ResulTus.Logging` | Extensiones de `ILogger` que emiten el resultado como campos con nombre, no como una cadena renderizada. |
-| `ResulTus.Serialization` | Conversores de `System.Text.Json` para `Result<T>`, `Error` y `ErrorType` con un formato de cable fijo y estricto. |
-| `ResulTus.Diagnostics` | Medición y trazado opcionales mediante `Activity`/`DiagnosticListener` alrededor de operaciones que producen resultados. |
-| `ResulTus.AspNetCore` | Convierte resultados en action results de ASP.NET Core y en ProblemDetails RFC 9457. |
-| `ResulTus.HttpClient` | Convierte respuestas HTTP, documentos ProblemDetails y fallos de transporte en `Result<TSuccess, HttpClientError>`. |
-| `ResulTus.Validation` | `ValidationErrors`/`ValidationIssue` estructurados y validación con DataAnnotations. |
-| `ResulTus.Validation.FluentValidation` | Ejecuta un `IValidator<T>` y devuelve un `Result<T, ValidationErrors>` con todos los fallos. |
-| `ResulTus.Analyzers` | Analizadores de Roslyn (`RESULT001`–`RESULT006`) que convierten el mal uso de resultados en diagnósticos de compilación. |
-| `ResulTus.SourceGenerators` | El generador de código `[ErrorFactory]` (`RESULTGEN001`). |
-| `ResulTus.Testing` | Aserciones de resultados para tests, independientes del framework (`ShouldSucceed`, `ShouldFail`). |
+| [`ResulTus`](src/ResulTus/README.md) | Los tipos centrales: `Result`, `Result<T>`, `Result<TSuccess, TError>`, `Error`, `ErrorType`. |
+| [`ResulTus.Extensions`](src/ResulTus.Extensions/README.md) | Los operadores fluidos (`Map`, `Bind`, `Ensure`, `Recover`, `MapError`, `Tap`, `Finally`, `Switch`) y las conversiones, síncronas y asíncronas. |
+| [`ResulTus.Collections`](src/ResulTus.Collections/README.md) | Operaciones de colecciones sobre secuencias, arrays y listas de solo lectura de resultados (`Traverse`, `Sequence`, `Fold`, `Partition`). |
+| [`ResulTus.Logging`](src/ResulTus.Logging/README.md) | Extensiones de `ILogger` que emiten el resultado como campos con nombre, no como una cadena renderizada. |
+| [`ResulTus.Serialization`](src/ResulTus.Serialization/README.md) | Conversores de `System.Text.Json` para `Result<T>`, `Error` y `ErrorType` con un formato de cable fijo y estricto. |
+| [`ResulTus.Diagnostics`](src/ResulTus.Diagnostics/README.md) | Medición y trazado opcionales mediante `Activity`/`DiagnosticListener` alrededor de operaciones que producen resultados. |
+| [`ResulTus.AspNetCore`](src/ResulTus.AspNetCore/README.md) | Convierte resultados en action results de ASP.NET Core y en ProblemDetails RFC 9457. |
+| [`ResulTus.HttpClient`](src/ResulTus.HttpClient/README.md) | Convierte respuestas HTTP, documentos ProblemDetails y fallos de transporte en `Result<TSuccess, HttpClientError>`. |
+| [`ResulTus.Validation`](src/ResulTus.Validation/README.md) | `ValidationErrors`/`ValidationIssue` estructurados y validación con DataAnnotations. |
+| [`ResulTus.Validation.FluentValidation`](src/ResulTus.Validation.FluentValidation/README.md) | Ejecuta un `IValidator<T>` y devuelve un `Result<T, ValidationErrors>` con todos los fallos. |
+| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Analizadores de Roslyn (`RESULT001`–`RESULT006`) que convierten el mal uso de resultados en diagnósticos de compilación. |
+| [`ResulTus.SourceGenerators`](src/ResulTus.SourceGenerators/README.md) | El generador de código `[ErrorFactory]` (`RESULTGEN001`). |
+| [`ResulTus.Testing`](src/ResulTus.Testing/README.md) | Aserciones de resultados para tests, independientes del framework (`ShouldSucceed`, `ShouldFail`). |
 
 Licencia MIT. Código fuente: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 

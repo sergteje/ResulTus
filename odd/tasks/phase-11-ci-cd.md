@@ -1,10 +1,10 @@
 # Phase 11 — CI/CD and release
 
-Objective: give the repository the infrastructure it still does not have — a GitHub Actions pipeline that restores, builds, tests, packs and publishes, plus the release and packaging metadata around it. Status: **not started**. The repository has no `.github/` directory today, so nothing builds or tests on push or pull request.
+Objective: give the repository the infrastructure it still does not have - a GitHub Actions pipeline that restores, builds, tests, packs and publishes, plus the release and packaging metadata around it. Status: **done** (reconciled 2026-11-17) - the workflows, packaging metadata and DocFX site landed; the task rows below carry the commits and observed runs.
 
-Branch: none created. Delivery strategy: undecided. Test runner: `dotnet test ResulTus.slnx` once a workflow exists to call it.
+Branch: none created. Delivery strategy: undecided. Test runner: `dotnet test ResulTus.slnx`, called by the `build-and-test` job in `ci.yml`.
 
-Recovered from `openspec/changes/phase-11-ci-cd/proposal.md` after that store was retired. The proposal itself is quoted verbatim in `L1` below; nothing in it has been executed.
+Recovered from `openspec/changes/phase-11-ci-cd/proposal.md` after that store was retired. The proposal itself is quoted verbatim in `L1` below; the task rows and log record what actually shipped.
 
 ## Specs
 
@@ -22,13 +22,13 @@ Scope carried over, item by item, with what is already true today:
 
 | Proposal item | State |
 | --- | --- |
-| `.github/workflows/ci.yml` | absent |
-| `.github/workflows/release.yml` | absent |
-| `tests/ResulTus.Benchmarks/` | **exists** — the proposal line is obsolete |
-| `README.md` | **exists**, canonical in two editions — obsolete |
-| `CONTRIBUTING.md` | absent |
-| NuGet metadata in `Directory.Build.props` | partial: `Description` and `RepositoryUrl` present, `PackageTags`/`PackageIcon` absent |
-| DocFX site under `docs/` | absent; `docs/` holds guides and the performance charter |
+| `.github/workflows/ci.yml` | **exists** - build/test, coverage gate, AOT smoke on Windows and Linux, docs |
+| `.github/workflows/release.yml` | **exists** - packs and publishes on `v*` tags |
+| `tests/ResulTus.Benchmarks/` | **exists** - the proposal line is obsolete |
+| `README.md` | **exists**, canonical in two editions - obsolete |
+| `CONTRIBUTING.md` | **exists** |
+| NuGet metadata in `Directory.Build.props` | **complete**: `Description`, `RepositoryUrl`, `PackageTags`, `PackageIcon`, `PackageReadmeFile` |
+| DocFX site under `docs/` | **exists** - `docs/docfx.json`, published by `.github/workflows/docs-pages.yml` |
 
 ## Tasks
 
@@ -286,3 +286,7 @@ slice (`review-0a79a1dd840f2a5f`, lenses risk + reliability), owner granted, red
 **approved** with zero blockers (two reliability advisories recorded: the benchmark sink
 keep-alive guard via `Consume`, and the glob-normalization coupling in the metadata test);
 authority burned. `66f6877` passive; `718547a` assessed on commit.
+
+### L8 - status reconciled against shipped evidence (2026-11-17)
+
+The objective line and the scope table had gone stale: they still said "not started", "no `.github/` directory", and "absent" for `ci.yml`, `release.yml`, `CONTRIBUTING.md`, the NuGet metadata and the DocFX site. All of those exist today and the task rows already carry their commits and observed runs. The header and table now state the shipped state; no historical log entry was rewritten, and no new work was claimed.

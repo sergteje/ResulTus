@@ -40,7 +40,7 @@ API-compatibility tests from the checked-in snapshots:
   docstrings and the specs, which are part of what the tests and CI enforce, so the mutation of
   a contract also counts as a break even when it is invisible to the compiler.
 - The analyzers' and source generator's diagnostic *ids and meanings* fall under the same rule:
-  code that compiled and диагности-free before cannot start being flagged without a major bump.
+  code that compiled and diagnostic-free before cannot start being flagged without a major bump.
 
 Between `MAJOR` versions: `MINOR` for added surface, `PATCH` for fixes only. Every use of the
 snapshot tests gates this.

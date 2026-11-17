@@ -26,6 +26,10 @@ alone does not bring the rules — add this package explicitly. Its reference to
 (`Microsoft.CodeAnalysis.CSharp`) is private, so nothing is added to your package graph. The pack
 includes `build/ResulTus.Analyzers.globalconfig`, which records the shipped default severities.
 
+The analyzer is built against Roslyn 4.14.0, which is also its minimum: a compiler older than 4.14
+does not load the assembly, so no rule fires. Use an SDK or Visual Studio that ships Roslyn 4.14 or
+later.
+
 ## What you get
 
 | Id | Title | Severity | What it reports |

@@ -51,13 +51,13 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T1 | S1 | inline | done | this commit |
 | T2 | S2 | inline | done | this commit |
 | T3 | S3 | inline | done | this commit |
-| T4 | S4 | inline | pending | - |
-| T5 | S5 | inline | pending | - |
-| T6 | S6 | inline | pending | - |
-| T7 | S7 | inline | pending | - |
-| T8 | S8 | inline | pending | - |
-| T9 | S9 | inline | pending | - |
-| T10 | S10 | inline | pending | - |
+| T4 | S4 | inline | done | this commit |
+| T5 | S5 | inline | done | this commit |
+| T6 | S6 | inline | done | this commit |
+| T7 | S7 | inline | done | this commit |
+| T8 | S8 | inline | done | this commit |
+| T9 | S9 | inline | done | this commit |
+| T10 | S10 | inline | done | this commit |
 | T11 | S11 | delegated | pending | - |
 | T12 | S12 | inline | pending | - |
 | T13 | S13 | inline | pending | - |
@@ -91,3 +91,20 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **RED -> GREEN evidence.** Tests were written first (`tests/ResulTus.Tests/MatchContractTests.cs` for all three overloads across both branches; `Constructor_ShouldSnapshotTheSourceCollection` in `tests/ResulTus.Validation.Tests/ValidationErrorsTests.cs`). With the four source files stashed, the tests failed: 3/3 `MatchContractTests` FAIL and `Constructor_ShouldSnapshotTheSourceCollection` FAIL. After restoring the fixes: ResulTus.Tests 3/3, Validation 28/28 on both TFMs, Collections 111/111 on both TFMs. Full solution build is 0 warnings, 0 errors.
 
 **Risk:** none of items 1-6 - no stored data, security, public contract shape, concurrency, delivery, or untested behavior changes. `Match` keeps its signature and 0 B success path; `ValidationErrors` gains one copy allocation on a non-hot construction path; the `Partition` edit is on an OOM-only exit path.
+### L4 - documents and consumer gaps closed (T4-T10)
+
+**T4 / C1 - CHANGELOG.** Added an `## [Unreleased]` section listing the three fixes, moved the `[Unreleased]` comparison link to `v1.1.1...HEAD`, and added the missing `[1.1.1]` and `[1.1.0]` link references so every version header resolves.
+
+**T5 / C2 - versioning spec.** Replaced the corrupted token in `odd/specs/versioning.md:43` with `diagnostic-free`.
+
+**T6 / C3 - AGENTS.md.** Replaced the false "not a published publish-and-run result" claim with the observed CI proof: `aot-smoke` publishes and runs trimmed plus Native AOT on Windows, `aot-smoke-linux` does Native AOT on Linux.
+
+**T7 / C4 - stale ODD status.** `phase-11-ci-cd.md` now reports `done`, its scope table matches the shipped workflows, metadata and DocFX site, and an `L8` records the reconciliation. `audit-first-pass.md` S8 notes the multi-targeting premise is obsolete; T6 stays owner-routed but reads `moot - awaits owner close`, because closing it is an owner decision, not an engineering one.
+
+**T8 / B5 - Roslyn minimum.** Both `ResulTus.Analyzers/README.md` and `ResulTus.SourceGenerators/README.md` now state the Roslyn 4.14.0 minimum and that an older compiler does not load the assembly.
+
+**T9 / B6 - `HttpClientError` factories.** Added a construction-helpers table to `ResulTus.HttpClient/README.md` with the four factory signatures and their arguments.
+
+**T10 / B7 - Spanish table.** Restored the package links in `README.es.md`; all 13 rows now match the English edition.
+
+**Risk:** none of items 1-6. Documentation and task-status text only, plus one spec typo.
