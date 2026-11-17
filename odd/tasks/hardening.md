@@ -308,3 +308,13 @@ CodeRabbit found seven edge cases in `scripts/SnippetGate`. None manifested on t
 **Method note worth keeping.** Batching all probes into one file hid the CS8915, CS8954 and CS1001 diagnostics behind the structural damage of the raw-string probe; one probe file per defect is what produced each message. The orchestrator independently confirmed the fence fix afterwards by breaking a listing inside a four-backtick fence and watching the gate fail, which is the only way to prove that fence is compiled rather than merely counted.
 
 **Verification after the round.** Solution build 0 warnings and 0 errors; Release suite 52 of 52 test-project runs green; per-package coverage 11 of 11 above 90% lines; snippet gate 24 documents, 126 blocks, none excluded. No probe file remains in the worktree.
+
+### L20 - delivered: merged, tagged and published
+
+**Merge.** Pull request 15 merged into `main` as `4b0e83b`, thirteen commits squashed into the merge commit history, remote branch deleted. The first run of the rebuilt pipeline in `build-and-test` (build, four target frameworks, coverage gate and documentation snippet gate in one job) passed in 4m17s; every other job passed too.
+
+**Tag and publication.** `v1.2.0` on `4b0e83b`; release run 44118277216 concluded success. Thirteen `.nupkg` and thirteen `.snupkg` went to nuget.org and the `.nupkg` set mirrored to GitHub Packages. Two firsts worth recording: the GitHub release carries 874 characters of notes, where the previous releases published an empty body because of the equality match fixed in this slice, and the build provenance attestation uploaded both to the repository and to the Rekor transparency log (index 3948471785).
+
+**Indexing was not instant.** nuget.org served 1.2.0 for `ResulTus.Validation.FluentValidation` first and for `ResulTus` about five minutes later; the baseline bump waited for the core package to resolve, because packing against a baseline that is not yet on the feed fails with NU1102.
+
+**Baseline bumped.** `PackageValidationBaselineVersion` is now `1.2.0`, in the change after the release as the versioning spec requires, and `dotnet pack` against that baseline succeeds. The versioning spec's parenthetical now reads `1.2.0` today instead of describing the release in progress.
