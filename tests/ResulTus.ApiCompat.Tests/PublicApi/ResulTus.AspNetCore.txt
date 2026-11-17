@@ -3,6 +3,15 @@ M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(ResulTus.Resu
 M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(ResulTus.Result result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> Microsoft.AspNetCore.Mvc.IActionResult
 M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(Result<T> result) -> ActionResult<T>
 M: ResulTus.AspNetCore.ResultActionResultExtensions.ToActionResult(Result<T> result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> ActionResult<T>
+T: ResulTus.AspNetCore.ResultEndpointFilter
+M: ResulTus.AspNetCore.ResultEndpointFilter.ctor()
+M: ResulTus.AspNetCore.ResultEndpointFilter.InvokeAsync(Microsoft.AspNetCore.Http.EndpointFilterInvocationContext context, Microsoft.AspNetCore.Http.EndpointFilterDelegate next) -> System.Threading.Tasks.ValueTask<System.Object>
+T: ResulTus.AspNetCore.ResultEndpointFilter<TSuccess>
+M: ResulTus.AspNetCore.ResultEndpointFilter<TSuccess>.ctor()
+M: ResulTus.AspNetCore.ResultEndpointFilter<TSuccess>.InvokeAsync(Microsoft.AspNetCore.Http.EndpointFilterInvocationContext context, Microsoft.AspNetCore.Http.EndpointFilterDelegate next) -> System.Threading.Tasks.ValueTask<System.Object>
+T: ResulTus.AspNetCore.ResultEndpointFilterExtensions
+M: ResulTus.AspNetCore.ResultEndpointFilterExtensions.WithResultMapping(Microsoft.AspNetCore.Builder.RouteHandlerBuilder builder) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder
+M: ResulTus.AspNetCore.ResultEndpointFilterExtensions.WithResultMapping(Microsoft.AspNetCore.Builder.RouteHandlerBuilder builder) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder
 T: ResulTus.AspNetCore.ResultHttpResultExtensions
 M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(ResulTus.Result result) -> Microsoft.AspNetCore.Http.IResult
 M: ResulTus.AspNetCore.ResultHttpResultExtensions.ToHttpResult(ResulTus.Result result, System.Func<ResulTus.Error, System.Int32> statusSelector) -> Microsoft.AspNetCore.Http.IResult

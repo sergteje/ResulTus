@@ -24,7 +24,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 | --- | --- | --- | --- | --- |
 | T1 | S1 | delegated | done | this commit |
 | T2 | S2 | delegated | done | this commit |
-| T3 | S3 | inline | pending | - |
+| T3 | S3 | delegated | done | this commit |
 | T4 | S4 | delegated | pending | - |
 | T5 | S5 | delegated | pending | - |
 | T6 | S6 | inline | pending | - |
@@ -61,3 +61,12 @@ Tags are bounded by construction: `outcome` always, `error_type` on failure only
 Evidence: 37 of 37 diagnostics tests on net8.0, net10.0 and net11.0 (baseline 29), ApiCompat 11 of 11 with twelve snapshot lines added to `ResulTus.Diagnostics.txt`, build 0 warnings, snippet gate at 24 documents and 134 blocks (four new fences), and the existing `Activity` tests untouched, so the span tags and event payloads are unchanged.
 
 One runtime detail worth keeping: on .NET 8 a disposed `MeterListener` keeps receiving measurements and `Instrument.Enabled` stays true, so the test double stops recording on dispose instead of relying on the runtime. The library does not depend on `Enabled`; `Add` and `Record` are no-ops with no listener and allocate nothing, which the existing zero-allocation test still proves.
+### L5 - T3: Minimal API filters without reflection
+
+`ResulTus.AspNetCore` gained two filters, `ResultEndpointFilter` for the unit tier and `ResultEndpointFilter<TSuccess>` for `Result<TSuccess>`, plus `WithResultMapping()` and `WithResultMapping<TSuccess>()` on `RouteHandlerBuilder`, so a handler reads `app.MapGet("/x", () => useCase.Handle()).WithResultMapping();`.
+
+The two closed filters are the design, not a shortcut: a filter receives `object?`, so recognizing `Result<TSuccess>` at runtime would need reflection, and the package builds with `IsAotCompatible=true` where that is a warning and therefore an error. Each filter converts only its own tier through the existing `ToHttpResult()` and returns every other value untouched.
+
+Evidence: 62 of 62 AspNetCore tests on net8.0, net10.0 and net11.0 (baseline 45), including six end-to-end tests that build a real `WebApplication` with `CreateSlimBuilder()` and invoke the endpoint's `RequestDelegate`, comparing the mapped response with the direct `ToHttpResult()` response and with the same route mapped without the filter. ApiCompat 11 of 11 with nine snapshot lines added to `ResulTus.AspNetCore.txt`, build 0 warnings, snippet gate at 24 documents and 135 blocks.
+
+The typed tier stays out of the filter on purpose: `ResulTus.Validation` already bridges `Result<TSuccess, ValidationErrors>` explicitly, and a generic error policy does not exist. The package README states that boundary.
