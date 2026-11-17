@@ -26,6 +26,15 @@ internal static class ResultSymbols
     /// <summary>The metadata name of <c>ResulTus.Result&lt;TSuccess, TError&gt;</c>.</summary>
     internal const string PairResultMetadataName = "Result`2";
 
+    /// <summary>The namespace of the awaitables that can carry a result.</summary>
+    internal const string TasksNamespace = "System.Threading.Tasks";
+
+    /// <summary>The metadata name of <c>System.Threading.Tasks.Task&lt;TResult&gt;</c>.</summary>
+    internal const string TaskMetadataName = "Task`1";
+
+    /// <summary>The metadata name of <c>System.Threading.Tasks.ValueTask&lt;TResult&gt;</c>.</summary>
+    internal const string ValueTaskMetadataName = "ValueTask`1";
+
     /// <summary>The display name of the extension class holding the value-result operators.</summary>
     internal const string ExtensionsTypeName = "ResulTus.Extensions.ResultExtensions";
 
@@ -57,6 +66,43 @@ internal static class ResultSymbols
             UnitResultMetadataName or
             ValueResultMetadataName or
             PairResultMetadataName;
+    }
+
+    /// <summary>
+    /// Determines whether <paramref name="type"/> is a <c>Task&lt;TResult&gt;</c> or a
+    /// <c>ValueTask&lt;TResult&gt;</c> whose payload is one of the three result types.
+    /// </summary>
+    /// <param name="type">The type to test; may be <c>null</c>.</param>
+    /// <returns>
+    /// <c>true</c> when the type is a <c>System.Threading.Tasks</c> awaitable that carries a result.
+    /// </returns>
+    /// <remarks>
+    /// The check runs in the namespace rather than on the display string, so a user type named
+    /// <c>Task&lt;T&gt;</c> or a task-like awaitable of the consumer's own does not match, even when
+    /// it carries a result.
+    /// </remarks>
+    internal static bool IsAwaitableResultType(ITypeSymbol? type)
+    {
+        if (type is not INamedTypeSymbol named)
+        {
+            return false;
+        }
+
+        var definition = named.OriginalDefinition;
+
+        // Same invariant as IsResultType: a named type always has a containing namespace.
+        if (definition.ContainingNamespace!.ToDisplayString() != TasksNamespace)
+        {
+            return false;
+        }
+
+        if (definition.MetadataName is not (TaskMetadataName or ValueTaskMetadataName))
+        {
+            return false;
+        }
+
+        // Task<TResult> and ValueTask<TResult> always declare exactly one type argument.
+        return IsResultType(named.TypeArguments[0]);
     }
 
     /// <summary>

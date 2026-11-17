@@ -388,6 +388,8 @@ public class AnalyzerEdgeCaseTests
             new RedundantBindAnalyzer(),
             new NestedResultAnalyzer(),
             new ConstantEnsureAnalyzer(),
+            new UnawaitedResultAnalyzer(),
+            new DiscardedAwaitAnalyzer(),
         ];
 
         foreach (var analyzer in analyzers)

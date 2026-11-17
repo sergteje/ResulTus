@@ -12,6 +12,8 @@ public class ResultSymbolsTests
         namespace Other
         {
             public readonly struct Result { }
+
+            public sealed class Task<T> { }
         }
 
         namespace ResulTus
@@ -21,6 +23,17 @@ public class ResultSymbolsTests
 
         public static class Generic<T>
         {
+        }
+
+        public static class Awaitables
+        {
+            public static System.Threading.Tasks.Task<ResulTus.Result> TaskOfResult => null!;
+
+            public static System.Threading.Tasks.ValueTask<ResulTus.Result> ValueTaskOfResult => default;
+
+            public static System.Threading.Tasks.Task<int> TaskOfNumber => null!;
+
+            public static Other.Task<ResulTus.Result> LookAlike => null!;
         }
         """;
 
@@ -56,6 +69,28 @@ public class ResultSymbolsTests
         ResultSymbols.IsResultType(Compilation.GetTypeByMetadataName("Other.Result")).Should().BeFalse();
         ResultSymbols.IsResultType(array).Should().BeFalse();
         ResultSymbols.IsResultType(typeParameter).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// GIVEN <c>Task&lt;Result&gt;</c>, <c>ValueTask&lt;Result&gt;</c>, an awaitable over another
+    /// payload, a non-awaitable and a look-alike type in another namespace
+    /// WHEN they are matched
+    /// THEN only the two awaitables over a result MUST be recognised.
+    /// </summary>
+    [Fact]
+    public void IsAwaitableResultType_ShouldAcceptOnlyAwaitablesOverAResult()
+    {
+        var awaitables = Compilation.GetTypeByMetadataName("Awaitables")!;
+
+        ITypeSymbol TypeOf(string propertyName)
+            => ((IPropertySymbol)awaitables.GetMembers(propertyName)[0]).Type;
+
+        ResultSymbols.IsAwaitableResultType(TypeOf("TaskOfResult")).Should().BeTrue();
+        ResultSymbols.IsAwaitableResultType(TypeOf("ValueTaskOfResult")).Should().BeTrue();
+        ResultSymbols.IsAwaitableResultType(TypeOf("TaskOfNumber")).Should().BeFalse();
+        ResultSymbols.IsAwaitableResultType(TypeOf("LookAlike")).Should().BeFalse();
+        ResultSymbols.IsAwaitableResultType(Compilation.GetSpecialType(SpecialType.System_Int32)).Should().BeFalse();
+        ResultSymbols.IsAwaitableResultType(null).Should().BeFalse();
     }
 
     /// <summary>

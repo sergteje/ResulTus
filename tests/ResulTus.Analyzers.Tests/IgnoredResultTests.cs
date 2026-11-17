@@ -86,4 +86,36 @@ public class IgnoredResultTests
 
         diagnostics.Should().BeEmpty();
     }
+
+    /// <summary>
+    /// GIVEN an awaited result used as a whole statement
+    /// WHEN <c>RESULT001</c> runs
+    /// THEN it MUST stay silent, because the drop happened after the work and <c>RESULT008</c>
+    /// owns that shape.
+    /// </summary>
+    [Fact]
+    public async Task AwaitedResult_ShouldBeLeftToResult008()
+    {
+        const string source = """
+            using System.Threading.Tasks;
+            using ResulTus;
+
+            public static class Subject
+            {
+                public static Task<Result> SomethingAsync() => Task.FromResult(Result.Success());
+
+                public static async Task Caller()
+                {
+                    await SomethingAsync();
+                }
+            }
+            """;
+
+        var diagnostics = await AnalyzerHarness.AnalyzeRuleAsync(
+            new IgnoredResultAnalyzer(),
+            source,
+            "RESULT001");
+
+        diagnostics.Should().BeEmpty();
+    }
 }

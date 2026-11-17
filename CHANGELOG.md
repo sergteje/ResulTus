@@ -46,6 +46,13 @@ defines it, means the public API may still change between minor releases.
   than the buffers themselves. The token reaches the source through `WithCancellation` and the
   `TraverseAsync` mapper, and cancellation rethrows `OperationCanceledException` instead of becoming
   a failed result, even when the source ignores the token.
+- **`ResulTus.Analyzers` reports the two ways an asynchronous result loses its outcome.**
+  `RESULT007` fires when a `Task<Result<...>>` or `ValueTask<Result<...>>` is produced as an
+  expression statement and never awaited; `RESULT008` fires when an `await` used as a whole
+  expression statement produces a `Result` that is then thrown away. Both are `Warning`s in the
+  `Reliability` category, and both stay silent on the explicit acknowledgements:
+  `_ = CallAsync();`, `_ = await CallAsync();`, an assigned, returned, matched or deconstructed
+  result, and any awaitable whose payload is not a ResulTus result.
 
 ## [1.2.0] - 2026-11-17
 

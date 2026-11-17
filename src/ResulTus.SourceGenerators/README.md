@@ -92,7 +92,7 @@ type without `[ResultErrors]` is reported the same way, because `[ResultErrors]`
 - [`ResulTus`](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus/README.md) — required
   dependency: the result types, `Error` and both attributes.
 - [`ResulTus.Analyzers`](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Analyzers/README.md)
-  — the `RESULT001`–`RESULT006` build-time rules.
+  — the `RESULT001`–`RESULT008` build-time rules.
 - [All ResulTus packages](https://github.com/sergteje/ResulTus#packages) — the full package table.
 
 ## Learn more

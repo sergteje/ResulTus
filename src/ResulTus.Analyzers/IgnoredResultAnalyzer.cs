@@ -14,7 +14,9 @@ namespace ResulTus.Analyzers;
 /// <remarks>
 /// A dropped result is the failure mode the whole pattern exists to prevent: the operation reports
 /// its outcome and nobody reads it. Assigning it, discarding it with <c>_ =</c>, returning it or
-/// passing it to another call are all deliberate, so none of those report.
+/// passing it to another call are all deliberate, so none of those report. An awaited statement is
+/// also left alone: the value was dropped after the work ran, which is <c>RESULT008</c>'s shape, and
+/// reporting it here too would put two warnings on one line.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class IgnoredResultAnalyzer : DiagnosticAnalyzer
@@ -42,6 +44,13 @@ public sealed class IgnoredResultAnalyzer : DiagnosticAnalyzer
 
         // `_ = GetValue();` is the documented way to say "I am dropping this on purpose".
         if (statement.Expression is AssignmentExpressionSyntax)
+        {
+            return;
+        }
+
+        // `await SomethingAsync();` is RESULT008's shape: the work happened and the value was
+        // dropped. Reporting it here as well would put two warnings on one line.
+        if (statement.Expression is AwaitExpressionSyntax)
         {
             return;
         }
