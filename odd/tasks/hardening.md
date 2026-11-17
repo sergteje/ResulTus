@@ -66,7 +66,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T16 | S16 | inline | done | this commit |
 | T17 | S17 | inline | pending | - |
 | T18 | S18 | inline | done | this commit |
-| T19 | S19 | inline | pending | - |
+| T19 | S19 | inline | done | this commit |
 
 ## Log
 
@@ -188,3 +188,13 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Validation.** The workflow was parsed with a real YAML parser (`YamlDotNet` in a scratch project outside the worktree) which read back four jobs and their step counts, so the file is not merely indented plausibly.
 
 **Risk:** item 5 (delivery) - CI job configuration. No gate threshold, script, or coverage measurement changed.
+
+### L11 - branch protection, read-only (T19)
+
+**T19 / S19 - nothing blocks a merge today.** Read-only queries on 2026-11-17: `GET /branches/main/protection` answers `Branch not protected` (HTTP 404) and `GET /rulesets` answers `[]`. No required status check exists, so a red CI run does not prevent a merge; the merge decision is entirely manual. This is why T16 could remove the `coverage-gate` job name without stranding a check.
+
+**Same query, adjacent settings.** The repository is public, Dependabot security updates are enabled, secret scanning is disabled (with push protection, non-provider patterns and validity checks all disabled), Actions allow every action, and SHA pinning is not required.
+
+**What an owner would decide, not done here.** Enabling a branch ruleset on `main` (require the `build-and-test` status, forbid force pushes and deletion), turning on secret scanning with push protection, and requiring SHA pinning for third-party actions are all repository-settings mutations. Each needs an explicit go, so this task reports them and changes nothing.
+
+**Risk:** none of items 1-6. Read-only API queries and a documentation entry.
