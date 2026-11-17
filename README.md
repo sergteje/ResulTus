@@ -46,7 +46,7 @@ Those four facts are a trade, stated openly: the 32 B default tier and its array
 
 MIT licensed. Source: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 
-Every package above is **Stable** and shipped at 1.2.0 on [nuget.org](https://www.nuget.org/profiles/sergteje) — there are no preview or planned entries in the table. Every package ships its own focused README (linked in the table and packed into the `.nupkg`). The core plus `ResulTus.Extensions` are all you need to start:
+Every package above is **Stable** and shipped at 1.3.0 on [nuget.org](https://www.nuget.org/profiles/sergteje) — there are no preview or planned entries in the table. Every package ships its own focused README (linked in the table and packed into the `.nupkg`). The core plus `ResulTus.Extensions` are all you need to start:
 
 ```bash
 dotnet add package ResulTus

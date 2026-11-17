@@ -27,7 +27,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 | T3 | S3 | delegated | done | this commit |
 | T4 | S4 | delegated | done | this commit |
 | T5 | S5 | delegated | done | this commit |
-| T6 | S6 | inline | pending | - |
+| T6 | S6 | inline | done | this commit |
 
 ## Log
 
@@ -92,3 +92,8 @@ The only edit to the synchronous file widens `Grow<T>` from private to internal 
 **Parity sweep.** The rule range moved from `RESULT001`-`RESULT006` to `RESULT001`-`RESULT008` in both root README editions, `src/ResulTus/README.md`, `src/ResulTus.SourceGenerators/README.md` and `odd/specs/versioning.md`, and the rule tables in both READMEs and `docs/error-handling.md` gained the two rows.
 
 **Evidence.** 53 of 53 analyzer tests on net8.0, net10.0 and net11.0 (baseline 47, plus the split test that pins `RESULT001`'s silence on an awaited statement), with the RED being `CS0246` for the two analyzers before they existed. Solution build 0 warnings. No snapshot changed, because `scripts/ApiSnapshot` excludes the analyzers by design.
+### L8 - T6: 1.3.0 prepared
+
+The fifth pull request promotes `## [Unreleased]` to `## [1.3.0] - 2026-11-17`, moves `Version` to `1.3.0` in `Directory.Build.props`, shifts the comparison links and states the new version in both README editions. `PackageValidationBaselineVersion` stays at `1.2.0`: a baseline has to exist on the feed, so it moves in the change that follows the release, exactly as the versioning spec requires.
+
+Measured before publishing: `dotnet pack` produces `ResulTus.1.3.0` against the `1.2.0` baseline with no compatibility error, the solution builds with 0 warnings and 0 errors, and the snippet gate reports 24 documents and 137 blocks. The changelog section carries five `### Added` entries, one per feature, and the file holds no replacement characters, only the em dashes the earlier releases use.

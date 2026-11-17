@@ -46,7 +46,7 @@ Esos cuatro hechos son un intercambio, declarado abiertamente: el tier por defec
 
 Licencia MIT. Código fuente: [`sergteje/ResulTus`](https://github.com/sergteje/ResulTus).
 
-Todos los paquetes de la tabla son **estables** y están publicados en 1.2.0 en [nuget.org](https://www.nuget.org/profiles/sergteje) — no hay entradas en preview ni planificadas. Cada paquete lleva su propio README enfocado (enlazado en la tabla y empaquetado en el `.nupkg`). El core más `ResulTus.Extensions` son todo lo necesario para empezar:
+Todos los paquetes de la tabla son **estables** y están publicados en 1.3.0 en [nuget.org](https://www.nuget.org/profiles/sergteje) — no hay entradas en preview ni planificadas. Cada paquete lleva su propio README enfocado (enlazado en la tabla y empaquetado en el `.nupkg`). El core más `ResulTus.Extensions` son todo lo necesario para empezar:
 
 ```bash
 dotnet add package ResulTus
