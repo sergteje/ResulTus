@@ -37,6 +37,15 @@ defines it, means the public API may still change between minor releases.
   over a different success type — untouched. `Result<TSuccess, TError>` stays out of scope: the error
   type is the policy that maps it to a status, and `ResulTus.Validation` bridges its own tier
   explicitly.
+- **`ResulTus.Collections` gains the streaming half of its async tier.** `SequenceAsync` over
+  `IAsyncEnumerable<Result<T>>`, `TraverseAsync` over `IAsyncEnumerable<TSource>` with a
+  `Func<TSource, CancellationToken, Task<Result<TOut>>>` mapper, and `PartitionAsync` over
+  `IAsyncEnumerable<Result<T>>` mirror `Sequence`, `Traverse` and `Partition`: same order, same
+  first-failure short-circuit (except in `PartitionAsync`, which consumes the whole stream), same
+  exactly sized result, and `PartitionAsync` returns copies of its rented `ArrayPool` buffers rather
+  than the buffers themselves. The token reaches the source through `WithCancellation` and the
+  `TraverseAsync` mapper, and cancellation rethrows `OperationCanceledException` instead of becoming
+  a failed result, even when the source ignores the token.
 
 ## [1.2.0] - 2026-11-17
 

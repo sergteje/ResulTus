@@ -31,7 +31,8 @@ types and `Error` these operations consume and produce. It adds no other package
 | Value `Result<T>` | `Sequence`, `Traverse`, `Fold`, `FirstFailure`, `FirstSuccess`, `Partition`, `Flatten`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded` |
 | Unit `Result` | `Combine`, `Fold`, `FirstFailure`, `ForEach`, `AllSucceeded`, `AnySucceeded`, `NoneSucceeded` |
 | Typed `Result<TSuccess, TError>` | `Sequence`, `Traverse`, `Fold` |
-| Async | `WhenAllAsync`, `WhenAnyAsync` |
+| Async tasks | `WhenAllAsync`, `WhenAnyAsync` |
+| Async streams | `SequenceAsync`, `TraverseAsync`, `PartitionAsync` |
 
 Every operation except `Flatten` also has `T[]` and `IReadOnlyList<T>` overloads that read the count
 up front and index directly.
@@ -133,6 +134,33 @@ Result<int> raced = await new[]
     Task.FromResult(Result<int>.Success(10)),
 }.WhenAnyAsync();                                   // the first task to complete
 ```
+
+`SequenceAsync`, `TraverseAsync` and `PartitionAsync` are the same three materializing operations over an
+`IAsyncEnumerable<T>`. They produce the outcome the synchronous `Sequence`, `Traverse` and `Partition` produce for
+the same sequence: the same order, the same first failure, and the same exactly sized result built from a rented
+pool buffer that is returned on every exit path.
+
+```csharp
+using System.Threading.Tasks;
+using ResulTus;
+using ResulTus.Collections;
+
+static async IAsyncEnumerable<Result<int>> StreamRows()
+{
+    await Task.CompletedTask;
+    yield return Result<int>.Success(10);
+    yield return Result<int>.Success(20);
+}
+
+Result<IReadOnlyList<int>> streamed = await StreamRows().SequenceAsync();   // success: [10, 20]
+
+(int[] streamedValues, Error[] streamedErrors) = await StreamRows().PartitionAsync();
+// [10, 20] and []
+```
+
+Cancellation is control flow. The token is checked before enumeration starts, passed to the source through
+`WithCancellation` and to the `TraverseAsync` mapper, and checked again on every element. A cancelled token rethrows
+`OperationCanceledException`; it never becomes a failed `Result`, not even when the source ignores the token.
 
 ### `Combine` has two meanings
 
