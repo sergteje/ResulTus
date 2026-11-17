@@ -318,3 +318,13 @@ CodeRabbit found seven edge cases in `scripts/SnippetGate`. None manifested on t
 **Indexing was not instant.** nuget.org served 1.2.0 for `ResulTus.Validation.FluentValidation` first and for `ResulTus` about five minutes later; the baseline bump waited for the core package to resolve, because packing against a baseline that is not yet on the feed fails with NU1102.
 
 **Baseline bumped.** `PackageValidationBaselineVersion` is now `1.2.0`, in the change after the release as the versioning spec requires, and `dotnet pack` against that baseline succeeds. The versioning spec's parenthetical now reads `1.2.0` today instead of describing the release in progress.
+
+### L21 - the coverage gate flaked on the allocation audits
+
+**What happened.** The pull request that bumped the package-validation baseline failed `build-and-test` with `ResulTus.Extensions: the own test project failed`, inside the coverage step. In the same job, two minutes earlier, the plain `dotnet test` step had reported the same binary as `206 of 206 passed` on all four target frameworks. The failed job's rerun was green.
+
+**Why.** The coverage collector instruments the assembly under test, and the three `AsyncAllocationAuditTests` assert exact allocated byte counts. Instrumentation perturbs those counts, so a suite that is green uninstrumented can fail instrumented depending on the machine. The tests themselves are unchanged and stay under the owner's disposition: this is the measurement harness, not the assertions.
+
+**Fix.** The gate now passes `--filter "FullyQualifiedName!~AsyncAllocationAuditTests"` to its instrumented run, with a comment stating why. Coverage does not need their allocation numbers, and every one of their assertions still runs in the plain `dotnet test` step of the same job. Measured after the change: all eleven packages still at or above 90% lines, and `ResulTus.Extensions` is unchanged at 98.83%, so those three tests were not the only cover of any line.
+
+**Why it mattered.** `build-and-test` is the required status check on `main`. A flaky required check blocks merges at random, which is worse for the repository than the duplicated build this slice removed.
