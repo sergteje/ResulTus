@@ -48,17 +48,17 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | inline | done | this commit |
-| T2 | S2 | inline | done | this commit |
-| T3 | S3 | inline | done | this commit |
-| T4 | S4 | inline | done | this commit |
-| T5 | S5 | inline | done | this commit |
-| T6 | S6 | inline | done | this commit |
-| T7 | S7 | inline | done | this commit |
-| T8 | S8 | inline | done | this commit |
-| T9 | S9 | inline | done | this commit |
-| T10 | S10 | inline | done | this commit |
-| T11 | S11 | delegated | pending | - |
+| T1 | S1 | inline | done | bbe5bd3 |
+| T2 | S2 | inline | done | bbe5bd3 |
+| T3 | S3 | inline | done | bbe5bd3 |
+| T4 | S4 | inline | done | d0a2032 |
+| T5 | S5 | inline | done | d0a2032 |
+| T6 | S6 | inline | done | d0a2032 |
+| T7 | S7 | inline | done | d0a2032 |
+| T8 | S8 | inline | done | d0a2032 |
+| T9 | S9 | inline | done | d0a2032 |
+| T10 | S10 | inline | done | d0a2032 |
+| T11 | S11 | inline | done | this commit |
 | T12 | S12 | inline | pending | - |
 | T13 | S13 | inline | pending | - |
 | T14 | S14 | delegated | pending | - |
@@ -108,3 +108,17 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **T10 / B7 - Spanish table.** Restored the package links in `README.es.md`; all 13 rows now match the English edition.
 
 **Risk:** none of items 1-6. Documentation and task-status text only, plus one spec typo.
+
+### L5 - net8/net9 test matrix (T11)
+
+**T11 / S11 - the test matrix reaches every supported TFM.** All 13 test projects now multi-target `net8.0;net9.0;net10.0;net11.0`. `ci.yml` gained `9.0.x` and `8.0.x` next to `11.0.x`/`10.0.x` in `build-and-test` and `coverage-gate`, because a test project that targets a runtime the runner does not have fails at execution time, not at build time. The AOT jobs and `docs` keep their single-SDK lists: they publish one sample and build metadata for one TFM.
+
+**Route: inline.** Thirteen one-line `TargetFrameworks` edits and two YAML lists. No Writer trigger held: no independent behavior units, and the change is mechanical.
+
+**No runtime pin in the repository.** An earlier attempt pinned `<RuntimeFrameworkVersion>8.0.33</RuntimeFrameworkVersion>` per test project to dodge a local `MSB3030 apphost.exe not found`. That was a machine artifact, not a repository decision: this host has the .NET 8 runtime but no .NET 8 SDK, so `packs/Microsoft.NETCore.App.Host.win-x64` has no 8.x entry while `KnownAppHostPacks` from SDK 11 asks for 8.0.34. The pin was reverted and the environment was fixed instead, by staging a local packs overlay (junctions to the installed packs plus the downloaded 8.0.34 host pack) and passing `-p:NetCoreTargetingPackRoot=<overlay>` on this machine only. CI needs no overlay because `setup-dotnet` installs the 8.0/9.0 SDKs, which bring their host packs; a requested 8.0.x apphost pack resolves up to any installed 8.0.x patch, as observed with 8.0.28 resolving to the 8.0.33 pack.
+
+**Evidence.** `dotnet build ResulTus.slnx`: 0 warnings, 0 errors with four TFMs. `dotnet test ResulTus.slnx --no-build` on net8.0, net9.0, net10.0 and net11.0: ApiCompat 11, Analyzers 47, AspNetCore 45, Collections 111, Diagnostics 29, HttpClient 50, Logging 36, Serialization 86, SourceGenerators 53, Testing 19, Validation 28 and ResulTus.Tests 86 pass on every TFM. The only failures are the three owner-disposed `AsyncAllocationAuditTests` in Extensions (198/201 on all four TFMs), identical on every runtime.
+
+**Cost.** One extra `dotnet test` execution per TFM in `build-and-test`; the coverage gate stays on net10.0 because it passes `--framework net10.0` explicitly, so the measurement is unchanged.
+
+**Risk:** item 5 (delivery) - CI job configuration changes. No stored data, security surface, public contract, or concurrency change.

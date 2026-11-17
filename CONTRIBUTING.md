@@ -8,8 +8,10 @@ and [`README.md`](README.md) first will make every other rule below obvious.
 
 - **.NET SDK 11** (`global.json` pins 11.0.x with `rollForward: latestFeature`) — it compiles
   every target framework the libraries multi-target.
-- **The .NET 10 runtime** — the test projects target `net10.0`, and an SDK 11 installation does
-  not provide that runtime. Installing the .NET 10 SDK alongside 11 (what CI does) covers it.
+- **The .NET 8, 9 and 10 runtimes** — every test project multi-targets
+  `net8.0;net9.0;net10.0;net11.0`, so a missing runtime turns a supported-framework guarantee
+  into an untested claim. Installing the .NET 8, 9 and 10 SDKs alongside 11 (what CI does) covers
+  it, and it is also what provides the apphost pack the xUnit v3 test projects need to build.
 
 ## Build and test
 
