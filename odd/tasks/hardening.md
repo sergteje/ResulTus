@@ -61,7 +61,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T11 | S11 | inline | done | this commit |
 | T12 | S12 | inline | done | this commit |
 | T13 | S13 | inline | done | this commit |
-| T14 | S14 | delegated | pending | - |
+| T14 | S14 | inline | done | this commit |
 | T15 | S15 | inline | pending | - |
 | T16 | S16 | inline | pending | - |
 | T17 | S17 | inline | pending | - |
@@ -146,3 +146,21 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Evidence.** Extensions in Release: 206/206. Debug on net8.0 and net11.0: 203/206, the three failures being the owner-disposed `AsyncAllocationAuditTests` that only fail outside Release. No production code changed, so no RED exists for these tests; they pin shipped behavior.
 
 **Risk:** none of items 1-6. Test-only change.
+
+### L8 - asynchronous exception capture (T14)
+
+**T14 / S14 - `Result.TryAsync` and `Result.TryValueTaskAsync`.** Four new overloads on `Result`: value-producing and unit delegates for the `Task` and the `ValueTask` source. Each takes the `CancellationToken` the delegate receives, checks it before the delegate starts, captures any non-cancellation exception through `Error.FromException`, and rethrows `OperationCanceledException`, so the synchronous rule ("cancellation is control flow, never an error") now holds across the asynchronous boundary.
+
+**Scope decision: no `Func<Exception, Error>` overloads.** The synchronous tier has two mapping overloads per shape; the asynchronous tier deliberately ships none, because S14 names the capture helpers and the mapping need is not part of it, and adding them later is additive and non-breaking. Recorded here so the asymmetry is a decision, not an omission.
+
+**Route: inline.** One coherent behavior across production code, tests, docs and snapshot; no independent unit could run in parallel and no writer reason held.
+
+**Test-first evidence.** `tests/ResulTus.Tests/TryAsyncContractTests.cs` was written first and failed to compile with `CS0117: 'Result' no contiene una definición para 'TryAsync'` (the methods did not exist). After the implementation: 12/12 pass on net10.0, and the suite reports 98 tests in ResulTus.Tests on all four target frameworks.
+
+**Public surface and versioning.** `dotnet run --project scripts/ApiSnapshot -- --write` added exactly four lines, all in `PublicApi/ResulTus.txt`; no other snapshot changed, so nothing else drifted. Adding members is a minor bump, which is the `1.2.0` slice this feature forecast for the B1-B4 group, and `CHANGELOG.md` records it under `## [Unreleased] / ### Added`.
+
+**Documentation.** `docs/error-handling.md` extends the "From an exception" section: what the helpers do, the snippet with both sources, and the limit that they do not replace `try/catch` around code you cannot change. The snippet was extracted into a scratch console project outside the worktree referencing `src/ResulTus` and built with 0 warnings, so it compiles today and not only once the snippet gate (T15) exists.
+
+**Evidence.** Solution build: 0 warnings, 0 errors across four target frameworks. Full suite: everything green except the three owner-disposed `AsyncAllocationAuditTests` that fail only outside Release. ApiCompat: 11/11 on net8.0, net9.0, net10.0 and net11.0.
+
+**Risk:** none of items 1-6. The change is additive public API with no altered signature, no behavior change to existing members, no stored data, and no concurrency change.

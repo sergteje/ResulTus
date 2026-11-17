@@ -8,6 +8,13 @@ defines it, means the public API may still change between minor releases.
 
 ## [Unreleased]
 
+### Added
+
+- **`Result.TryAsync` and `Result.TryValueTaskAsync`** capture a non-cancellation exception from an
+  asynchronous delegate as a failure and rethrow `OperationCanceledException`, so an asynchronous
+  boundary keeps returning a `Result` without losing the rule that cancellation is control flow.
+  They mirror the synchronous `Try` overloads for `Task` and `ValueTask` sources.
+
 ### Fixed
 
 - **`Partition` no longer leaks a pooled buffer** when the second `ArrayPool` rent throws: the
