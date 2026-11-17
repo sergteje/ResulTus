@@ -48,6 +48,13 @@ jobs:
       # It reuses the Release build above: the script passes --framework net10.0 --no-build.
       - name: Coverage gate (90% lines per package)
         run: pwsh -File scripts/coverage-gate.ps1 -Threshold 0.90
+      # The repository rule is that every code block in a document must compile. This step makes
+      # it a check instead of a review habit: scripts/SnippetGate compiles all 126 ```csharp
+      # blocks of the root readmes, docs/ and the package readmes against the shipped projects,
+      # so a snippet that drifts from the API fails here. Its stubs supply only the ambient state
+      # the fragments share between fences (see scripts/SnippetGate/Stubs).
+      - name: Documentation snippet gate
+        run: dotnet run --project scripts/SnippetGate -c Release
 
   # Publish-and-run proof for the claims annotated since 0.0.1: a console app
   # walking the AOT-safe System.Text.Json path is published trimmed and then

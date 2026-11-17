@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Same shape as scripts/ApiSnapshot: a repo tool, never packed, never AOT-published. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>false</IsAotCompatible>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);IL2026;IL2070;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The stub harness is documentation data this tool copies into the generated project; it
+         references the shipped packages, so it must never be compiled into the tool itself. -->
+    <Compile Remove="Stubs\**\*.cs" />
+    <None Include="Stubs\**\*.cs" />
+  </ItemGroup>
+
+</Project>

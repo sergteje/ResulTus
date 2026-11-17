@@ -75,9 +75,12 @@ generator are excluded by design: Roslyn projects earn coverage in their own con
   specifications in `odd/specs/`.
 - `CHANGELOG.md` records every released version in Keep a Changelog form; a change that ships
   updates it in the same commit.
-- **Every code block in a document must compile.** Extract the blocks and build them against the
-  real source projects in a throwaway project; a snippet that does not build is a documentation
-  defect.
+- **Every code block in a document must compile.** `scripts/SnippetGate` enforces it: it compiles
+  every C# fence of `README.md`, `README.es.md`, `docs/**/*.md` and `src/*/README.md` against the
+  real source projects, and the CI build fails on a snippet that no longer builds.
+  `dotnet run --project scripts/SnippetGate` reproduces it locally. A fragment is not a program, so
+  the few symbols a document shares between fences come from `scripts/SnippetGate/Stubs/`; a block
+  that is pseudo-code belongs in a `text` fence, never in a C# one.
 - The API reference site is built by DocFX (`docs/docfx.json`) on every push — the CI `docs` job
   is the proof that it builds without errors.
 

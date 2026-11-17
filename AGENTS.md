@@ -94,9 +94,13 @@ released version in Keep a Changelog form; a change that ships updates it in the
 Generated technical artifacts — code, comments, docs, commit messages — are English; conversation
 follows the owner's language.
 
-**Every code block in a document must compile.** Extract the blocks and build them against the
-real source projects in a throwaway project outside the repository; a snippet that does not build
-is a documentation defect, not an exception.
+**Every code block in a document must compile.** `scripts/SnippetGate` enforces it: it compiles every
+```csharp fence of `README.md`, `README.es.md`, `docs/**/*.md` and `src/*/README.md` against the real
+source projects, and the CI build fails on a snippet that no longer builds. Run
+`dotnet run --project scripts/SnippetGate` before pushing a documentation change. A fragment is not
+a program, so the few symbols a document shares between fences come from
+`scripts/SnippetGate/Stubs/`; a block that is pseudo-code belongs in a ```text fence, never in a
+C# one.
 
 ## Benchmarks
 

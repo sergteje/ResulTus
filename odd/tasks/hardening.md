@@ -62,7 +62,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T12 | S12 | inline | done | this commit |
 | T13 | S13 | inline | done | this commit |
 | T14 | S14 | inline | done | this commit |
-| T15 | S15 | inline | pending | - |
+| T15 | S15 | delegated | done | this commit |
 | T16 | S16 | inline | done | this commit |
 | T17 | S17 | inline | done | this commit |
 | T18 | S18 | inline | done | this commit |
@@ -214,3 +214,23 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Validation.** All five workflows were parsed with `YamlDotNet` in a scratch project outside the worktree; `release.yml` reads back ten steps and each new workflow one job. Action semantics themselves can only be proven by a real run, which happens on the next push and pull request.
 
 **Risk:** item 5 (delivery and release) - a new deploy-time gate and two new workflows. The library's public surface and behavior are untouched.
+
+### L13 - documentation snippet gate (T15)
+
+**T15 / S15 - the rule became a check.** `scripts/SnippetGate` is a repository tool that compiles every ```csharp fence of `README.md`, `README.es.md`, `docs/**/*.md` and `src/*/README.md` against the shipped `src/` projects and fails on any compile error. It is a delegated unit: the specification was written by the orchestrator, a bounded worker implemented it, and the orchestrator re-ran it and produced its own negative control before accepting it.
+
+**Shape.** Per document it emits one source file into a temporary project under the system temp directory: using directives hoisted once and deduplicated, type and namespace declarations emitted verbatim at namespace level (so `[JsonSerializable]` and `[ResultErrors]` see what a reader would paste), and each statement-shaped block wrapped in its own `static void` or `static async Task` method. One generated solution and one `dotnet build` compile the whole set; compiler diagnostics are mapped back to `document:line (block #n)`.
+
+**One compilation per document is a measured requirement, not a preference.** Documents that each declare `AppJsonContext` crash the System.Text.Json generator when compiled together: it names its output after the declared type, so two same-named contexts collide on a duplicate hint name. Per-document assemblies remove that collision and keep every document self-contained.
+
+**The stub harness is deliberately small.** `scripts/SnippetGate/Stubs/Globals.stubs.cs` supplies only the state the prose carries across fences: `args`, `failed`, `logger`, `json`, `converter`, `options`, plus a real `[JsonSerializable(typeof(int))]` context behind the shared converter. Every document that declares one of those names still declares it, and the local declaration shadows the stub, so no stub reshapes a snippet to make it compile. `Parse`, `Find`, `FetchAsync`, `Product`, `DomainError` and the per-document contexts are declared by the documents themselves; only the cross-fence state needed help.
+
+**No exclusion path.** A ```csharp fence with no content fails the gate, and a pseudo-code block has to be retagged to ```text so the document stops claiming it is C#. None needed retagging: all 126 blocks are real C# and every one compiles, so the documentation diff of this task is empty.
+
+**Evidence, verified by the orchestrator.** `dotnet run --project scripts/SnippetGate -c Release` prints `snippet gate: 24 documents, 126 blocks compiled, none excluded` and exits 0 in 26 seconds. An injected `int __orchestratorProbe = "text";` in `docs/getting-started.md` makes it fail with `docs/getting-started.md:29 (block #2): CS1001`, exit 1, while keeping the generated project for inspection; reverting the document returns the gate to green and `git diff` over `docs` is empty. The worker additionally showed an injected `CS0029` and an injected rename of `Result.Success` to `Result.Succeeded` (`CS0117`) each failing with the exact document, line and block, and reported no snippet that disagreed with the shipped API.
+
+**CI and documents.** One step, `Documentation snippet gate`, runs after the coverage gate in `build-and-test`; the workflow was parsed back with a YAML parser and reads seven steps in that job. `AGENTS.md` and `CONTRIBUTING.md` no longer describe the manual "extract the blocks and build them in a throwaway project" procedure: both point at the gate and at where the stubs live.
+
+**Known limits, stated rather than hidden.** The generated project enables implicit usings, so a snippet that omits `using System;` still compiles although a pasted copy would not; the gate compiles the blocks, it does not execute them; and it costs about 26 seconds warm.
+
+**Risk:** item 5 (delivery) - one new CI step. No library code, public surface, or document content changed.
