@@ -143,6 +143,43 @@ Result<int> raced = await new[]
 
 `WhenAnyAsync` throws `ArgumentException` on an empty sequence.
 
+### The streaming half — `IAsyncEnumerable<T>`
+
+`SequenceAsync`, `TraverseAsync` and `PartitionAsync` mirror the three materializing value-tier operations over an
+async stream: same names plus the suffix, same short-circuit on the first failure, same exactly sized result. Each
+returns a `Task` of whatever the synchronous overload returns directly:
+
+| Operation | Signature | Returns |
+| --- | --- | --- |
+| `SequenceAsync` | `SequenceAsync<T>(this IAsyncEnumerable<Result<T>>, CancellationToken = default)` | `Task<Result<IReadOnlyList<T>>>` |
+| `TraverseAsync` | `TraverseAsync<TSource, TOut>(this IAsyncEnumerable<TSource>, Func<TSource, CancellationToken, Task<Result<TOut>>>, CancellationToken = default)` | `Task<Result<IReadOnlyList<TOut>>>` |
+| `PartitionAsync` | `PartitionAsync<T>(this IAsyncEnumerable<Result<T>>, CancellationToken = default)` | `Task<(T[] Successes, Error[] Failures)>` |
+
+```csharp
+static async IAsyncEnumerable<Result<int>> StreamRows()
+{
+    await Task.CompletedTask;
+    yield return FetchRow(1);
+    yield return FetchRow(2);
+}
+
+Result<IReadOnlyList<int>> streamed = await StreamRows().SequenceAsync();
+// success: [10, 20]
+
+(int[] streamedSucceeded, Error[] streamedFailed) = await StreamRows().PartitionAsync();
+// streamedSucceeded: [10, 20], streamedFailed: []
+```
+
+`SequenceAsync` stops at the first failure, exactly as `Sequence` does. `TraverseAsync` maps one element at a time,
+in stream order and never in parallel, and stops invoking the mapper after the first failure, exactly as `Traverse`
+does. `PartitionAsync` consumes the whole stream because neither side may be lost, and the two arrays it returns are
+copies, never the rented pool buffer.
+
+Cancellation is control flow. The token is checked before enumeration starts, passed to the source through
+`WithCancellation` and to the `TraverseAsync` mapper, and checked again on every element, so a cancelled token
+rethrows `OperationCanceledException`. It never becomes a failed `Result`, not even when the source itself ignores
+the token.
+
 ## Allocation
 
 `Fold`, `FirstFailure` and the unit `Combine` allocate nothing for either source. `Sequence` and `Traverse`

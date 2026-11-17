@@ -952,7 +952,19 @@ public static class ResultCollectionExtensions
 
     private static int InitialCapacity<T>(IEnumerable<T> source)
         => source is ICollection<T> collection && collection.Count > 0 ? collection.Count : 4;
-    private static T[] Grow<T>(T[] buffer, int count, bool clearOnReturn)
+
+    /// <summary>
+    /// Doubles a rented buffer, copying the filled prefix into a larger rental and returning the old
+    /// one. Internal rather than private because the asynchronous mirrors in
+    /// <see cref="ResultCollectionAsyncExtensions"/> grow their buffers the same way: one rented
+    /// buffer in, one larger rental out, and the previous one returned exactly once.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="buffer">The filled buffer to replace.</param>
+    /// <param name="count">How many elements are live in <paramref name="buffer"/>.</param>
+    /// <param name="clearOnReturn">Whether the old rental must be cleared before it is returned.</param>
+    /// <returns>The larger rental.</returns>
+    internal static T[] Grow<T>(T[] buffer, int count, bool clearOnReturn)
     {
         var grown = ArrayPool<T>.Shared.Rent(buffer.Length * 2);
         Array.Copy(buffer, grown, count);

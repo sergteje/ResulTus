@@ -25,7 +25,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 | T1 | S1 | delegated | done | this commit |
 | T2 | S2 | delegated | done | this commit |
 | T3 | S3 | delegated | done | this commit |
-| T4 | S4 | delegated | pending | - |
+| T4 | S4 | delegated | done | this commit |
 | T5 | S5 | delegated | pending | - |
 | T6 | S6 | inline | pending | - |
 
@@ -70,3 +70,12 @@ The two closed filters are the design, not a shortcut: a filter receives `object
 Evidence: 62 of 62 AspNetCore tests on net8.0, net10.0 and net11.0 (baseline 45), including six end-to-end tests that build a real `WebApplication` with `CreateSlimBuilder()` and invoke the endpoint's `RequestDelegate`, comparing the mapped response with the direct `ToHttpResult()` response and with the same route mapped without the filter. ApiCompat 11 of 11 with nine snapshot lines added to `ResulTus.AspNetCore.txt`, build 0 warnings, snippet gate at 24 documents and 135 blocks.
 
 The typed tier stays out of the filter on purpose: `ResulTus.Validation` already bridges `Result<TSuccess, ValidationErrors>` explicitly, and a generic error policy does not exist. The package README states that boundary.
+### L6 - T4: the streaming half
+
+`ResulTus.Collections` gained `SequenceAsync`, `TraverseAsync` and `PartitionAsync` over `IAsyncEnumerable`, each mirroring its synchronous counterpart: same order, same first-failure short-circuit, same empty-input result, same exactly sized arrays copied out of a rented buffer and never handed to the caller.
+
+One deliberate divergence is documented: the asynchronous operations also check the token per element, so a source that ignores cancellation cannot quietly turn a cancelled stream into a success. That is a stronger guarantee than the synchronous operations can offer, not a different outcome.
+
+Evidence: 133 of 133 collection tests on net8.0, net9.0, net10.0 and net11.0 (baseline 111), including three differential tests that run one input through both halves and compare outcomes, consumed prefix and mapper calls; ApiCompat 11 of 11 with three snapshot lines added to `ResulTus.Collections.txt`; build 0 warnings; snippet gate at 24 documents and 137 blocks.
+
+The only edit to the synchronous file widens `Grow<T>` from private to internal so both halves share it, with an unchanged body, because duplicating it would be a second implementation of the same growth rule.

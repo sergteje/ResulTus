@@ -3,6 +3,9 @@ M: ResulTus.Collections.ResultCollectionAsyncExtensions.WhenAllAsync(IEnumerable
 M: ResulTus.Collections.ResultCollectionAsyncExtensions.WhenAllAsync(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<ResulTus.Result>> tasks, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<ResulTus.Result>
 M: ResulTus.Collections.ResultCollectionAsyncExtensions.WhenAnyAsync(IEnumerable<Task<Result<T>>> tasks, System.Threading.CancellationToken cancellationToken) -> Task<Result<T>>
 M: ResulTus.Collections.ResultCollectionAsyncExtensions.WhenAnyAsync(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<ResulTus.Result>> tasks, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Collections.ResultCollectionAsyncExtensions.SequenceAsync(IAsyncEnumerable<Result<T>> results, System.Threading.CancellationToken cancellationToken) -> Task<Result<IReadOnlyList<T>>>
+M: ResulTus.Collections.ResultCollectionAsyncExtensions.TraverseAsync(IAsyncEnumerable<TSource> source, Func<TSource, System.Threading.CancellationToken, Task<Result<TOut>>> selector, System.Threading.CancellationToken cancellationToken) -> Task<Result<IReadOnlyList<TOut>>>
+M: ResulTus.Collections.ResultCollectionAsyncExtensions.PartitionAsync(IAsyncEnumerable<Result<T>> results, System.Threading.CancellationToken cancellationToken) -> Task<ValueTuple<T[], ResulTus.Error[]>>
 T: ResulTus.Collections.ResultCollectionExtensions
 M: ResulTus.Collections.ResultCollectionExtensions.Sequence(IEnumerable<Result<T>> results) -> Result<IReadOnlyList<T>>
 M: ResulTus.Collections.ResultCollectionExtensions.Traverse(IEnumerable<TSource> source, Func<TSource, Result<TOut>> selector) -> Result<IReadOnlyList<TOut>>
