@@ -120,17 +120,30 @@ public class DocfxSiteConfigTests
     /// <summary>
     /// GIVEN the CI workflow
     /// THEN the <c>docs</c> job itself MUST restore the local tool and build docs/docfx.json
-    ///      (anchored inside that job's block, not anywhere in the file), with the three
-    ///      pre-existing jobs and the read-only top-level permission intact.
+    ///      (anchored inside that job's block, not anywhere in the file), the coverage and snippet
+    ///      gates MUST run inside the build-and-test job, every other job MUST still exist, and the
+    ///      read-only top-level permission MUST be intact.
     /// </summary>
+    /// <remarks>
+    /// The coverage gate was a separate job until it was merged into <c>build-and-test</c> to stop
+    /// rebuilding what that job had already built. The contract it protects is the gate, not the
+    /// job name, so it is asserted where it now lives; dropping either gate still fails here.
+    /// </remarks>
     [Fact]
     public void CiWorkflow_ShouldBuildDocfxSiteInDocsJob()
     {
         var workflow = ReadRepoFile(".github", "workflows", "ci.yml").Replace("\r\n", "\n");
 
         workflow.Should().Contain("  build-and-test:");
-        workflow.Should().Contain("  coverage-gate:");
         workflow.Should().Contain("  aot-smoke:");
+        workflow.Should().Contain("  aot-smoke-linux:");
+        workflow.Should().Contain("  docs:");
+
+        var buildJob = ExtractBlock(workflow, "  build-and-test:", "  ");
+        buildJob.Should().Contain("pwsh -File scripts/coverage-gate.ps1",
+            "the per-package coverage gate must run in the job that already built the solution");
+        buildJob.Should().Contain("dotnet run --project scripts/SnippetGate",
+            "the documentation snippet gate must run in CI");
 
         var docsJob = ExtractBlock(workflow, "  docs:", "  ");
         docsJob.Should().Contain("dotnet tool restore",

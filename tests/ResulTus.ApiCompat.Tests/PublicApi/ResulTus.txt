@@ -49,6 +49,10 @@ M: ResulTus.Result.Try(Func<T> action) -> Result<T>
 M: ResulTus.Result.Try(Func<T> action, System.Func<System.Exception, ResulTus.Error> map) -> Result<T>
 M: ResulTus.Result.Try(System.Action action) -> ResulTus.Result
 M: ResulTus.Result.Try(System.Action action, System.Func<System.Exception, ResulTus.Error> map) -> ResulTus.Result
+M: ResulTus.Result.TryAsync(Func<System.Threading.CancellationToken, Task<T>> action, System.Threading.CancellationToken cancellationToken) -> Task<Result<T>>
+M: ResulTus.Result.TryAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> action, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<ResulTus.Result>
+M: ResulTus.Result.TryValueTaskAsync(Func<System.Threading.CancellationToken, ValueTask<T>> action, System.Threading.CancellationToken cancellationToken) -> ValueTask<Result<T>>
+M: ResulTus.Result.TryValueTaskAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> action, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<ResulTus.Result>
 M: ResulTus.Result.ToString() -> System.String
 O: ResulTus.Result.op_Inequality(ResulTus.Result left, ResulTus.Result right) -> System.Boolean
 O: ResulTus.Result.op_Equality(ResulTus.Result left, ResulTus.Result right) -> System.Boolean

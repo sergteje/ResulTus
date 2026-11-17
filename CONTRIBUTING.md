@@ -8,18 +8,22 @@ and [`README.md`](README.md) first will make every other rule below obvious.
 
 - **.NET SDK 11** (`global.json` pins 11.0.x with `rollForward: latestFeature`) — it compiles
   every target framework the libraries multi-target.
-- **The .NET 10 runtime** — the test projects target `net10.0`, and an SDK 11 installation does
-  not provide that runtime. Installing the .NET 10 SDK alongside 11 (what CI does) covers it.
+- **The .NET 8, 9 and 10 runtimes** — every test project multi-targets
+  `net8.0;net9.0;net10.0;net11.0`, so a missing runtime turns a supported-framework guarantee
+  into an untested claim. Installing the .NET 8, 9 and 10 SDKs alongside 11 (what CI does) covers
+  it, and it is also what provides the apphost pack the xUnit v3 test projects need to build.
 
 ## Build and test
 
 ```bash
-dotnet build ResulTus.slnx
-dotnet test  ResulTus.slnx
+dotnet build ResulTus.slnx -c Release
+dotnet test  ResulTus.slnx -c Release
 ```
 
-Warnings are errors and every public member requires XML documentation, so a green build means
-0 warnings and 0 errors. Never run the benchmark project as part of a normal build or test; it
+Release is the configuration CI uses, and the one these commands must name: three allocation audits
+in `ResulTus.Extensions.Tests` measure the async pipeline and only hold there. Warnings are errors and
+every public member requires XML documentation, so a green build means 0 warnings and 0 errors.
+Never run the benchmark project as part of a normal build or test; it
 compiles through the solution and executes only when explicitly asked.
 
 ## Ground rules that decide how code is written here
@@ -73,9 +77,12 @@ generator are excluded by design: Roslyn projects earn coverage in their own con
   specifications in `odd/specs/`.
 - `CHANGELOG.md` records every released version in Keep a Changelog form; a change that ships
   updates it in the same commit.
-- **Every code block in a document must compile.** Extract the blocks and build them against the
-  real source projects in a throwaway project; a snippet that does not build is a documentation
-  defect.
+- **Every code block in a document must compile.** `scripts/SnippetGate` enforces it: it compiles
+  every C# fence of `README.md`, `README.es.md`, `docs/**/*.md` and `src/*/README.md` against the
+  real source projects, and the CI build fails on a snippet that no longer builds.
+  `dotnet run --project scripts/SnippetGate` reproduces it locally. A fragment is not a program, so
+  the few symbols a document shares between fences come from `scripts/SnippetGate/Stubs/`; a block
+  that is pseudo-code belongs in a `text` fence, never in a C# one.
 - The API reference site is built by DocFX (`docs/docfx.json`) on every push — the CI `docs` job
   is the proof that it builds without errors.
 

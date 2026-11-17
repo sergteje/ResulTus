@@ -2,18 +2,20 @@
 
 ResulTus is a high-performance `Result` library for .NET. Success and failure are one inline
 `readonly record struct`: zero heap allocation on the success path **and** on the failure path.
-Libraries target `net8.0`, `net9.0`, `net10.0` and `net11.0`; test projects target `net10.0` and
-`net11.0` (the coverage gate measures on `net10.0`); the analyzers and the source generator target
-`netstandard2.0`.
+Libraries target `net8.0`, `net9.0`, `net10.0` and `net11.0`; test projects target the same four
+frameworks (the coverage gate measures on `net10.0` only); the analyzers and the source generator
+target `netstandard2.0`.
 
 ## Build and test
 
 ```bash
-dotnet build ResulTus.slnx
-dotnet test ResulTus.slnx
+dotnet build ResulTus.slnx -c Release
+dotnet test ResulTus.slnx -c Release
 ```
 
-Warnings are errors and every public member requires XML documentation, so a "green" build means
+Release is the configuration CI uses: three allocation audits in `ResulTus.Extensions.Tests` only
+hold there, so a Debug run reports them as failures. Warnings are errors and every public member
+requires XML documentation, so a "green" build means
 0 warnings and 0 errors. Never run the benchmark project as part of a normal build or test; it
 compiles through the solution and executes only when explicitly asked.
 
@@ -72,8 +74,10 @@ numbers instead; do not mix the two.
 - **No opinionated layers without a real use.** Retry policies, circuit breakers and similar
   stateful machinery stay out until the owner names a repeated real use. `Recover` already covers
   fallback.
-- **Never claim Native AOT or trimming support without observed proof.** The `JsonTypeInfo<T>`
-  overload is the AOT-safe route; that is a design claim, not a published publish-and-run result.
+- **AOT and trimming are proven by CI, not by prose.** The `aot-smoke` job publishes and runs a
+  trimmed sample and a Native AOT sample on Windows, and `aot-smoke-linux` publishes and runs a
+  Native AOT sample on Linux. The `JsonTypeInfo<T>` overload remains the AOT-safe serialization
+  route. Never claim support the workflows do not exercise.
 
 ## Tests
 
@@ -92,9 +96,13 @@ released version in Keep a Changelog form; a change that ships updates it in the
 Generated technical artifacts — code, comments, docs, commit messages — are English; conversation
 follows the owner's language.
 
-**Every code block in a document must compile.** Extract the blocks and build them against the
-real source projects in a throwaway project outside the repository; a snippet that does not build
-is a documentation defect, not an exception.
+**Every code block in a document must compile.** `scripts/SnippetGate` enforces it: it compiles every
+```csharp fence of `README.md`, `README.es.md`, `docs/**/*.md` and `src/*/README.md` against the real
+source projects, and the CI build fails on a snippet that no longer builds. Run
+`dotnet run --project scripts/SnippetGate` before pushing a documentation change. A fragment is not
+a program, so the few symbols a document shares between fences come from
+`scripts/SnippetGate/Stubs/`; a block that is pseudo-code belongs in a ```text fence, never in a
+C# one.
 
 ## Benchmarks
 

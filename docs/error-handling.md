@@ -93,6 +93,28 @@ Result<int> failed = Result.Try(() => int.Parse("nope"));  // failure, Error.Fro
 `Result.Try` also takes an overload with a `Func<Exception, Error>` mapping function so the
 captured error is yours, not the library's default.
 
+An asynchronous call has no synchronous block to wrap. `Result.TryAsync` covers `Task`-returning
+work and `Result.TryValueTaskAsync` covers `ValueTask`-returning work; both receive the
+cancellation token the delegate is given, check it before the delegate starts, capture a
+non-cancellation exception exactly as `Try` does, and rethrow `OperationCanceledException`.
+
+```csharp
+Result<int> loaded = await Result.TryAsync(
+    async _ =>
+    {
+        await Task.Yield();
+        return 42;
+    },
+    CancellationToken.None);
+
+Result<int> captured = await Result.TryValueTaskAsync<int>(
+    _ => throw new TimeoutException("slow"),
+    CancellationToken.None);
+```
+
+Neither helper replaces `try/catch` around code you cannot change: they exist so an asynchronous
+boundary keeps returning a `Result` instead of letting an exception escape it.
+
 ## Error factories via the source generator
 
 Writing `Error.NotFound("USER_NOT_FOUND", ...)` at every call site repeats the code and the

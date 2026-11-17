@@ -313,4 +313,22 @@ public class FluentValidationTests
 
         act.Should().Throw<ArgumentNullException>();
     }
+
+    /// <summary>
+    /// GIVEN a <c>null</c> instance
+    /// WHEN it is validated asynchronously
+    /// THEN it MUST throw <see cref="ArgumentNullException"/> before any rule runs, so the async
+    /// and sync overloads reject the same input.
+    /// </summary>
+    [Fact]
+    public async Task NullInstance_ValidateAsync_ShouldThrow()
+    {
+        Customer? customer = null;
+        var validator = new AsyncCustomerValidator();
+
+        var act = () => customer!.ValidateAsync(validator, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentNullException>();
+        validator.ObservedToken.Should().BeNull();
+    }
 }

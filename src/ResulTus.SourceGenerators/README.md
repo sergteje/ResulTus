@@ -30,6 +30,10 @@ This package declares no package dependency of its own, and `ResulTus` does not 
 it explicitly. Its reference to the Roslyn API (`Microsoft.CodeAnalysis.CSharp`) is private and
 never enters your package graph.
 
+The generator is built against Roslyn 4.14.0, which is also its minimum: a compiler older than 4.14
+does not load the assembly, so no source is generated. Use an SDK or Visual Studio that ships Roslyn
+4.14 or later.
+
 ## What you get
 
 `ErrorFactoryGenerator` and one diagnostic, `RESULTGEN001` (Error), reported when a

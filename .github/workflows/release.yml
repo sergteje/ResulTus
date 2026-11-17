@@ -12,6 +12,8 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
+  attestations: write
 
 env:
   ARTIFACTS: packaging
@@ -58,6 +60,46 @@ jobs:
           done
           [ "$mismatch" -eq 0 ] || exit 1
 
+      # The notes are extracted and validated BEFORE anything leaves the runner. A missing or
+      # whitespace-only changelog section must stop the release, not publish thirteen packages and
+      # then fail to create the release object they belong to.
+      #
+      # The heading carries a date (`## [1.2.0] - 2026-11-17`), so the section is matched by prefix,
+      # not by equality: an equality match silently produced an empty notes file. `-s` alone is not
+      # enough either, because a heading followed by a blank line still writes one newline.
+      - name: Extract release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          awk -v section="## [$VERSION]" 'found { if ($0 ~ /^## /) exit; print } index($0, section) == 1 { found = 1 }' CHANGELOG.md > "$NOTES"
+          if ! grep -q '[^[:space:]]' "$NOTES"; then
+            echo "::error::no changelog section '## [$VERSION]' produced release notes; nothing was published"
+            exit 1
+          fi
+          echo "NOTES_FILE=$NOTES" >> "$GITHUB_ENV"
+
+      # Signed provenance for the exact bytes this job produced, so the artifact set has an
+      # immutable record of which workflow and commit built it. Free on a public repository; it
+      # needs the id-token and attestations permissions above.
+      #
+      # What it does NOT prove: nuget.org adds its own repository signature to the package it
+      # serves, so the downloaded .nupkg is not byte-identical to the one attested here and cannot
+      # be verified against this attestation. The attestation binds the build artifact for incident
+      # response and audit; it is not a consumer-facing verification path. That path only exists
+      # with author signing, which the project does not have.
+      #
+      # `dotnet nuget verify` is deliberately absent: it answers NU3004 "the package is not signed"
+      # for every artifact this workflow produces, because the project ships without author signing
+      # (a paid certificate, out of scope). The package-content gate before publishing is
+      # EnablePackageValidation in Directory.Build.props, which fails `dotnet pack` when the packed
+      # surface breaks the released baseline.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            ${{ env.ARTIFACTS }}/*.nupkg
+            ${{ env.ARTIFACTS }}/*.snupkg
+
       - name: Push packages and symbols to nuget.org
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
@@ -81,16 +123,14 @@ jobs:
           dotnet nuget push "${{ env.ARTIFACTS }}/*.nupkg" --source github --skip-duplicate
 
       # Tag and release are the same covenant: pushing a v* tag publishes the packages AND
-      # creates the Release object with the notes taken verbatim from that version's changelog
-      # section — no release object can exist without the tag it belongs to.
+      # creates the Release object with the notes extracted above — no release object can exist
+      # without the tag it belongs to, and no package is published without validated notes.
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          NOTES=$(mktemp)
-          awk -v section="## [$VERSION]" 'found { if ($0 ~ /^## /) exit; print } $0 == section { found = 1 }' CHANGELOG.md > "$NOTES"
           gh release create "$GITHUB_REF_NAME" \
             --title "ResulTus $VERSION" \
-            --notes-file "$NOTES" \
+            --notes-file "$NOTES_FILE" \
             --latest

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/sergteje/ResulTus/security/advisories/new
+    about: Report a vulnerability privately instead of opening a public issue.
+  - name: Documentation
+    url: https://github.com/sergteje/ResulTus/tree/main/docs
+    about: Guides for the error model, the value tiers and every package.

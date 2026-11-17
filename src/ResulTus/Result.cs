@@ -3,6 +3,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ResulTus;
 
@@ -70,9 +72,15 @@ public readonly record struct Result
     /// <param name="onSuccess">Function invoked when the result is successful.</param>
     /// <param name="onFailure">Function invoked when the result is a failure, receiving the <see cref="Error"/>.</param>
     /// <returns>The value returned by the invoked function.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Match<TResult>(Func<TResult> onSuccess, Func<Error, TResult> onFailure)
-        => _isSuccess == 1 ? onSuccess() : onFailure(_error);
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        return _isSuccess == 1 ? onSuccess() : onFailure(_error);
+    }
 
     /// <summary>
     /// Deconstructs the result into its components.
@@ -219,6 +227,174 @@ public readonly record struct Result
         catch (Exception exception)
         {
             return Failure(map(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs an asynchronous value-producing delegate and captures a non-cancellation exception as a
+    /// failed result.
+    /// </summary>
+    /// <typeparam name="T">The type of the value produced by <paramref name="action"/>.</typeparam>
+    /// <param name="action">The asynchronous delegate to run. It receives <paramref name="cancellationToken"/>.</param>
+    /// <param name="cancellationToken">Token checked before the delegate runs and passed to it.</param>
+    /// <returns>
+    /// A success holding the produced value, or a failure holding
+    /// <see cref="Error.FromException"/> of the thrown exception.
+    /// </returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of captured,
+    /// so cancellation keeps its normal control flow across the asynchronous boundary too. No stack
+    /// trace is captured.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was already cancelled, or the delegate threw a cancellation
+    /// exception.
+    /// </exception>
+    public static async Task<Result<T>> TryAsync<T>(
+        Func<CancellationToken, Task<T>> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            return Result<T>.Success(await action(cancellationToken).ConfigureAwait(false));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Result<T>.Failure(Error.FromException(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs an asynchronous unit delegate and captures a non-cancellation exception as a failed
+    /// result.
+    /// </summary>
+    /// <param name="action">The asynchronous delegate to run. It receives <paramref name="cancellationToken"/>.</param>
+    /// <param name="cancellationToken">Token checked before the delegate runs and passed to it.</param>
+    /// <returns>
+    /// A successful unit result, or a failure holding <see cref="Error.FromException"/> of the thrown
+    /// exception.
+    /// </returns>
+    /// <remarks>
+    /// <see cref="OperationCanceledException"/> and its derived types are rethrown instead of captured,
+    /// so cancellation keeps its normal control flow across the asynchronous boundary too. No stack
+    /// trace is captured.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was already cancelled, or the delegate threw a cancellation
+    /// exception.
+    /// </exception>
+    public static async Task<Result> TryAsync(
+        Func<CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            await action(cancellationToken).ConfigureAwait(false);
+            return Success();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Failure(Error.FromException(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs a <see cref="ValueTask{TResult}"/>-returning delegate and captures a non-cancellation
+    /// exception as a failed result.
+    /// </summary>
+    /// <typeparam name="T">The type of the value produced by <paramref name="action"/>.</typeparam>
+    /// <param name="action">The asynchronous delegate to run. It receives <paramref name="cancellationToken"/>.</param>
+    /// <param name="cancellationToken">Token checked before the delegate runs and passed to it.</param>
+    /// <returns>
+    /// A success holding the produced value, or a failure holding
+    /// <see cref="Error.FromException"/> of the thrown exception.
+    /// </returns>
+    /// <remarks>
+    /// This is the allocation-free counterpart of
+    /// <see cref="TryAsync{T}(Func{CancellationToken, Task{T}}, CancellationToken)"/>: use it when the
+    /// delegate usually completes synchronously. Cancellation is rethrown exactly as in the task tier.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was already cancelled, or the delegate threw a cancellation
+    /// exception.
+    /// </exception>
+    public static async ValueTask<Result<T>> TryValueTaskAsync<T>(
+        Func<CancellationToken, ValueTask<T>> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            return Result<T>.Success(await action(cancellationToken).ConfigureAwait(false));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Result<T>.Failure(Error.FromException(exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs a unit <see cref="ValueTask"/>-returning delegate and captures a non-cancellation
+    /// exception as a failed result.
+    /// </summary>
+    /// <param name="action">The asynchronous delegate to run. It receives <paramref name="cancellationToken"/>.</param>
+    /// <param name="cancellationToken">Token checked before the delegate runs and passed to it.</param>
+    /// <returns>
+    /// A successful unit result, or a failure holding <see cref="Error.FromException"/> of the thrown
+    /// exception.
+    /// </returns>
+    /// <remarks>
+    /// This is the allocation-free counterpart of
+    /// <see cref="TryAsync(Func{CancellationToken, Task}, CancellationToken)"/>. Cancellation is
+    /// rethrown exactly as in the task tier.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> is <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was already cancelled, or the delegate threw a cancellation
+    /// exception.
+    /// </exception>
+    public static async ValueTask<Result> TryValueTaskAsync(
+        Func<CancellationToken, ValueTask> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            await action(cancellationToken).ConfigureAwait(false);
+            return Success();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Failure(Error.FromException(exception));
         }
     }
 }

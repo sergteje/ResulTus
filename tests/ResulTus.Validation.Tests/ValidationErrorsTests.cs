@@ -151,16 +151,23 @@ public class ValidationErrorsTests
     }
 
     /// <summary>
-    /// GIVEN a <c>null</c> issue collection
-    /// WHEN <see cref="ValidationErrors"/> is constructed
-    /// THEN it MUST throw <see cref="ArgumentNullException"/>.
+    /// GIVEN a <see cref="ValidationErrors"/> built from a mutable list
+    /// WHEN the source list is mutated after construction
+    /// THEN the issues MUST NOT change, because a validation failure is immutable evidence.
     /// </summary>
     [Fact]
-    public void Constructor_WithNull_ShouldThrow()
+    public void Constructor_ShouldSnapshotTheSourceCollection()
     {
-        var act = () => new ValidationErrors(null!);
+        var source = new List<ValidationIssue> { new("Name", "required") };
 
-        act.Should().Throw<ArgumentNullException>();
+        var errors = new ValidationErrors(source);
+
+        source.Add(new ValidationIssue("Age", "too young"));
+        source[0] = new ValidationIssue("Name", "replaced");
+
+        errors.HasErrors.Should().BeTrue();
+        errors.Issues.Should().ContainSingle();
+        errors.Issues[0].Message.Should().Be("required");
     }
 }
 

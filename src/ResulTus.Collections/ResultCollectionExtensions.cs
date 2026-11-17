@@ -205,12 +205,15 @@ public static class ResultCollectionExtensions
         var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
         var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
         var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
-        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        Error[]? failureBuffer = null;
         var successCount = 0;
         var failureCount = 0;
 
         try
         {
+            // Rented inside the guarded region so a failure here still returns successBuffer.
+            failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+
             foreach (var result in results)
             {
                 if (result.TryGetValue(out var value, out var error))
@@ -242,7 +245,10 @@ public static class ResultCollectionExtensions
         finally
         {
             ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
-            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            if (failureBuffer is not null)
+            {
+                ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            }
         }
     }
 
@@ -641,12 +647,15 @@ public static class ResultCollectionExtensions
         var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
         var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
         var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
-        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        Error[]? failureBuffer = null;
         var successCount = 0;
         var failureCount = 0;
 
         try
         {
+            // Rented inside the guarded region so a failure here still returns successBuffer.
+            failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+
             for (var index = 0; index < results.Length; index++)
             {
                 if (results[index].TryGetValue(out var value, out var error))
@@ -678,7 +687,10 @@ public static class ResultCollectionExtensions
         finally
         {
             ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
-            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            if (failureBuffer is not null)
+            {
+                ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            }
         }
     }
 
@@ -696,12 +708,15 @@ public static class ResultCollectionExtensions
         var clearOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
         var clearErrorsOnReturn = RuntimeHelpers.IsReferenceOrContainsReferences<Error>();
         var successBuffer = ArrayPool<T>.Shared.Rent(InitialCapacity(results));
-        var failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+        Error[]? failureBuffer = null;
         var successCount = 0;
         var failureCount = 0;
 
         try
         {
+            // Rented inside the guarded region so a failure here still returns successBuffer.
+            failureBuffer = ArrayPool<Error>.Shared.Rent(InitialCapacity(results));
+
             for (var index = 0; index < results.Count; index++)
             {
                 if (results[index].TryGetValue(out var value, out var error))
@@ -733,7 +748,10 @@ public static class ResultCollectionExtensions
         finally
         {
             ArrayPool<T>.Shared.Return(successBuffer, clearOnReturn);
-            ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            if (failureBuffer is not null)
+            {
+                ArrayPool<Error>.Shared.Return(failureBuffer, clearErrorsOnReturn);
+            }
         }
     }
 

@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
 defines it, means the public API may still change between minor releases.
 
+## [1.2.0] - 2026-11-17
+
+### Added
+
+- **`Result.TryAsync` and `Result.TryValueTaskAsync`** capture a non-cancellation exception from an
+  asynchronous delegate as a failure and rethrow `OperationCanceledException`, so an asynchronous
+  boundary keeps returning a `Result` without losing the rule that cancellation is control flow.
+  They mirror the synchronous `Try` overloads for `Task` and `ValueTask` sources.
+
+### Fixed
+
+- **`Partition` no longer leaks a pooled buffer** when the second `ArrayPool` rent throws: the
+  failure buffer is now rented inside the guarded region and returned only when it was rented.
+- **`ValidationErrors` copies its issues on construction**, so mutating the source list after the
+  failure exists cannot change it.
+- **`Match` throws `ArgumentNullException`** for a `null` callback on all three overloads, instead
+  of a branch-dependent `NullReferenceException`.
+
 ## [1.1.1] - 2026-11-12
 
 ### Changed
@@ -227,7 +245,10 @@ First versioned release. Thirteen packages, one result type shared by all of the
 - Benchmarks are reproducible through `tests/ResulTus.Benchmarks/`; every recorded number and its
   measurement stamp live in [`docs/performance.md`](docs/performance.md).
 
-[Unreleased]: https://github.com/sergteje/ResulTus/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/sergteje/ResulTus/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/sergteje/ResulTus/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/sergteje/ResulTus/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/sergteje/ResulTus/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sergteje/ResulTus/releases/tag/v1.0.0
 [0.0.3]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.3
 [0.0.2]: https://github.com/sergteje/ResulTus/releases/tag/v0.0.2
