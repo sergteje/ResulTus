@@ -21,7 +21,7 @@ Risk: item 5 (delivery/release). The version string reaches consumers through th
 | T1 | S1 | inline | done | see L2 |
 | T2 | S2 | inline | done | see L2 |
 | T3 | S3 | owner | done | [PR #1](https://github.com/sergteje/ResulTus/pull/1), see L4 |
-| T4 | S4 | owner | pending | tag + GitHub release done; NuGet publish deferred by owner — see L6 |
+| T4 | S4 | owner | dropped | tag + GitHub release done; the NuGet push for 0.0.1 was deferred by the owner and never ran — 0.0.2 is the first published version. See L6 and L7 |
 | T5 | S5 | inline | done | see L3 |
 
 ## Log
@@ -118,3 +118,7 @@ The correction sequence mattered and is recorded: the first claim of a completed
 - T4 does not close-blocked: the tag and GitHub release are done, and the one unpublished artifact is the NuGet push, which moves to the 0.0.x flow as its first publish — with the release.yml pipeline already live, the *next* `v*` tag publishes automatically, so 0.0.2 may never need a hand run.
 - The deferred first-publish rule still holds in spirit: 0.0.1 remains unpublished, so delaying costs nothing and the version stays unused for whenever the owner chooses it.
 - `odd/tasks/phase-11-ci-cd.md` T1 (CI) and T2 (release workflow) are done; the empty-indexer claim in L5 stands corrected only by this entry.
+
+### L7 — T4 closed as dropped (2026-11-17)
+
+Nothing new was published or attempted. The status row said `pending`, which implied a queue that the owner had already emptied: the 0.0.1 push was deferred in L6 and never ran, and `0.0.2` is the version that first reached nuget.org (see `odd/tasks/release-0.0.2.md` L2). The row now says `dropped` so a reader does not look for work that no longer exists. The log history above is untouched: L6 records what the owner decided at the time, and that record stands.

@@ -24,10 +24,10 @@ Every audit claim below was re-verified against the repository before being acce
 | T1 | S1 | inline | done | [run 42653755212](https://github.com/sergteje/ResulTus/actions/runs/42653755212), see L2 |
 | T2 | S2, S3 | inline | done | see L2 |
 | T3 | S4 | inline | done | see L3 |
-| T4 | S5 | inline | pending | — |
+| T4 | S5 | inline | done | b7db1a7 |
 | T5 | S6, S7 | inline | done | see L3 |
-| T6 | S8 | owner | pending | decision criteria, no build |
-| T7 | S9 | owner | pending | backlog for 1.0 |
+| T6 | S8 | owner | pending | decision criteria recorded in S8; multi-targeting has since shipped for every library, so the study is moot — owner may close |
+| T7 | S9 | inline | done | `tests/ResulTus.ApiCompat.Tests` (see `odd/tasks/api-compat.md`) |
 
 ## Log
 
@@ -64,7 +64,7 @@ The audit's one blocking factual error — "no CI yet" — was caused by reading
 - *"Que los delegates nulos tengan comportamiento coherente"* — value tier was covered (`AsyncMethods_WithNullArguments_ShouldThrow`); the unit tier's async battery **did not exist** and now does: `CrossTierSemanticsTests.Unit_AsyncMethods_WithNullDelegatesShouldThrow`, one assertion per operator per source type.
 - *"Que no existan conversiones implícitas con resultados anidados"* — **not a test gap**: the overlay analyzer is named exactly for this — `RESULT005` (`NestedResultAnalyzer`, `src/ResulTus.Analyzers/NestedResultAnalyzer.cs:40`), with analyzer tests in `tests/ResulTus.Analyzers.Tests/`. Named; verified.
 
-**Gaps that are REAL API facts, not test work (owner decision required — not implemented):
+**Gaps that are REAL API facts, not test work (owner decision required at the time; resolved later in `odd/tasks/async-parity.md`):**
 
 ### L4 — T5 executed: the false-positive battery and the Gen0 columns (2026-11-10)
 
@@ -98,3 +98,22 @@ The CI `aot-smoke` job publishes the app twice on `windows-latest` and executes 
 Observed: CI run **`42653755212`** — `build-and-test: success`, `aot-smoke: success`. `CHANGELOG.md` records the proof with the run id; README and any public claim of AOT support still wait for a deliberate wording decision by the owner, in line with the repo rule that no support claim ships without observed proof — now there *is* observed proof, but the claim itself is the owner's wording to choose.
 
 Commit: `426d7c4`.
+
+### Closeout — the two stale rows (2026-11-17)
+
+Verified against the repository, not against the task table:
+
+- **T4 (S5) is done, commit `b7db1a7`** — `src/ResulTus.SourceGenerators/ErrorFactoryGenerator.cs`
+  no longer calls `Collect()`: the pipeline is anchored on `ForAttributeWithMetadataName`, every
+  `[ErrorFactory]` candidate flows on its own into the report and emit steps, and
+  `FactoryCandidate` compares by content so an edit to one declaration re-runs only that candidate.
+  The behaviour is pinned by `IncrementalCachingContractTests`, and `CHANGELOG.md` records it as
+  *Incremental source generator pipeline*.
+- **T7 (S9) is done** — the public-surface contract test shipped as
+  `tests/ResulTus.ApiCompat.Tests`: `ApiCompatTests.cs` diffs 11 checked-in `PublicApi/*.txt`
+  snapshots, one per shipped assembly, and the project sits in `ResulTus.slnx` and is green in CI.
+  The decision record is `odd/tasks/api-compat.md` (T1–T4 done) with `odd/specs/versioning.md` as
+  the policy.
+- **T6 (S8) stays an owner decision** — it asked for study criteria, not a build, and those are
+  recorded in S8. Every library since multi-targets `net8.0;net9.0;net10.0;net11.0`, which answers
+  the question in practice; closing the row is the owner's call.

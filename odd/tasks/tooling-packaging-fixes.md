@@ -34,7 +34,7 @@ packed `.nupkg` in a scratch project outside the worktree.
 | --- | --- | --- | --- | --- |
 | T1 | S3, S4 (docs/httpclient.md fixes) | inline | done | — |
 | T2 | S1, S2 (analyzers + generator pack routing, consumer smoke) | inline | done | — |
-| T3 | S5 (CHANGELOG), suite, assess | inline | pending | — |
+| T3 | S5 (CHANGELOG), suite, assess | inline | done | 100b55d |
 
 ## Log
 
@@ -83,3 +83,13 @@ separate feature.
   the `[1.1.1]` CHANGELOG section is shared; both features land in the same unreleased release.
 - **Native assessment** of the slice 52ddbd5..c20e04d: risk `medium` (executable change:
   `ResulTus.Analyzers.csproj`), `review_due: false`, reason `under_budget`.
+
+### L4 — delivered in 1.1.1 (2026-11-12)
+
+- **Delivery**: pull request #9 (`fix/tooling-packaging` → `main`) merged as `8668941`; tag `v1.1.1`
+  points at that merge commit, so the analyzers/generator routing and the `docs/httpclient.md`
+  fixes ship with the released packages.
+- **Release**: `1.1.1` published to nuget.org (packages and symbols) and as the GitHub release
+  `ResulTus 1.1.1`, with notes taken verbatim from the `CHANGELOG` `[1.1.1]` section.
+- **Branches**: `fix/tooling-packaging` and `feat/package-readmes` deleted local and remote after
+  the merges; the worktree is clean on `main`.

@@ -108,7 +108,19 @@ the package alone does not activate the rules.
   `AsyncAllocationAuditTests` (Extensions) failures on net10 and net11. **Verified pre-existing**:
   they reproduce identically at baseline b25c9e5 in a clean worktree; this feature touches no
   source code. Reported to the owner as a base-only follow-up, not a defect of this change.
-- No publish, push or pull request was performed — those remain the owner's decisions.
+- At the time of this entry no publish, push or pull request had been performed — those remained
+  the owner's decisions (superseded by L5).
 - **Native assessment** of the slice b25c9e5..d54229d: risk `medium` (executable change:
   `Directory.Build.props`), `review_due: false`, reason `under_budget` — the review stays pending
   in the slice until a later commit reaches the budget.
+
+### L5 — delivered in 1.1.1 (2026-11-12)
+
+- **Delivery**: pull request #8 (`feat/package-readmes` → `main`) merged as `7483044`; tag `v1.1.1`
+  sits on `main` after the stacked `#9` merge (`8668941`), so all four tasks ship in the released
+  packages.
+- **Release**: `1.1.1` published to nuget.org (packages and symbols) and as the GitHub release
+  `ResulTus 1.1.1`; the 13 packages carry their per-package README and `icon.png` as verified in
+  L4.
+- **Branches**: `feat/package-readmes` and `fix/tooling-packaging` deleted local and remote after
+  the merges; the worktree is clean on `main`.
