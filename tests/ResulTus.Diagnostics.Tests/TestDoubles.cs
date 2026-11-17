@@ -1,6 +1,7 @@
 // Copyright (c) ResulTus. All rights reserved.
 
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace ResulTus.Diagnostics.Tests;
 
@@ -122,4 +123,119 @@ public sealed class ActivityCollector : IDisposable
 
     /// <inheritdoc />
     public void Dispose() => _listener.Dispose();
+}
+
+/// <summary>
+/// One published instrument, copied out at the moment the listener enabled it.
+/// </summary>
+/// <param name="Name">The instrument's name.</param>
+/// <param name="Unit">The unit the instrument reports in, when it declares one.</param>
+/// <param name="Description">The instrument's description, when it declares one.</param>
+public sealed record InstrumentSnapshot(string Name, string? Unit, string? Description);
+
+/// <summary>
+/// One measurement, copied out of the listener's span so assertions read stable values and can
+/// outlive the callback.
+/// </summary>
+/// <param name="InstrumentName">The name of the instrument that reported it.</param>
+/// <param name="Unit">The reporting instrument's unit, when it declares one.</param>
+/// <param name="Value">The measured value: the counter's delta or the histogram's sample.</param>
+/// <param name="Tags">The tags the measurement carried.</param>
+public sealed record MeasurementSnapshot(
+    string InstrumentName,
+    string? Unit,
+    object? Value,
+    IReadOnlyDictionary<string, object?> Tags);
+
+/// <summary>
+/// A <see cref="MeterListener"/> that records every instrument and measurement published by the
+/// library's meter. It is the only external observer the metrics tests use, so what they assert is
+/// what a real collector receives rather than what the library believes it sent.
+/// </summary>
+/// <remarks>
+/// A disposed collector stops recording: the .NET 8 runtime keeps delivering measurements to a
+/// disposed listener, and a double that kept collecting them would allocate inside whatever test
+/// ran next.
+/// </remarks>
+public sealed class MeterCollector : IDisposable
+{
+    private readonly MeterListener _listener;
+    private bool _disposed;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MeterCollector"/> class and registers it.
+    /// </summary>
+    public MeterCollector()
+    {
+        // The meters and their instruments are static, so they may not exist yet. Touching one
+        // before the listener starts means Start() discovers both, whichever test ran first.
+        _ = ResultMetrics.OutcomeCounter;
+
+        _listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, published) =>
+            {
+                if (!ReferenceEquals(instrument.Meter, ResultMetrics.Meter))
+                {
+                    return;
+                }
+
+                Instruments.Add(new InstrumentSnapshot(instrument.Name, instrument.Unit, instrument.Description));
+                published.EnableMeasurementEvents(instrument);
+            },
+        };
+
+        _listener.SetMeasurementEventCallback<long>(OnMeasurement);
+        _listener.SetMeasurementEventCallback<double>(OnMeasurement);
+        _listener.Start();
+    }
+
+    /// <summary>
+    /// Gets the instruments published by the library's meter, in publication order.
+    /// </summary>
+    public List<InstrumentSnapshot> Instruments { get; } = [];
+
+    /// <summary>
+    /// Gets every measurement received so far, in the order the library reported it.
+    /// </summary>
+    public List<MeasurementSnapshot> Measurements { get; } = [];
+
+    /// <summary>
+    /// Gets the measurements one instrument reported.
+    /// </summary>
+    /// <param name="instrumentName">The instrument's name.</param>
+    /// <returns>The matching measurements, in order.</returns>
+    public IReadOnlyList<MeasurementSnapshot> For(string instrumentName)
+        => Measurements.Where(measurement => measurement.InstrumentName == instrumentName).ToArray();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _disposed = true;
+        _listener.Dispose();
+    }
+
+    private void OnMeasurement<T>(
+        Instrument instrument,
+        T measurement,
+        ReadOnlySpan<KeyValuePair<string, object?>> tags,
+        object? state)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var copied = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var tag in tags)
+        {
+            copied[tag.Key] = tag.Value;
+        }
+
+        Measurements.Add(new MeasurementSnapshot(
+            instrument.Name,
+            instrument.Unit,
+            measurement,
+            copied));
+    }
 }

@@ -9,6 +9,18 @@ M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.Measure(System.Func<ResulTus
 M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.Measure(Func<Result<T>> operation, System.String operationName) -> TimedResult<T>
 M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.MeasureAsync(System.Func<System.Threading.Tasks.Task<ResulTus.Result>> operation, System.String operationName) -> System.Threading.Tasks.Task<ResulTus.Diagnostics.TimedUnitResult>
 M: ResulTus.Diagnostics.ResultDiagnosticsExtensions.MeasureAsync(Func<Task<Result<T>>> operation, System.String operationName) -> Task<TimedResult<T>>
+T: ResulTus.Diagnostics.ResultMetrics
+F: System.String ResulTus.Diagnostics.ResultMetrics.MeterName
+F: System.String ResulTus.Diagnostics.ResultMetrics.OutcomeCounterName
+F: System.String ResulTus.Diagnostics.ResultMetrics.DurationHistogramName
+F: System.String ResulTus.Diagnostics.ResultMetrics.OutcomeTagName
+F: System.String ResulTus.Diagnostics.ResultMetrics.ErrorTypeTagName
+F: System.String ResulTus.Diagnostics.ResultMetrics.SuccessOutcome
+F: System.String ResulTus.Diagnostics.ResultMetrics.FailureOutcome
+P: System.Diagnostics.Metrics.Meter ResulTus.Diagnostics.ResultMetrics.Meter { get; }
+P: System.Diagnostics.Metrics.Counter<System.Int64> ResulTus.Diagnostics.ResultMetrics.OutcomeCounter { get; }
+P: System.Diagnostics.Metrics.Histogram<System.Double> ResulTus.Diagnostics.ResultMetrics.DurationHistogram { get; }
+M: ResulTus.Diagnostics.ResultMetrics.Record(System.Boolean isSuccess, ResulTus.Error error, System.TimeSpan elapsed) -> System.Void
 T: ResulTus.Diagnostics.ResultOperationCompleted
 M: ResulTus.Diagnostics.ResultOperationCompleted.ctor(System.String OperationName, System.TimeSpan Elapsed, System.Boolean IsSuccess, ResulTus.ErrorType ErrorType, System.String ErrorCode)
 P: System.String ResulTus.Diagnostics.ResultOperationCompleted.OperationName { get; set; }

@@ -18,6 +18,15 @@ defines it, means the public API may still change between minor releases.
   Because the factory now claims `Result<TSuccess, TError>`, a consumer that registers its own
   converter for that type *after* calling `AddResulTusConverters()` gets the built-in one; register
   it before the call, or skip the extension, to keep a custom converter.
+- **`ResulTus.Diagnostics` reports metrics next to its traces.** `ResultMetrics` publishes a
+  `System.Diagnostics.Metrics` meter named `ResulTus`, versioned after the assembly, with an outcome
+  counter (`resul_tus.result.outcomes`, `{result}`) and a duration histogram
+  (`resul_tus.result.duration`, seconds). `Measure` and `MeasureAsync` record both instruments, and
+  `Record(bool isSuccess, Error error, TimeSpan elapsed)` is the same measurement for a result a
+  caller already holds. Tags are bounded by construction — `outcome` (`success` / `failure`) and, on
+  failure, `error_type` with the `ErrorType` name — and never carry the free-form `Error.Code`,
+  whose cardinality is unbounded; the tag sets are built once for the process, so a measurement
+  allocates nothing. Subscribe with `AddMeter("ResulTus")`.
 
 ## [1.2.0] - 2026-11-17
 

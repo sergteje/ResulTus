@@ -23,7 +23,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
 | T1 | S1 | delegated | done | this commit |
-| T2 | S2 | delegated | pending | - |
+| T2 | S2 | delegated | done | this commit |
 | T3 | S3 | inline | pending | - |
 | T4 | S4 | delegated | pending | - |
 | T5 | S5 | delegated | pending | - |
@@ -52,3 +52,12 @@ Option A was "one `1.3.0` release with the five items, five pull requests, one t
 Evidence: 98 of 98 serialization tests on net8.0, net10.0 and net11.0 (baseline 86), ApiCompat 11 of 11 with exactly five snapshot lines added to `ResulTus.Serialization.txt`, solution build 0 warnings and 0 errors, and the documentation snippet gate at 24 documents and 130 blocks (four new fences, all compiling). Malformed documents throw `JsonException` with the sibling's messages: a success without `value`, a failure without `error`, a missing `isSuccess`, and a null document each name what is wrong.
 
 One behaviour change is recorded rather than hidden: the factory now claims `Result<TSuccess, TError>`, so a consumer registering its own converter for that type after `AddResulTusConverters()` gets the built-in one. Registering before the call, or not calling the extension, keeps the custom converter.
+### L4 - T2: metrics next to the traces
+
+`ResulTus.Diagnostics` now publishes a `Meter` named `ResulTus` with two instruments: `resul_tus.result.outcomes` (`Counter<long>`) and `resul_tus.result.duration` (`Histogram<double>`, seconds per OpenTelemetry). `ResultMetrics.Record` is the public entry point, and the existing `Measure`/`MeasureAsync` path records both instruments from the same call that already produced the `Activity` and the `DiagnosticListener` event, so one call feeds spans, events and metrics.
+
+Tags are bounded by construction: `outcome` always, `error_type` on failure only. `Error.Code` is never a tag, and the test asserts it by using a distinctive code and checking that no measurement carries it. The tag sets are built once per process in a static table indexed by `ErrorType`, and the listener transcript shows one record per measurement with no per-call construction.
+
+Evidence: 37 of 37 diagnostics tests on net8.0, net10.0 and net11.0 (baseline 29), ApiCompat 11 of 11 with twelve snapshot lines added to `ResulTus.Diagnostics.txt`, build 0 warnings, snippet gate at 24 documents and 134 blocks (four new fences), and the existing `Activity` tests untouched, so the span tags and event payloads are unchanged.
+
+One runtime detail worth keeping: on .NET 8 a disposed `MeterListener` keeps receiving measurements and `Instrument.Enabled` stays true, so the test double stops recording on dispose instead of relying on the runtime. The library does not depend on `Enabled`; `Add` and `Record` are no-ops with no listener and allocate nothing, which the existing zero-allocation test still proves.

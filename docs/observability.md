@@ -2,8 +2,9 @@
 
 Two optional packages cover the "what happened" question without pulling a logging or tracing framework into the
 core. `ResulTus.Logging` writes a result through the standard `ILogger` as **named fields, not a rendered string**.
-`ResulTus.Diagnostics` instruments a result-producing operation with opt-in timing, `Activity` spans and
-`DiagnosticListener` events. Neither does anything unless the caller asks it to.
+`ResulTus.Diagnostics` instruments a result-producing operation with opt-in timing, `Activity` spans,
+`DiagnosticListener` events and `System.Diagnostics.Metrics` instruments. Neither does anything unless the caller
+asks it to.
 
 ## Structured logging — `ResulTus.Logging`
 
@@ -178,3 +179,85 @@ TimedResult<int> observed = measured.Measure("observed-fetch");
 An operation that throws is recorded as an `ErrorType.Unexpected` failure carrying the exception message, and the
 exception is rethrown. A span that reported success because the exception escaped the wrapper would be worse than
 no span at all, so the completed event and the activity status both report the failure before it propagates.
+
+### Metrics
+
+Every measured call also reports through a `System.Diagnostics.Metrics.Meter` named `ResulTus`, versioned after the
+assembly and exposed as `ResultMetrics.Meter`. The instruments ship with the framework, so nothing extra is
+referenced.
+
+| Instrument | Type | Unit | Tags |
+| --- | --- | --- | --- |
+| `resul_tus.result.outcomes` | `Counter<long>` | `{result}` | `outcome`, plus `error_type` on a failure |
+| `resul_tus.result.duration` | `Histogram<double>` | `s` | `outcome`, plus `error_type` on a failure |
+
+`outcome` is exactly `success` or `failure`, and `error_type` is the `ErrorType` name. Durations are recorded in
+seconds, the unit OpenTelemetry expects a duration histogram to use.
+
+**The tag set is bounded by construction.** Those two tags are the whole set, and both take their values from a
+closed list: two outcomes and the ten `ErrorType` names. The free-form `Error.Code` is deliberately not a tag,
+because it is chosen by the caller and a metric tagged with it creates one series per distinct code in every
+collector that keeps a series per attribute set — series that are never removed, so a handful of counters becomes
+an unbounded, permanent memory cost. Per-code detail stays in the spans, which are sampled rather than aggregated.
+
+Add the meter to an OpenTelemetry meter provider by name:
+
+```text
+builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter("ResulTus"));
+```
+
+A `MeterListener` reads the same measurements when no SDK is involved:
+
+```csharp
+using System;
+using System.Diagnostics.Metrics;
+using ResulTus;
+using ResulTus.Diagnostics;
+
+using var metricsListener = new MeterListener
+{
+    InstrumentPublished = (instrument, published) =>
+    {
+        if (instrument.Meter.Name == ResultMetrics.MeterName)
+        {
+            published.EnableMeasurementEvents(instrument);
+        }
+    },
+};
+
+metricsListener.SetMeasurementEventCallback<long>((instrument, value, tags, state) =>
+    Console.WriteLine($"counter {instrument.Name}: +{value} over {tags.Length} tag(s)"));
+
+metricsListener.SetMeasurementEventCallback<double>((instrument, value, tags, state) =>
+    Console.WriteLine($"histogram {instrument.Name}: {value}"));
+
+metricsListener.Start();
+
+Func<Result<int>> gauged = () => Result<int>.Failure(Error.NotFound("USER_404", "No user"));
+gauged.Measure("gauged-fetch");
+```
+
+That call reports `counter resul_tus.result.outcomes: +1 over 2 tag(s)` — the tags are `outcome=failure` and
+`error_type=NotFound`, never the code — followed by `histogram resul_tus.result.duration: <elapsed seconds>`.
+
+An instrument discards its measurements when no listener registered for it, so with no subscriber the metrics cost a
+listener check and no allocation, and the tag lists are built once for the process rather than once per measurement.
+
+`Measure` and `MeasureAsync` record both instruments for you. When the result already exists and only the timing is
+yours, `ResultMetrics.Record(bool isSuccess, Error error, TimeSpan elapsed)` makes the same measurement without an
+`Activity` or an event:
+
+```csharp
+using System;
+using System.Diagnostics;
+using ResulTus;
+using ResulTus.Diagnostics;
+
+var startedAt = Stopwatch.GetTimestamp();
+Result<int> reloaded = Result<int>.Success(7);
+var elapsed = Stopwatch.GetElapsedTime(startedAt);
+
+ResultMetrics.Record(reloaded.IsSuccess, default, elapsed);
+```
+
+Pass the error on a failure and `default` on a success, where there is no error to classify.
