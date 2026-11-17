@@ -22,7 +22,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 
 | ID | Spec | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1 | delegated | pending | - |
+| T1 | S1 | delegated | done | this commit |
 | T2 | S2 | delegated | pending | - |
 | T3 | S3 | inline | pending | - |
 | T4 | S4 | delegated | pending | - |
@@ -44,3 +44,11 @@ Option A was "one `1.3.0` release with the five items, five pull requests, one t
 ### L2 - state at start
 
 `main` is at `ec22396`, CI green, `1.2.0` published on nuget.org with its baseline in place. The five items come from the audit of the shipped surface: `ResulTus.Serialization` has no `Result<TSuccess,TError>` converter (`git grep "Result<TSuccess, TError>" src/ResulTus.Serialization` returns nothing), `ResulTus.Diagnostics` has zero `System.Diagnostics.Metrics` references, `ResulTus.AspNetCore` has no `IEndpointFilter`, `ResulTus.Collections` has zero `IAsyncEnumerable` references, and `ResulTus.Analyzers` stops at `RESULT006`.
+
+### L3 - T1: the typed tier serializes
+
+`ResulTus.Serialization` gained `ResultJsonConverter<TSuccess, TError>` and the factory now closes it for `Result<,>`, so `AddResulTusConverters()` covers the tier without a second call. The wire format is the sibling's verbatim (`isSuccess` plus `value` or `error`), the error goes through the converter registered for `TError`, and the `JsonTypeInfo` constructor gives Native AOT a path that never reflects over the payload.
+
+Evidence: 98 of 98 serialization tests on net8.0, net10.0 and net11.0 (baseline 86), ApiCompat 11 of 11 with exactly five snapshot lines added to `ResulTus.Serialization.txt`, solution build 0 warnings and 0 errors, and the documentation snippet gate at 24 documents and 130 blocks (four new fences, all compiling). Malformed documents throw `JsonException` with the sibling's messages: a success without `value`, a failure without `error`, a missing `isSuccess`, and a null document each name what is wrong.
+
+One behaviour change is recorded rather than hidden: the factory now claims `Result<TSuccess, TError>`, so a consumer registering its own converter for that type after `AddResulTusConverters()` gets the built-in one. Registering before the call, or not calling the extension, keeps the custom converter.

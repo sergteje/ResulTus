@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
 defines it, means the public API may still change between minor releases.
 
+## [Unreleased]
+
+### Added
+
+- **`ResulTus.Serialization` converts the typed tier `Result<TSuccess, TError>`** through the
+  existing `AddResulTusConverters()` call, with the same strict wire format as `Result<T>`
+  (`isSuccess` plus `value` or `error`) and the error written by the converter registered for
+  `TError`. The public `ResultJsonConverter<TSuccess, TError>` adds a `JsonTypeInfo<TSuccess>` /
+  `JsonTypeInfo<TError>` constructor, so a Native AOT application never reflects over the payload.
+  Because the factory now claims `Result<TSuccess, TError>`, a consumer that registers its own
+  converter for that type *after* calling `AddResulTusConverters()` gets the built-in one; register
+  it before the call, or skip the extension, to keep a custom converter.
+
 ## [1.2.0] - 2026-11-17
 
 ### Added

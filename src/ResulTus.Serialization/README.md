@@ -9,9 +9,9 @@
 </picture>
 
 This package adds `System.Text.Json` converters for the [ResulTus](https://github.com/sergteje/ResulTus)
-types that carry the shared `Error`: `Result<T>`, the unit `Result`, `Error` and `ErrorType`.
-The wire shape is a contract — it is always camelCase and never follows a configured naming policy.
-The typed tier `Result<TSuccess, TError>` is not covered; use a custom converter or map it to a DTO.
+result types: `Result<T>`, the typed tier `Result<TSuccess, TError>` and the unit `Result`, plus the
+`Error` and `ErrorType` values they carry. The wire shape is a contract — it is always camelCase and
+never follows a configured naming policy.
 
 ## Install
 
@@ -30,18 +30,22 @@ other package reference.
 | Type | Success | Failure |
 | --- | --- | --- |
 | `Result<T>` | `{"isSuccess":true,"value":<value>}` | `{"isSuccess":false,"error":{...}}` |
+| `Result<TSuccess, TError>` | `{"isSuccess":true,"value":<value>}` | `{"isSuccess":false,"error":<error>}` |
 | unit `Result` | `{"isSuccess":true}` | `{"isSuccess":false,"error":{...}}` |
 
 An `error` object is `{"code":...,"message":...,"type":...}`, with `message` omitted when it is
-`null`. `type` is the `ErrorType` enum name, so it survives reordering. `isFailure` is never
-written: it is derivable from `isSuccess`, and two fields that can disagree are a liability.
+`null`. `type` is the `ErrorType` enum name, so it survives reordering. On the typed tier `error` is
+whatever the registered converter for `TError` writes: with `TError` as `Error` it is the same error
+object, with `TError` as `string` it is a JSON string. `isFailure` is never written: it is derivable
+from `isSuccess`, and two fields that can disagree are a liability.
 
 ### Register the converters
 
-`AddResulTusConverters()` registers all four converters on a `JsonSerializerOptions` and returns the
-same instance. Call it once, before the options are first used — an options instance becomes
-read-only after its first serialization, and mutating it afterwards throws
-`InvalidOperationException`.
+`AddResulTusConverters()` registers every converter the package ships on a `JsonSerializerOptions`
+and returns the same instance. The result factory it adds covers both generic tiers — `Result<T>`
+and `Result<TSuccess, TError>` — so one call is enough for either. Call it once, before the options
+are first used — an options instance becomes read-only after its first serialization, and mutating
+it afterwards throws `InvalidOperationException`.
 
 ```csharp
 using System.Text.Json;
@@ -77,12 +81,44 @@ string savedJson = JsonSerializer.Serialize(Result.Success(), options);
 // {"isSuccess":true}
 ```
 
+### The typed tier
+
+`Result<TSuccess, TError>` is the tier `ResulTus.Validation` and `ResulTus.HttpClient` produce, and
+the one an API puts in a contract. Each payload goes through the converter registered for its own
+type, so a structured error keeps exactly the shape `Result<T>` uses:
+
+```csharp
+using System.Text.Json;
+using ResulTus;
+using ResulTus.Serialization;
+
+internal sealed record Order(int Id);
+
+var options = new JsonSerializerOptions().AddResulTusConverters();
+
+string successJson = JsonSerializer.Serialize(Result<Order, Error>.Success(new Order(42)), options);
+// {"isSuccess":true,"value":{"Id":42}}
+
+string failureJson = JsonSerializer.Serialize(
+    Result<Order, Error>.Failure(Error.NotFound("ORDER_MISSING", "No such order")), options);
+// {"isSuccess":false,"error":{"code":"ORDER_MISSING","message":"No such order","type":"NotFound"}}
+
+Result<Order, Error> back = JsonSerializer.Deserialize<Result<Order, Error>>(failureJson, options)!;
+```
+
+`TSuccess` and `TError` are independent. A plain string error needs no extra registration:
+`Result<int, string>.Failure("boom")` is `{"isSuccess":false,"error":"boom"}`, and a success carrying
+a `null` reference value is `{"isSuccess":true,"value":null}`. A default
+`Result<TSuccess, TError>` is a failure carrying `Error.None`, so it round-trips as
+`{"isSuccess":false,"error":{"code":"","type":"None"}}`.
+
 ### Reading is strict
 
 A success without a `value`, a failure without an `error`, or an object without `isSuccess` throws
-a `JsonException` naming the missing property. Unknown properties are skipped, and `ErrorType` names
-are matched case-insensitively — but a numeric token or an unknown name is rejected with a
-`JsonException` instead of degrading to a default value.
+a `JsonException` naming the missing property — for `Result<TSuccess, TError>` exactly as for
+`Result<T>`. Unknown properties are skipped, and `ErrorType` names are matched case-insensitively —
+but a numeric token or an unknown name is rejected with a `JsonException` instead of degrading to a
+default value.
 
 ### Trimmed and Native AOT applications
 
@@ -110,6 +146,32 @@ Construct the converter from the generated metadata with
 `Utf8JsonWriter` and read through a `Utf8JsonReader`, or add it to the context's options and hand
 the serializer a `JsonTypeInfo<T>` — `JsonSerializer.Serialize(carrier, context.ConsumerCarrier)`.
 Both routes emit the same JSON as the options route above.
+
+The typed tier has its own metadata-bound converter, because it has two generic arguments to
+resolve. `ResultJsonConverter<TSuccess, TError>` takes one `JsonTypeInfo<T>` per argument, so a
+Native AOT consumer never reflects over `TError` either:
+
+```csharp
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using ResulTus;
+using ResulTus.Serialization;
+
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(Error))]
+internal sealed partial class TypedAppJsonContext : JsonSerializerContext
+{
+}
+
+var metadataOptions = new JsonSerializerOptions();
+metadataOptions.Converters.Add(new ErrorJsonConverter());
+var typedContext = new TypedAppJsonContext(metadataOptions);
+var typedConverter = new ResultJsonConverter<int, Error>(typedContext.Int32, typedContext.Error);
+```
+
+The context's options must carry `ErrorJsonConverter` before the context is created: that is what
+makes the generated `Error` metadata write the package's error object instead of the type's public
+properties.
 
 The reflection-based `JsonSerializer.Serialize<TValue>(value, options)` overload is annotated
 `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`: even with the converters registered, a
