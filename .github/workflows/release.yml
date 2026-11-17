@@ -12,6 +12,8 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
+  attestations: write
 
 env:
   ARTIFACTS: packaging
@@ -57,6 +59,22 @@ jobs:
             esac
           done
           [ "$mismatch" -eq 0 ] || exit 1
+
+      # Signed provenance for the exact bytes that are about to be published, so a consumer can
+      # check that a package on nuget.org was built by this workflow from this commit. Free for a
+      # public repository, and it needs the id-token and attestations permissions above.
+      #
+      # `dotnet nuget verify` is deliberately absent: it answers NU3004 "the package is not signed"
+      # for every artifact this workflow produces, because the project ships without author signing
+      # (a paid certificate, out of scope). The package-content gate before publishing is
+      # EnablePackageValidation in Directory.Build.props, which fails `dotnet pack` when the packed
+      # surface breaks the released baseline.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            ${{ env.ARTIFACTS }}/*.nupkg
+            ${{ env.ARTIFACTS }}/*.snupkg
 
       - name: Push packages and symbols to nuget.org
         env:

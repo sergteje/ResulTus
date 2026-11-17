@@ -64,7 +64,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T14 | S14 | inline | done | this commit |
 | T15 | S15 | inline | pending | - |
 | T16 | S16 | inline | done | this commit |
-| T17 | S17 | inline | pending | - |
+| T17 | S17 | inline | done | this commit |
 | T18 | S18 | inline | done | this commit |
 | T19 | S19 | inline | done | this commit |
 
@@ -198,3 +198,19 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **What an owner would decide, not done here.** Enabling a branch ruleset on `main` (require the `build-and-test` status, forbid force pushes and deletion), turning on secret scanning with push protection, and requiring SHA pinning for third-party actions are all repository-settings mutations. Each needs an explicit go, so this task reports them and changes nothing.
 
 **Risk:** none of items 1-6. Read-only API queries and a documentation entry.
+
+### L12 - package validation, provenance and security scanning (T17)
+
+**T17 / S17 - a pack-time baseline, signed provenance and two free scanners.** `Directory.Build.props` turns on `EnablePackageValidation` with `PackageValidationBaselineVersion 1.1.1`, which is the existing package-validation baseline the audit asked for: `dotnet pack` now compares the packed surface against the last released package and fails on a break. `release.yml` attests build provenance for the exact nupkg and snupkg bytes before anything is pushed, with the `id-token` and `attestations` permissions it needs. Two new workflows cover the scanning gap: `codeql.yml` analyzes the C# surface on push, pull request and a weekly schedule, and `dependency-review.yml` fails a pull request that adds a high or critical advisory.
+
+**The baseline is not a no-op, and that was measured.** Packing at 1.1.1 against 1.1.1 passes; packing at a simulated 1.2.0 against 1.1.1 also passes, which is the add-only change this branch ships; and packing with a baseline of 9.9.9 fails with `NU1102`, proving the check engages instead of silently succeeding. The versioning spec records the rule that the baseline moves forward when a new minor or major ships.
+
+**`dotnet nuget verify` is deliberately absent.** Measured: `dotnet nuget verify` on the package this workflow produces answers `NU3004: the package is not signed`, because the project ships without author signing, which S17 puts out of scope. Adding the step would fail every release, so the release workflow documents why the pack-time package validation is the content gate instead. Signature verification becomes meaningful only if author signing is adopted.
+
+**CodeQL needs a manual build.** Autobuild runs one `dotnet build` with one SDK, which cannot compile a solution whose test projects multi-target net8.0-net11.0 and whose xUnit v3 projects need an app host per framework, so the workflow installs the same four SDKs as `build-and-test` and builds the solution itself.
+
+**Observed gap, owner's decision.** Secret scanning and push protection are disabled on the repository, and enabling them is a repository-settings change, recorded in T19 rather than performed.
+
+**Validation.** All five workflows were parsed with `YamlDotNet` in a scratch project outside the worktree; `release.yml` reads back ten steps and each new workflow one job. Action semantics themselves can only be proven by a real run, which happens on the next push and pull request.
+
+**Risk:** item 5 (delivery and release) - a new deploy-time gate and two new workflows. The library's public surface and behavior are untouched.

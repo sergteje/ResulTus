@@ -16,6 +16,19 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <!--
+    Package validation compares the packed surface against the last released package, so a removed
+    or re-signed public member fails `dotnet pack` before anything reaches nuget.org. It only runs
+    when a project is actually packed, which is why it can live here unconditionally.
+    Baseline rule: bump PackageValidationBaselineVersion when a new minor or major ships, so the
+    comparison always targets a version consumers actually have. Not a build-time check: `dotnet
+    build` never downloads the baseline.
+  -->
+  <PropertyGroup>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>1.1.1</PackageValidationBaselineVersion>
+  </PropertyGroup>
+
   <PropertyGroup>
     <Description>ResulTus — High-performance Result Pattern library for .NET</Description>
     <Version>1.1.1</Version>

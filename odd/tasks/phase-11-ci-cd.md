@@ -22,8 +22,10 @@ Scope carried over, item by item, with what is already true today:
 
 | Proposal item | State |
 | --- | --- |
-| `.github/workflows/ci.yml` | **exists** - build/test, coverage gate, AOT smoke on Windows and Linux, docs |
-| `.github/workflows/release.yml` | **exists** - packs and publishes on `v*` tags |
+| `.github/workflows/ci.yml` | **exists** - build/test, coverage gate in the same job, AOT smoke on Windows and Linux, docs |
+| `.github/workflows/release.yml` | **exists** - packs, attests provenance and publishes on `v*` tags |
+| `.github/workflows/codeql.yml` | **exists** - CodeQL analysis for the C# surface (2026-11-17) |
+| `.github/workflows/dependency-review.yml` | **exists** - blocks a pull request that adds a high-severity dependency advisory (2026-11-17) |
 | `tests/ResulTus.Benchmarks/` | **exists** - the proposal line is obsolete |
 | `README.md` | **exists**, canonical in two editions - obsolete |
 | `CONTRIBUTING.md` | **exists** |
