@@ -258,3 +258,9 @@ The owner settled the four open decisions in one message: "1 PR unico como 1.2.0
 **4 - the baseline bump is acknowledged.** It happens after `1.2.0` is published, as the versioning spec now states.
 
 **A release defect found while preparing the release.** `release.yml` extracted the notes with `$0 == "## [1.2.0]"`, an equality match against a heading that carries a date, so every release so far published empty notes. It now matches the section by prefix and fails the job when the section produces no text, so a release can no longer be created with no notes.
+
+### L16 - correction: CodeQL was already active, so no workflow was needed
+
+**Correction to L12.** The audit claim "the workflow inventory has no CodeQL" was literally true and still wrong: `GET /repos/{owner}/{repo}/code-scanning/default-setup` shows the repository has used GitHub's default setup for `actions` and `csharp` since 2026-11-09, with a weekly schedule and the default query suite. Adding `codeql.yml` duplicated that analysis, and the first pull request showed both suites running the same commit. The workflow was removed; the repository keeps the default setup, which also covers the workflow files that a C#-only workflow would miss. `dependency-review.yml` and the package validation/provenance work stand unchanged, so the scanning gap T17 named is closed by configuration that already existed.
+
+**Consequence for the roadmap.** T17 keeps its outcome (a pack-time baseline, provenance, dependency review, and code scanning active) with one fewer repository file, and the phase-11 scope table records CodeQL as active without a workflow. The lesson is recorded because it will recur: a repository-settings capability is not visible in the repository, so an audit of files alone cannot see it.
