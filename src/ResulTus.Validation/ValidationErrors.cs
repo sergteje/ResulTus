@@ -20,13 +20,17 @@ public sealed class ValidationErrors
     /// <summary>
     /// Initializes a new <see cref="ValidationErrors"/> holding the given issues.
     /// </summary>
-    /// <param name="issues">The issues to preserve, in order.</param>
+    /// <param name="issues">The issues to preserve, in order. The sequence is copied.</param>
     /// <exception cref="ArgumentNullException"><paramref name="issues"/> is <c>null</c>.</exception>
+    /// <remarks>
+    /// The issues are copied into this instance, so a caller that later mutates the source collection
+    /// cannot change a validation failure that was already built.
+    /// </remarks>
     public ValidationErrors(IReadOnlyList<ValidationIssue> issues)
     {
         ArgumentNullException.ThrowIfNull(issues);
 
-        Issues = issues;
+        Issues = [.. issues];
     }
 
     /// <summary>

@@ -70,9 +70,15 @@ public readonly record struct Result
     /// <param name="onSuccess">Function invoked when the result is successful.</param>
     /// <param name="onFailure">Function invoked when the result is a failure, receiving the <see cref="Error"/>.</param>
     /// <returns>The value returned by the invoked function.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="onSuccess"/> or <paramref name="onFailure"/> is <c>null</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TResult Match<TResult>(Func<TResult> onSuccess, Func<Error, TResult> onFailure)
-        => _isSuccess == 1 ? onSuccess() : onFailure(_error);
+    {
+        ArgumentNullException.ThrowIfNull(onSuccess);
+        ArgumentNullException.ThrowIfNull(onFailure);
+
+        return _isSuccess == 1 ? onSuccess() : onFailure(_error);
+    }
 
     /// <summary>
     /// Deconstructs the result into its components.
