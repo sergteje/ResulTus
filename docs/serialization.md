@@ -1,9 +1,8 @@
 # Serialization
 
-`ResulTus.Serialization` provides `System.Text.Json` converters for the result types that
-carry the shared `Error` — `Result<T>`, the unit `Result`, `Error` and `ErrorType` — with a
-fixed, strict wire format. The generic typed tier `Result<TSuccess, TError>` is not
-serialized by these converters; use a custom converter or map it to a DTO.
+`ResulTus.Serialization` provides `System.Text.Json` converters for the result types —
+`Result<T>`, the typed tier `Result<TSuccess, TError>` and the unit `Result` — plus the `Error`
+and `ErrorType` values they carry, with a fixed, strict wire format.
 
 The wire shape is a contract, so the converters emit a fixed camelCase shape and never follow
 a configured naming policy. `ErrorType` is written as its enum name (a self-describing string
@@ -24,11 +23,14 @@ using ResulTus.Serialization;
 | Type | Success | Failure |
 | --- | --- | --- |
 | `Result<T>` | `{"isSuccess":true,"value":<value>}` | `{"isSuccess":false,"error":{...}}` |
+| `Result<TSuccess, TError>` | `{"isSuccess":true,"value":<value>}` | `{"isSuccess":false,"error":<error>}` |
 | unit `Result` | `{"isSuccess":true}` | `{"isSuccess":false,"error":{...}}` |
 
 An `error` object is `{"code":...,"message":...,"type":...}`, with `message` omitted when it
 is `null`. `type` is the `ErrorType` enum name. `isFailure` is never written — it is
-derivable from `isSuccess`, and two fields that can disagree are a liability.
+derivable from `isSuccess`, and two fields that can disagree are a liability. On the typed
+tier the `error` is written by the converter registered for `TError`: with `Error` it is the
+same error object, with `string` it is a JSON string.
 
 Reading is strict: a success without a `value`, a failure without an `error`, or an object
 without `isSuccess` is a `JsonException` naming the missing property. Unknown properties are
@@ -36,7 +38,8 @@ skipped, and `ErrorType` names are matched case-insensitively.
 
 ## Ordinary applications: `AddResulTusConverters()`
 
-Register the four converters on a `JsonSerializerOptions` once, before its first use:
+Register the converters on a `JsonSerializerOptions` once, before its first use. The factory it
+adds covers both generic tiers, `Result<T>` and `Result<TSuccess, TError>`:
 
 ```csharp
 var options = new JsonSerializerOptions();
@@ -65,6 +68,36 @@ string savedJson = JsonSerializer.Serialize(Result.Success(), options);
 
 `AddResulTusConverters()` returns the same `options` instance for chaining, and mutating an
 options instance after its first serialization throws `InvalidOperationException`.
+
+## The typed tier
+
+`Result<TSuccess, TError>` is the tier `ResulTus.Validation` and `ResulTus.HttpClient` produce, and
+the one an API puts in a contract. No second registration call is needed: the factory registered by
+`AddResulTusConverters()` closes the converter over both type arguments. Each payload goes through
+the converter registered for its own type, so the success value and the error are never
+special-cased.
+
+```csharp
+internal sealed record Order(int Id);
+
+Result<Order, Error> success = Result<Order, Error>.Success(new Order(42));
+string successJson = JsonSerializer.Serialize(success, options);
+// {"isSuccess":true,"value":{"Id":42}}
+
+Result<Order, Error> failure = Result<Order, Error>.Failure(Error.NotFound("ORDER_MISSING"));
+string failureJson = JsonSerializer.Serialize(failure, options);
+// {"isSuccess":false,"error":{"code":"ORDER_MISSING","type":"NotFound"}}
+
+Result<Order, Error> back = JsonSerializer.Deserialize<Result<Order, Error>>(failureJson, options)!;
+```
+
+`TError` needs no special handling beyond the converter the options already have. A plain string
+error is `{"isSuccess":false,"error":"boom"}` for `Result<int, string>.Failure("boom")`, and a
+success carrying a `null` reference value is `{"isSuccess":true,"value":null}`.
+
+A default `Result<TSuccess, TError>` is a failure carrying `Error.None`, not a success hiding a
+`null` value, so it round-trips as `{"isSuccess":false,"error":{"code":"","type":"None"}}`. Reading
+is strict in exactly the way the section above describes.
 
 ## Trimmed and Native AOT applications
 
@@ -109,9 +142,32 @@ reader.Read();
 Result<int> back = converter.Read(ref reader, typeof(Result<int>), new JsonSerializerOptions());
 ```
 
-The factory that `AddResulTusConverters()` registers instantiates `ResultJsonConverter<T>`
-through its parameterless constructor, which resolves the payload converter from the options
-at each call — fine in ordinary applications, but not the Native AOT route.
+The factory that `AddResulTusConverters()` registers instantiates `ResultJsonConverter<T>` and
+`ResultJsonConverter<TSuccess, TError>` through their parameterless constructors, which resolve the
+payload converters from the options at each call — fine in ordinary applications, but not the Native
+AOT route.
+
+### The direct converter for the typed tier
+
+The typed tier has two generic arguments to resolve, so its converter takes one `JsonTypeInfo<T>`
+per argument: `ResultJsonConverter<TSuccess, TError>`. Neither the success payload nor `TError` is
+ever resolved through reflection.
+
+```csharp
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(Error))]
+internal sealed partial class TypedAppJsonContext : JsonSerializerContext;
+
+var typedOptions = new JsonSerializerOptions();
+typedOptions.Converters.Add(new ErrorJsonConverter());
+var typedContext = new TypedAppJsonContext(typedOptions);
+var typedConverter = new ResultJsonConverter<int, Error>(typedContext.Int32, typedContext.Error);
+```
+
+The context's options must carry `ErrorJsonConverter` before the context is created: that is what
+makes the generated `Error` metadata write the package's error object instead of the type's public
+properties. Without it the `error` object would use the generic property shape, which is not the
+wire contract. The converter then emits exactly the bytes the registered path emits.
 
 ### The source-generated carrier
 

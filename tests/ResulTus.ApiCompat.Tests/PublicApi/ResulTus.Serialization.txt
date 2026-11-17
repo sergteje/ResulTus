@@ -11,6 +11,11 @@ M: ResulTus.Serialization.ResultJsonConverter<T>.ctor()
 M: ResulTus.Serialization.ResultJsonConverter<T>.ctor(JsonTypeInfo<T> valueTypeInfo)
 M: ResulTus.Serialization.ResultJsonConverter<T>.Write(System.Text.Json.Utf8JsonWriter writer, Result<T> value, System.Text.Json.JsonSerializerOptions options) -> System.Void
 M: ResulTus.Serialization.ResultJsonConverter<T>.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> Result<T>
+T: ResulTus.Serialization.ResultJsonConverter<TSuccess, TError>
+M: ResulTus.Serialization.ResultJsonConverter<TSuccess, TError>.ctor()
+M: ResulTus.Serialization.ResultJsonConverter<TSuccess, TError>.ctor(JsonTypeInfo<TSuccess> successTypeInfo, JsonTypeInfo<TError> errorTypeInfo)
+M: ResulTus.Serialization.ResultJsonConverter<TSuccess, TError>.Write(System.Text.Json.Utf8JsonWriter writer, Result<TSuccess, TError> value, System.Text.Json.JsonSerializerOptions options) -> System.Void
+M: ResulTus.Serialization.ResultJsonConverter<TSuccess, TError>.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) -> Result<TSuccess, TError>
 T: ResulTus.Serialization.ResultJsonConverterFactory
 M: ResulTus.Serialization.ResultJsonConverterFactory.ctor()
 M: ResulTus.Serialization.ResultJsonConverterFactory.CanConvert(System.Type typeToConvert) -> System.Boolean
