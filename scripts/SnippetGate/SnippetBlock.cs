@@ -24,6 +24,13 @@ internal sealed class SnippetBlock
         @"^(?:(?:public|internal|private|protected|static|sealed|abstract|partial|readonly|ref|unsafe|file|new)[ \t]+)*(?:namespace|class|struct|record|interface|enum|delegate)\b",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // A namespace declaration, in the file-scoped form (`namespace A.B;`) or the block form
+    // (`namespace A.B {`). A listing that carries one has to be emitted outside the generated
+    // namespace, or the file ends up with two.
+    private static readonly Regex NamespaceDeclaration = new(
+        @"^namespace[ \t]+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[ \t]*(?:;|\{)[ \t]*$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     // A local function the whole document shares. It is emitted as a static method of the snippet
     // class, which is the member form of exactly the same declaration.
     private static readonly Regex LocalFunction = new(
@@ -52,6 +59,13 @@ internal sealed class SnippetBlock
     internal List<SourceLine> Declarations { get; } = [];
 
     /// <summary>
+    /// The namespaces this block's declarations establish. A block that carries one is written to
+    /// its own file so a file-scoped namespace never meets the generated one, and the document's
+    /// statements import it.
+    /// </summary>
+    internal List<string> DeclaredNamespaces { get; } = [];
+
+    /// <summary>
     /// Local functions the document shares between fences. Inside the snippet class the very same
     /// text is a static method, which is what makes <c>Parse("42")</c> resolve from a later block.
     /// </summary>
@@ -61,6 +75,9 @@ internal sealed class SnippetBlock
     internal List<SourceLine> Statements { get; } = [];
 
     internal bool NeedsAsync => Statements.Any(line => Await.IsMatch(line.Text));
+
+    /// <summary>True when this block's declarations carry their own namespace declaration.</summary>
+    internal bool DeclaresNamespace => DeclaredNamespaces.Count > 0;
 
     /// <summary>True when the block contributes nothing at all: not one using, declaration or statement.</summary>
     internal bool IsEmpty =>
@@ -118,25 +135,50 @@ internal sealed class SnippetBlock
     }
 
     /// <summary>
-    /// Removes the using directives that open the block and returns them, so the generated file
-    /// carries one deduplicated list per document instead of one per fence.
+    /// Removes the using directives that open the block, so the generated file carries one
+    /// deduplicated list per document instead of one per fence. Blank lines and comment lines
+    /// between directives are trivia: a listing that separates two usings with a blank line or
+    /// explains one with a comment still opens with directives, and skipping that trivia here is
+    /// what keeps the second directive out of the generated method body. Those trivia lines are
+    /// dropped, and each directive keeps the markdown line it came from.
     /// </summary>
     private int HoistUsings()
     {
-        var index = 0;
-        while (index < body.Count && string.IsNullOrWhiteSpace(body[index].Text))
+        var probe = 0;
+        while (probe < body.Count && IsTrivia(body[probe]))
         {
-            index++;
+            probe++;
         }
 
-        while (index < body.Count && UsingDirective.IsMatch(body[index].Text))
+        if (probe >= body.Count || !UsingDirective.IsMatch(body[probe].Text))
         {
-            Usings.Add(new SourceLine(body[index].Text.Trim(), body[index].MarkdownLine));
+            return 0;
+        }
+
+        var index = 0;
+        while (index < body.Count)
+        {
+            if (UsingDirective.IsMatch(body[index].Text))
+            {
+                Usings.Add(new SourceLine(body[index].Text.Trim(), body[index].MarkdownLine));
+                index++;
+                continue;
+            }
+
+            if (!IsTrivia(body[index]))
+            {
+                break;
+            }
+
             index++;
         }
 
         return index;
     }
+
+    private static bool IsTrivia(SourceLine line) =>
+        string.IsNullOrWhiteSpace(line.Text)
+        || line.Text.TrimStart().StartsWith("//", StringComparison.Ordinal);
 
     /// <summary>
     /// Finds the next non-blank line after a run of attribute lines, so an attributed declaration
@@ -180,28 +222,63 @@ internal sealed class SnippetBlock
 
     /// <summary>
     /// Copies one declaration - a type, a namespace or a local function - verbatim into the list
-    /// its kind belongs to, and returns the index of the line after it.
+    /// its kind belongs to, and returns the index of the line after it. Raw string literals are
+    /// tracked across lines, so a brace that is only text inside a payload never ends the member.
     /// </summary>
     private int CaptureMember(int start)
     {
-        var target = IsTypeDeclarationAt(start) ? Declarations : Functions;
+        var isDeclaration = IsTypeDeclarationAt(start);
+        var captured = new List<SourceLine>();
+        var state = default(ScanState);
         var depth = 0;
-        var inBlockComment = false;
 
         for (var index = start; index < body.Count; index++)
         {
-            var code = CSharpLines.Code(body[index].Text, ref inBlockComment);
-            target.Add(body[index]);
+            var code = CSharpLines.Code(body[index].Text, ref state);
+            captured.Add(body[index]);
             depth += CSharpLines.BraceDelta(code);
 
             var trimmed = code.TrimEnd();
             if (depth == 0 && (trimmed.EndsWith(';') || trimmed.EndsWith('}')))
             {
-                return index + 1;
+                break;
             }
         }
 
-        return body.Count;
+        if (isDeclaration)
+        {
+            Declarations.AddRange(captured);
+
+            var declared = NamespaceDeclaredBy(captured);
+            if (declared is not null)
+            {
+                DeclaredNamespaces.Add(declared);
+            }
+        }
+        else
+        {
+            Functions.AddRange(captured);
+        }
+
+        return Math.Min(start + captured.Count, body.Count);
+    }
+
+    /// <summary>The namespace a declaration span opens, or <see langword="null"/> when it opens none.</summary>
+    private static string? NamespaceDeclaredBy(IReadOnlyList<SourceLine> span)
+    {
+        foreach (var line in span)
+        {
+            var code = CSharpLines.Code(line.Text).Trim();
+            if (code.Length == 0 || IsAttributeLine(code))
+            {
+                continue;
+            }
+
+            var declaration = NamespaceDeclaration.Match(code);
+            return declaration.Success ? declaration.Groups["name"].Value : null;
+        }
+
+        return null;
     }
 
     /// <summary>Looks past the attributes of a member to decide what kind of member it is.</summary>
@@ -269,19 +346,38 @@ internal sealed class SnippetBlock
 }
 
 /// <summary>
+/// Scanner state that survives a line break: a block comment or a raw string literal can span
+/// lines, and both must keep their content out of the brace count.
+/// </summary>
+internal struct ScanState
+{
+    /// <summary>True while inside a <c>/* ... */</c> comment.</summary>
+    public bool InBlockComment;
+
+    /// <summary>The length of the opening quote run while inside a raw string literal, otherwise 0.</summary>
+    public int RawQuotes;
+}
+
+/// <summary>
 /// Reads C# the way the splitter needs it: the line with string, character and comment content
-/// removed, so a brace inside a message or a semicolon inside a comment never decides structure.
+/// removed, so a brace inside a message, a payload or a comment never decides structure.
 /// </summary>
 internal static class CSharpLines
 {
-    internal static string Code(string line, ref bool inBlockComment)
+    internal static string Code(string line, ref ScanState state)
     {
         var code = new StringBuilder(line.Length);
         var index = 0;
 
         while (index < line.Length)
         {
-            if (inBlockComment)
+            if (state.RawQuotes > 0)
+            {
+                index = SkipRawString(line, index, ref state);
+                continue;
+            }
+
+            if (state.InBlockComment)
             {
                 var end = line.IndexOf("*/", index, StringComparison.Ordinal);
                 if (end < 0)
@@ -289,7 +385,7 @@ internal static class CSharpLines
                     return code.ToString();
                 }
 
-                inBlockComment = false;
+                state.InBlockComment = false;
                 index = end + 2;
                 continue;
             }
@@ -303,14 +399,8 @@ internal static class CSharpLines
 
             if (current == '/' && index + 1 < line.Length && line[index + 1] == '*')
             {
-                inBlockComment = true;
+                state.InBlockComment = true;
                 index += 2;
-                continue;
-            }
-
-            if (TryStringStart(line, index, out var quote, out var verbatim))
-            {
-                index = SkipString(line, quote, verbatim);
                 continue;
             }
 
@@ -320,7 +410,36 @@ internal static class CSharpLines
                 continue;
             }
 
-            code.Append(current);
+            var prefixStart = index;
+            var verbatim = false;
+            while (index < line.Length
+                && index - prefixStart < 2
+                && (line[index] == '$' || line[index] == '@'))
+            {
+                verbatim |= line[index] == '@';
+                index++;
+            }
+
+            if (index < line.Length && line[index] == '"')
+            {
+                var quotes = QuoteRun(line, index);
+                if (quotes >= 3 && !verbatim)
+                {
+                    // A raw string literal opens here. Its content - braces included - is text,
+                    // and the closing run may be on a later line.
+                    state.RawQuotes = quotes;
+                    index += quotes;
+                    continue;
+                }
+
+                index = SkipString(line, index, verbatim);
+                continue;
+            }
+
+            // Not a string after all: copy the character we started at and move on. Copying one
+            // character at a time is what keeps the loop progressing on ordinary code.
+            index = prefixStart;
+            code.Append(line[index]);
             index++;
         }
 
@@ -329,8 +448,8 @@ internal static class CSharpLines
 
     internal static string Code(string line)
     {
-        var inBlockComment = false;
-        return Code(line, ref inBlockComment);
+        var state = default(ScanState);
+        return Code(line, ref state);
     }
 
     /// <summary>Brace nesting contributed by one line of code.</summary>
@@ -350,31 +469,41 @@ internal static class CSharpLines
         return delta;
     }
 
-    private static bool TryStringStart(string line, int index, out int quote, out bool verbatim)
+    private static int QuoteRun(string line, int index)
     {
-        quote = index;
-        verbatim = false;
-
         var cursor = index;
-        while (cursor < line.Length && cursor - index < 2 && (line[cursor] == '$' || line[cursor] == '@'))
+        while (cursor < line.Length && line[cursor] == '"')
         {
-            if (line[cursor] == '@')
-            {
-                verbatim = true;
-            }
-
             cursor++;
         }
 
-        if (cursor < line.Length && line[cursor] == '"')
+        return cursor - index;
+    }
+
+    /// <summary>
+    /// Consumes raw-string content up to and including a closing run that is at least as long as
+    /// the opener, and clears the state when it finds one.
+    /// </summary>
+    private static int SkipRawString(string line, int index, ref ScanState state)
+    {
+        while (index < line.Length)
         {
-            quote = cursor;
-            return true;
+            if (line[index] != '"')
+            {
+                index++;
+                continue;
+            }
+
+            var quotes = QuoteRun(line, index);
+            index += quotes;
+            if (quotes >= state.RawQuotes)
+            {
+                state.RawQuotes = 0;
+                return index;
+            }
         }
 
-        quote = index;
-        verbatim = false;
-        return false;
+        return index;
     }
 
     private static int SkipString(string line, int quote, bool verbatim)

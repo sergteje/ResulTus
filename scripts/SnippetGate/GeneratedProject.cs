@@ -1,5 +1,7 @@
 // Copyright (c) ResulTus. All rights reserved.
 
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SnippetGate;
@@ -19,17 +21,30 @@ internal sealed class DocumentSnippets
 
     /// <summary>
     /// The identifier derived from the document path, which names its project, namespace and
-    /// snippet class. One compilation per document is what lets two documents both declare
-    /// <c>Product</c> or <c>AppJsonContext</c>, exactly as two listings in prose do: the C#
-    /// compiler tolerates the duplicate names in separate namespaces, but the source generators
-    /// (System.Text.Json and the ResulTus error factory) name their generated files after the
-    /// declared type alone, so two same-named types in one compilation would collide there.
+    /// snippet class. The readable part alone is not enough: two paths that differ only in
+    /// punctuation (`docs/error-handling.md` and `docs/error_handling.md`) reduce to the same
+    /// letters, and the second document would overwrite the first and be listed twice in the
+    /// solution. The hash of the exact repository-relative path keeps the identity collision-free
+    /// and identical on every machine, and stays a valid identifier and file name.
+    /// One compilation per document is what lets two documents both declare <c>Product</c> or
+    /// <c>AppJsonContext</c>, exactly as two listings in prose do: the C# compiler tolerates the
+    /// duplicate names in separate namespaces, but the source generators (System.Text.Json and the
+    /// ResulTus error factory) name their generated files after the declared type alone, so two
+    /// same-named types in one compilation would collide there.
     /// </summary>
-    internal string Identifier => Sanitize(Path.ChangeExtension(RelativePath, null));
+    internal string Identifier =>
+        Sanitize(Path.ChangeExtension(RelativePath, null)) + "_" + PathHash(RelativePath);
 
     internal string Namespace => "SnippetGate.Generated." + Identifier;
 
     internal string ClassName => "__Snippets_" + Identifier;
+
+    /// <summary>The first six hex characters of the path's SHA-256, lower-case, so it is path-stable.</summary>
+    private static string PathHash(string relativePath)
+    {
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(relativePath));
+        return Convert.ToHexString(digest)[..6].ToLowerInvariant();
+    }
 
     private static string Sanitize(string relativePath)
     {
@@ -46,7 +61,7 @@ internal sealed class DocumentSnippets
             }
         }
 
-        return char.IsDigit(builder[0]) ? "_" + builder : builder.ToString();
+        return builder.Length == 0 || char.IsDigit(builder[0]) ? "_" + builder : builder.ToString();
     }
 }
 
@@ -80,6 +95,8 @@ internal static class GeneratedProject
 {
     internal const string SolutionFileName = "SnippetGate.Generated.slnx";
 
+    private const string GlobalUsing = "global using ";
+
     internal static string ProjectFileName(DocumentSnippets document) => document.Identifier + ".csproj";
 
     internal static IReadOnlyList<GeneratedDocument> Write(
@@ -93,7 +110,7 @@ internal static class GeneratedProject
         var generated = new List<GeneratedDocument>();
         foreach (var document in documents)
         {
-            generated.Add(WriteDocument(root, directory, document, stubs));
+            generated.AddRange(WriteDocument(root, directory, document, stubs));
         }
 
         File.WriteAllText(
@@ -104,7 +121,11 @@ internal static class GeneratedProject
         return generated;
     }
 
-    private static GeneratedDocument WriteDocument(
+    /// <summary>
+    /// Writes the document's project: one file for the namespace the gate controls, plus one file
+    /// per declaration block that brings its own namespace.
+    /// </summary>
+    private static IReadOnlyList<GeneratedDocument> WriteDocument(
         string root,
         string directory,
         DocumentSnippets document,
@@ -113,6 +134,35 @@ internal static class GeneratedProject
         var projectDirectory = Path.Combine(directory, document.Identifier);
         Directory.CreateDirectory(projectDirectory);
 
+        var declaredNamespaces = document.Blocks
+            .SelectMany(block => block.DeclaredNamespaces)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        var generated = new List<GeneratedDocument>
+        {
+            WriteStatementFile(projectDirectory, document, declaredNamespaces),
+        };
+
+        foreach (var block in document.Blocks.Where(block => block.DeclaresNamespace))
+        {
+            generated.Add(WriteNamespaceFile(projectDirectory, document, block, declaredNamespaces));
+        }
+
+        File.WriteAllText(
+            Path.Combine(projectDirectory, ProjectFileName(document)),
+            ProjectFile(root, stubs),
+            new UTF8Encoding(false));
+
+        return generated;
+    }
+
+    private static GeneratedDocument WriteStatementFile(
+        string projectDirectory,
+        DocumentSnippets document,
+        IReadOnlyList<string> declaredNamespaces)
+    {
         var writer = new SourceWriter();
 
         writer.Write("// <auto-generated/>");
@@ -120,29 +170,29 @@ internal static class GeneratedProject
         writer.Write(string.Empty);
         writer.Write("// Ambient state the fragments share across fences: a later block continues the value an");
         writer.Write("// earlier one introduced. Nothing else is supplied from outside the document.");
-        writer.Write("using static global::__SnippetGlobals;");
-
-        foreach (var directive in document.Blocks
-            .SelectMany(block => block.Usings.Select(usingLine => (block.Ordinal, Line: usingLine)))
-            .GroupBy(entry => entry.Line.Text, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .OrderBy(entry => entry.Line.Text, StringComparer.Ordinal))
-        {
-            writer.Write(directive.Ordinal, directive.Line);
-        }
+        WriteUsings(writer, document, declaredNamespaces);
 
         writer.Write(string.Empty);
         writer.Write("namespace " + document.Namespace + ";");
 
-        if (document.Blocks.Any(block => block.Declarations.Count > 0))
+        var plain = document.Blocks.Where(block => !block.DeclaresNamespace).ToArray();
+        if (plain.Any(block => block.Declarations.Count > 0))
         {
             writer.Write(string.Empty);
             writer.Write("// The types the document declares for itself, at namespace level so an attribute-driven");
             writer.Write("// generator sees the same declaration a reader copies into a project.");
-            foreach (var entry in document.Blocks.SelectMany(block => block.Declarations.Select(line => (block.Ordinal, line))))
+            foreach (var entry in plain.SelectMany(block => block.Declarations.Select(line => (block.Ordinal, line))))
             {
                 writer.Write(entry.Ordinal, entry.line);
             }
+        }
+
+        if (document.Blocks.Any(block => block.DeclaresNamespace))
+        {
+            writer.Write(string.Empty);
+            writer.Write("// A listing that carries its own namespace is compiled in a file of its own, because a");
+            writer.Write("// source file may only contain one file-scoped namespace declaration. Those types are");
+            writer.Write("// imported above, so the statements below still see them.");
         }
 
         writer.Write(string.Empty);
@@ -176,15 +226,87 @@ internal static class GeneratedProject
 
         writer.Write("}");
 
-        var sourcePath = Path.Combine(projectDirectory, document.Identifier + ".g.cs");
-        File.WriteAllText(sourcePath, writer.ToString(), new UTF8Encoding(false));
+        var path = Path.Combine(projectDirectory, document.Identifier + ".g.cs");
+        File.WriteAllText(path, writer.ToString(), new UTF8Encoding(false));
+        return new GeneratedDocument(path, document.RelativePath, writer.LineToOrigin);
+    }
 
-        File.WriteAllText(
-            Path.Combine(projectDirectory, ProjectFileName(document)),
-            ProjectFile(root, stubs),
-            new UTF8Encoding(false));
+    /// <summary>
+    /// Writes one declaration block verbatim, with no generated namespace in front of it. The file
+    /// carries the document's usings so the listing still resolves the packages it references.
+    /// </summary>
+    private static GeneratedDocument WriteNamespaceFile(
+        string projectDirectory,
+        DocumentSnippets document,
+        SnippetBlock block,
+        IReadOnlyList<string> declaredNamespaces)
+    {
+        var writer = new SourceWriter();
 
-        return new GeneratedDocument(sourcePath, document.RelativePath, writer.LineToOrigin);
+        writer.Write("// <auto-generated/>");
+        writer.Write($"// Generated by scripts/SnippetGate from {document.RelativePath}, block #{block.Ordinal}.");
+        writer.Write("// The listing declares its own namespace, so it is compiled as its own file: a source file");
+        writer.Write("// may only contain one file-scoped namespace declaration, and the statement file already");
+        writer.Write("// has the generated one. The statements import the namespaces declared here.");
+        WriteUsings(writer, document, declaredNamespaces);
+
+        writer.Write(string.Empty);
+        foreach (var line in block.Declarations)
+        {
+            writer.Write(block.Ordinal, line);
+        }
+
+        var path = Path.Combine(
+            projectDirectory,
+            string.Create(CultureInfo.InvariantCulture, $"{document.Identifier}.ns{block.Ordinal}.g.cs"));
+        File.WriteAllText(path, writer.ToString(), new UTF8Encoding(false));
+        return new GeneratedDocument(path, document.RelativePath, writer.LineToOrigin);
+    }
+
+    /// <summary>
+    /// Emits the document's hoisted directives in the order the compiler demands: a global using
+    /// must precede every non-global one (CS8915), so the harness import sits between them.
+    /// </summary>
+    private static void WriteUsings(
+        SourceWriter writer,
+        DocumentSnippets document,
+        IReadOnlyList<string> declaredNamespaces)
+    {
+        var hoisted = document.Blocks
+            .SelectMany(block => block.Usings.Select(usingLine => (block.Ordinal, Line: usingLine)))
+            .GroupBy(entry => entry.Line.Text, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+
+        foreach (var entry in hoisted
+            .Where(entry => entry.Line.Text.StartsWith(GlobalUsing, StringComparison.Ordinal))
+            .OrderBy(entry => entry.Line.Text, StringComparer.Ordinal))
+        {
+            writer.Write(entry.Ordinal, entry.Line);
+        }
+
+        writer.Write("using static global::__SnippetGlobals;");
+
+        var rest = hoisted
+            .Where(entry => !entry.Line.Text.StartsWith(GlobalUsing, StringComparison.Ordinal))
+            .OrderBy(entry => entry.Line.Text, StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var entry in rest)
+        {
+            writer.Write(entry.Ordinal, entry.Line);
+        }
+
+        // A declared namespace has no line of its own in the document: the gate adds the import so
+        // the statements see the types the listing just declared.
+        foreach (var name in declaredNamespaces)
+        {
+            var directive = "using " + name + ";";
+            if (!rest.Any(entry => string.Equals(entry.Line.Text.Trim(), directive, StringComparison.Ordinal)))
+            {
+                writer.Write(directive);
+            }
+        }
     }
 
     private static string ProjectFile(string root, string stubs)
@@ -215,8 +337,8 @@ internal static class GeneratedProject
         builder.AppendLine();
         builder.AppendLine("  <ItemGroup>");
         builder.AppendLine("    <!-- One copy of the stub harness on disk, compiled into every document assembly. -->");
-        builder.AppendLine("    <Compile Include=\"")
-            .Append(Path.GetFullPath(stubs).Replace('\\', '/'))
+        builder.Append("    <Compile Include=\"")
+            .Append(Xml(Path.GetFullPath(stubs).Replace('\\', '/')))
             .AppendLine("/*.cs\" Link=\"Stubs/%(Filename)%(Extension)\" />");
         builder.AppendLine("  </ItemGroup>");
         builder.AppendLine();
@@ -227,11 +349,12 @@ internal static class GeneratedProject
             {
                 builder.AppendLine("    <!-- A Roslyn component, not a reference: [ResultErrors] and [ErrorFactory] generate");
                 builder.AppendLine("         the partial implementations the source-generator snippets call. -->");
-                builder.AppendLine($"    <ProjectReference Include=\"{project}\" OutputItemType=\"Analyzer\" ReferenceOutputAssembly=\"false\" />");
+                builder.AppendLine(
+                    $"    <ProjectReference Include=\"{Xml(project)}\" OutputItemType=\"Analyzer\" ReferenceOutputAssembly=\"false\" />");
             }
             else
             {
-                builder.AppendLine($"    <ProjectReference Include=\"{project}\" />");
+                builder.AppendLine($"    <ProjectReference Include=\"{Xml(project)}\" />");
             }
         }
 
@@ -248,13 +371,26 @@ internal static class GeneratedProject
         builder.AppendLine("  <Folder Name=\"/documents/\">");
         foreach (var document in documents)
         {
-            builder.AppendLine($"    <Project Path=\"{document.Identifier}/{ProjectFileName(document)}\" />");
+            builder.AppendLine(
+                $"    <Project Path=\"{Xml(document.Identifier + "/" + ProjectFileName(document))}\" />");
         }
 
         builder.AppendLine("  </Folder>");
         builder.AppendLine("</Solution>");
         return builder.ToString();
     }
+
+    /// <summary>
+    /// Escapes a value that becomes an XML attribute. A checkout below a directory named <c>R&amp;D</c>
+    /// or containing a quote would otherwise produce a project file no parser accepts. Ampersand
+    /// goes first, or the entities it introduces would be escaped twice.
+    /// </summary>
+    private static string Xml(string value) => value
+        .Replace("&", "&amp;", StringComparison.Ordinal)
+        .Replace("<", "&lt;", StringComparison.Ordinal)
+        .Replace(">", "&gt;", StringComparison.Ordinal)
+        .Replace("\"", "&quot;", StringComparison.Ordinal)
+        .Replace("'", "&apos;", StringComparison.Ordinal);
 
     private static void CopyStubs(string root, string target)
     {
