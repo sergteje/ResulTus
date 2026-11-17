@@ -11,8 +11,8 @@
 This package turns a [ResulTus](https://github.com/sergteje/ResulTus) `Result` or `Result<T>` into an
 ASP.NET Core response. A success becomes `200 OK` carrying the value; a failure becomes a mapped
 status code carrying an RFC 9457 ProblemDetails document that describes the `Error`. MVC controllers
-use `ToActionResult`, Minimal APIs use `ToHttpResult`, and a validation result renders its field
-errors as the `errors` member RFC 9457 defines.
+use `ToActionResult`, Minimal APIs use `ToHttpResult` or the `WithResultMapping()` endpoint filter,
+and a validation result renders its field errors as the `errors` member RFC 9457 defines.
 
 ## Install
 
@@ -104,6 +104,53 @@ On .NET 10 and later, `ActionResult<T>` implements `IConvertToActionResult` inst
 `IActionResult` directly. Return it from the action and MVC converts it — the controller example
 above does exactly that. When you need an `IActionResult` in hand, the unit-tier
 `Result.ToActionResult` overloads return it directly.
+
+## Minimal API filters
+
+A Minimal API handler that returns a `Result` or a `Result<T>` can be converted without calling
+`ToHttpResult()` in every handler. `WithResultMapping()` and `WithResultMapping<T>()` add an
+`IEndpointFilter` to the route; it converts the handler's own result and leaves every other return
+value untouched:
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using ResulTus;
+using ResulTus.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.MapGet("/health", () => Result.Success())
+    .WithResultMapping();
+
+app.MapGet("/products/{id:int}", (int id) =>
+{
+    return id == 0
+        ? Result<string>.Failure(Error.NotFound("PRODUCT_NOT_FOUND", "No product with that id"))
+        : Result<string>.Success($"product {id}");
+})
+.WithResultMapping<string>();
+
+app.Run();
+```
+
+The registration is closed at compile time, one overload per tier: `WithResultMapping()` handles
+`Result` and `WithResultMapping<T>()` handles `Result<T>`. A filter receives the handler's return
+value as `object`, so recognizing the type at run time would need reflection, and this package is
+AOT-compatible and trimming-safe; pick the overload that matches what the handler returns.
+
+Only the handler's own tier is converted. An `IResult`, a DTO, a string or `null` comes back
+untouched, and so does a result over a different success type, so adding the filter never changes a
+handler that returns something else. The failure path uses the default status mapping, exactly like
+the parameterless `ToHttpResult()`; a handler that needs a custom selector keeps calling
+`ToHttpResult(statusSelector)` itself.
+
+`Result<TSuccess, TError>` is deliberately outside this surface, not an omission. The error type is
+the policy that decides the status, so a generic filter would have to invent that policy for you;
+[`ResulTus.Validation`](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Validation/README.md)
+bridges `Result<TSuccess, ValidationErrors>` through its own explicit `ToHttpResult()` and
+`ToActionResult()`, which remain the supported route for the typed tier.
 
 ## Status mapping
 

@@ -27,6 +27,16 @@ defines it, means the public API may still change between minor releases.
   failure, `error_type` with the `ErrorType` name — and never carry the free-form `Error.Code`,
   whose cardinality is unbounded; the tag sets are built once for the process, so a measurement
   allocates nothing. Subscribe with `AddMeter("ResulTus")`.
+- **`ResulTus.AspNetCore` converts a Minimal API handler's result with an endpoint filter.**
+  `WithResultMapping()` handles a unit `Result` and `WithResultMapping<TSuccess>()` handles
+  `Result<TSuccess>`, each adding the matching `IEndpointFilter` (`ResultEndpointFilter` and
+  `ResultEndpointFilter<TSuccess>`) to the route, so a handler returns the result itself instead of
+  calling `ToHttpResult()`. The filters are closed at compile time and use no reflection, which keeps
+  the assembly AOT-compatible and trimming-safe, they produce exactly what the direct `ToHttpResult()`
+  call produces, and they return any other value — an `IResult`, a DTO, a string, `null`, a result
+  over a different success type — untouched. `Result<TSuccess, TError>` stays out of scope: the error
+  type is the policy that maps it to a status, and `ResulTus.Validation` bridges its own tier
+  explicitly.
 
 ## [1.2.0] - 2026-11-17
 
