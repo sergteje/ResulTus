@@ -6,8 +6,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace ResulTus.Diagnostics;
 
 /// <summary>
-/// Opt-in timing, <see cref="System.Diagnostics.DiagnosticListener"/> events and
-/// <see cref="Activity"/> tracing around an operation that produces a <see cref="Result"/>.
+/// Opt-in timing, <see cref="System.Diagnostics.DiagnosticListener"/> events,
+/// <see cref="Activity"/> tracing and metrics around an operation that produces a
+/// <see cref="Result"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,6 +21,13 @@ namespace ResulTus.Diagnostics;
 /// A measured call allocates nothing when nobody is listening: the events are written only when
 /// the listener is enabled, and the activity source returns <c>null</c> when no listener samples
 /// it. The elapsed time is read from <see cref="Stopwatch"/> without allocating.
+/// </para>
+/// <para>
+/// Every measured call also records the outcome counter and the duration histogram published by
+/// <see cref="ResultMetrics"/>, tagged with the outcome and, on a failure, the error's type — never
+/// with its code, whose cardinality is unbounded. One call therefore feeds spans, events and
+/// metrics at once, and <see cref="ResultMetrics.Record"/> is the same measurement for a caller who
+/// already has a result in hand.
 /// </para>
 /// <para>
 /// An operation that throws is recorded as an <see cref="ErrorType.Unexpected"/> failure carrying
@@ -232,6 +240,10 @@ public static class ResultDiagnosticsExtensions
                 activity.SetStatus(ActivityStatusCode.Error, error.Message ?? error.Code);
             }
         }
+
+        // The span above keeps the error code, which is per-span and therefore bounded by traffic;
+        // the metrics keep only the outcome and the error type, so their series count stays fixed.
+        ResultMetrics.Record(isSuccess, error, elapsed);
 
         if (ResultDiagnostics.Listener.IsEnabled(ResultDiagnostics.OperationCompletedEvent))
         {
