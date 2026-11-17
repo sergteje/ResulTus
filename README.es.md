@@ -3,6 +3,8 @@
 [![CI](https://github.com/sergteje/ResulTus/actions/workflows/ci.yml/badge.svg?branch=main&label=CI)](https://github.com/sergteje/ResulTus/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/nuget/dt/ResulTus?label=downloads)](https://www.nuget.org/packages/ResulTus)
 [![NuGet](https://img.shields.io/nuget/v/ResulTus?label=nuget)](https://www.nuget.org/packages/ResulTus)
+[![License](https://img.shields.io/github/license/sergteje/ResulTus?label=license)](https://github.com/sergteje/ResulTus/blob/main/LICENSE)
+[![Docs](https://github.com/sergteje/ResulTus/actions/workflows/docs-pages.yml/badge.svg?branch=main&label=docs)](https://sergteje.github.io/ResulTus/)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-dark.png">
