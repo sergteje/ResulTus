@@ -1,0 +1,3 @@
+# Every path is owned by the repository owner. A pull request that changes the public surface, the
+# CI workflows, the packaging or the security posture needs their review before merge.
+* @sergteje

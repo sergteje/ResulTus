@@ -65,7 +65,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T15 | S15 | inline | pending | - |
 | T16 | S16 | inline | pending | - |
 | T17 | S17 | inline | pending | - |
-| T18 | S18 | inline | pending | - |
+| T18 | S18 | inline | done | this commit |
 | T19 | S19 | inline | pending | - |
 
 ## Log
@@ -164,3 +164,13 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Evidence.** Solution build: 0 warnings, 0 errors across four target frameworks. Full suite: everything green except the three owner-disposed `AsyncAllocationAuditTests` that fail only outside Release. ApiCompat: 11/11 on net8.0, net9.0, net10.0 and net11.0.
 
 **Risk:** none of items 1-6. The change is additive public API with no altered signature, no behavior change to existing members, no stored data, and no concurrency change.
+
+### L9 - repository hygiene (T18)
+
+**T18 / S18 - the missing hygiene files, and the line-ending decision that goes with them.** `.gitattributes` now defines line endings instead of leaving them to each contributor's `core.autocrlf`: `* text=auto`, explicit text types, `*.ps1` as CRLF, `*.sh` as LF, and the four branding PNGs plus signing artifacts as binary. `SECURITY.md` states the supported lines, the private reporting channel, what a useful report contains and what is out of scope. `.github/CODEOWNERS` names the owner for every path. `.github/PULL_REQUEST_TEMPLATE.md` turns the repository's own rules into a checklist, including the risk line AGENTS.md requires. `.github/ISSUE_TEMPLATE/` carries a bug form and a feature form that asks for the real use, which is the rule that keeps opinionated machinery out.
+
+**The one-time renormalization is not part of this change.** `git add --renormalize .` would rewrite the line endings of 308 tracked files in a single commit. That is content-preserving but it touches every file, and doing it while `feature/hardening` is in flight would conflict with this branch on every merge. `.gitattributes` carries the note, and the decision stays with the owner, best taken from `main` with no branch open.
+
+**Owner action, not performed here.** Private vulnerability reporting has to be enabled in the repository settings for the `SECURITY.md` channel and the contact link to resolve. Changing repository settings is a remote policy mutation, so it is reported, not executed.
+
+**Risk:** none of items 1-6. Repository metadata and documentation only; no code, no build, no workflow change.
