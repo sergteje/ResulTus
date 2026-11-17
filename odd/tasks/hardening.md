@@ -60,7 +60,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T10 | S10 | inline | done | d0a2032 |
 | T11 | S11 | inline | done | this commit |
 | T12 | S12 | inline | done | this commit |
-| T13 | S13 | inline | pending | - |
+| T13 | S13 | inline | done | this commit |
 | T14 | S14 | delegated | pending | - |
 | T15 | S15 | inline | pending | - |
 | T16 | S16 | inline | pending | - |
@@ -134,3 +134,15 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Observed, not scheduled.** The three `AsyncAllocationAuditTests` that fail in Debug pass in Release, which is why the Release coverage gate is green while a Debug suite run reports them; that is consistent with the owner's disposition and stays untouched.
 
 **Risk:** none of items 1-6. One test that asserts already-shipped behavior; no production code changed.
+
+### L7 - typed async contract coverage (T13)
+
+**T13 / S13 - the audit premise was partly stale; the real gaps are closed.** `CrossTierSemanticsTests` already proved Task-versus-ValueTask agreement against the synchronous outcome for eleven of the typed operators (`MapAsync`, `BindAsync`, `TapAsync`, `MatchAsync`, `RecoverAsync` in both shapes, `FinallyAsync`, `MapErrorAsync`, `OnFailureAsync`, `SwitchAsync`, `EnsureAsync`), and its `Typed_AsyncMethods_NullAndCancelledShouldFollowTheContract` battery covered null delegates and cancellation for four of them. The typed file measured 95.83% lines and 100% branches before this task.
+
+**Gaps that were real.** `OnSuccessAsync` had no contract test at all even though it is public surface on both sources, and it is a pure alias of `TapAsync`, so nothing pinned that the alias never drifts. The null `Task` source guard (`ArgumentNullException.ThrowIfNull(result)`, present in every `Task`-source wrapper) was untested for the whole tier. The cancelled-token contract existed for four of the twelve call shapes, so the "cancellation is control flow, never a captured failure" rule was demonstrable only for a sample.
+
+**Change.** New `tests/ResulTus.Extensions.Tests/TypedResultAsyncContractTests.cs` with five facts: `OnSuccessAsync` through each source runs the effect once with the success value, never on failure, and returns the original result unchanged; a cancelled token makes it throw `OperationCanceledException` without running the effect; a null `Task` source throws `ArgumentNullException` for all twelve call shapes of the tier; and a cancelled token throws `OperationCanceledException` before awaiting the source or invoking the delegate for the eight operators that had no such test, asserting the delegates were never invoked. The four already covered are named in the file's remarks instead of duplicated.
+
+**Evidence.** Extensions in Release: 206/206. Debug on net8.0 and net11.0: 203/206, the three failures being the owner-disposed `AsyncAllocationAuditTests` that only fail outside Release. No production code changed, so no RED exists for these tests; they pin shipped behavior.
+
+**Risk:** none of items 1-6. Test-only change.
