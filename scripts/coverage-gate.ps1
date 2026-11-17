@@ -23,7 +23,12 @@ $projects = @(
 $failures = 0
 foreach ($entry in $projects) {
     $testProject = Join-Path $Root $entry.tests
-    dotnet test $testProject -c Release --no-build --framework net10.0 --nologo --collect "XPlat Code Coverage" 2>&1 | Out-Null
+    # The allocation audits measure exact byte counts and the coverage collector instruments the
+    # assembly under test, which perturbs those measurements: the same suite passed 206/206 in the
+    # plain Test step and then failed inside this run minutes later. They are excluded here and
+    # keep their own assertion pass in `dotnet test`, because coverage needs their lines covered,
+    # not their allocation numbers reproduced under instrumentation.
+    dotnet test $testProject -c Release --no-build --framework net10.0 --nologo --filter "FullyQualifiedName!~AsyncAllocationAuditTests" --collect "XPlat Code Coverage" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { Write-Host "::error::$($entry.pkg): the own test project failed"; $failures++; continue }
 
     $file = Get-ChildItem (Join-Path $Root 'tests') -Recurse -Filter coverage.cobertura.xml |
