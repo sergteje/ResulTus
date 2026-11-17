@@ -63,7 +63,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T13 | S13 | inline | done | this commit |
 | T14 | S14 | inline | done | this commit |
 | T15 | S15 | inline | pending | - |
-| T16 | S16 | inline | pending | - |
+| T16 | S16 | inline | done | this commit |
 | T17 | S17 | inline | pending | - |
 | T18 | S18 | inline | done | this commit |
 | T19 | S19 | inline | pending | - |
@@ -174,3 +174,17 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Owner action, not performed here.** Private vulnerability reporting has to be enabled in the repository settings for the `SECURITY.md` channel and the contact link to resolve. Changing repository settings is a remote policy mutation, so it is reported, not executed.
 
 **Risk:** none of items 1-6. Repository metadata and documentation only; no code, no build, no workflow change.
+
+### L10 - CI cost and duplicated work (T16)
+
+**T16 / S16 - one build instead of two, and a restore cache.** `coverage-gate` was a second job that checked out, installed four SDKs, restored and rebuilt the solution, then ran the same test projects the previous job had already built. Its single step now runs at the end of `build-and-test`, which reuses that job's Release build: `scripts/coverage-gate.ps1` already passes `--framework net10.0 --no-build`, so nothing in the measurement changed. The job count drops from five to four and the duplicated checkout, SDK install, restore and build disappear.
+
+**Caching.** Each of the four remaining jobs restores `~/.nuget/packages` with `actions/cache@v4`, keyed on `Directory.Packages.props`, every `*.csproj` and `global.json`, plus `.config/dotnet-tools.json` for the docs job, with an operating-system restore key. A dependency bump invalidates the cache; nothing else does. The key does not include source files, because restore does not depend on them.
+
+**No gate weakened.** Same script, same `-Threshold 0.90`, same failure semantics: the job that builds and tests is now also the job that fails on a package below the line. Locally the script reports all eleven packages at or above 90% lines.
+
+**Job-name safety.** Removing the `coverage-gate` job cannot strand a required status check: `main` reports "Branch not protected", so no check is required (recorded in T19). Enabling protection is an owner decision about repository settings and is not performed here.
+
+**Validation.** The workflow was parsed with a real YAML parser (`YamlDotNet` in a scratch project outside the worktree) which read back four jobs and their step counts, so the file is not merely indented plausibly.
+
+**Risk:** item 5 (delivery) - CI job configuration. No gate threshold, script, or coverage measurement changed.
