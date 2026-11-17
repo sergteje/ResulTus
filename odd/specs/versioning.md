@@ -21,7 +21,7 @@ ResulTus follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) with
   a change to any of these files **must be deliberate** and appear in the same commit as the
   change itself. That is not yet the promise of equality across versions — it is the promise
   that what changed is visible, reviewable and named.
-- The analyzers' diagnostic ids (`RESULT001`–`RESULT006`) and the source generator's
+- The analyzers' diagnostic ids (`RESULT001`–`RESULT008`) and the source generator's
   (`RESULTGEN001`) are part of the contract: their fires must not change meaning without a
   version bump and a changelog entry. This is the rule that keeps them useful as build-time
   dashboards.

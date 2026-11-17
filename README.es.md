@@ -40,7 +40,7 @@ Esos cuatro hechos son un intercambio, declarado abiertamente: el tier por defec
 | [`ResulTus.HttpClient`](src/ResulTus.HttpClient/README.md) | Convierte respuestas HTTP, documentos ProblemDetails y fallos de transporte en `Result<TSuccess, HttpClientError>`. |
 | [`ResulTus.Validation`](src/ResulTus.Validation/README.md) | `ValidationErrors`/`ValidationIssue` estructurados y validación con DataAnnotations. |
 | [`ResulTus.Validation.FluentValidation`](src/ResulTus.Validation.FluentValidation/README.md) | Ejecuta un `IValidator<T>` y devuelve un `Result<T, ValidationErrors>` con todos los fallos. |
-| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Analizadores de Roslyn (`RESULT001`–`RESULT006`) que convierten el mal uso de resultados en diagnósticos de compilación. |
+| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Analizadores de Roslyn (`RESULT001`–`RESULT008`) que convierten el mal uso de resultados en diagnósticos de compilación. |
 | [`ResulTus.SourceGenerators`](src/ResulTus.SourceGenerators/README.md) | El generador de código `[ErrorFactory]` (`RESULTGEN001`). |
 | [`ResulTus.Testing`](src/ResulTus.Testing/README.md) | Aserciones de resultados para tests, independientes del framework (`ShouldSucceed`, `ShouldFail`). |
 
@@ -243,6 +243,8 @@ Cada diferenciador es un hecho verificable, trazable a un archivo de `src/`.
 | `RESULT004` | Bind is a Map | Info |
 | `RESULT005` | Result nested in a Result | Warning |
 | `RESULT006` | Ensure predicate is constant | Warning |
+| `RESULT007` | Async result is not awaited | Warning |
+| `RESULT008` | Awaited result is discarded | Warning |
 
 ### Un generador de código para fábricas de errores
 

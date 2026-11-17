@@ -16,3 +16,5 @@ dotnet_diagnostic.RESULT003.severity = warning
 dotnet_diagnostic.RESULT004.severity = info
 dotnet_diagnostic.RESULT005.severity = warning
 dotnet_diagnostic.RESULT006.severity = warning
+dotnet_diagnostic.RESULT007.severity = warning
+dotnet_diagnostic.RESULT008.severity = warning

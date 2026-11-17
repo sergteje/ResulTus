@@ -78,7 +78,7 @@ Error notFound  = Error.NotFound("USER_NOT_FOUND");          // failure, no exce
 | `ResulTus.HttpClient` | HTTP responses and failures as `Result<TSuccess, HttpClientError>` | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.HttpClient/README.md) |
 | `ResulTus.Validation` | `ValidationErrors`/`ValidationIssue`, DataAnnotations | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Validation/README.md) |
 | `ResulTus.Validation.FluentValidation` | `IValidator<T>` to `Result<T, ValidationErrors>` | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Validation.FluentValidation/README.md) |
-| `ResulTus.Analyzers` | Roslyn analyzers `RESULT001`–`RESULT006` | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Analyzers/README.md) |
+| `ResulTus.Analyzers` | Roslyn analyzers `RESULT001`–`RESULT008` | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Analyzers/README.md) |
 | `ResulTus.SourceGenerators` | The `[ErrorFactory]` source generator | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.SourceGenerators/README.md) |
 | `ResulTus.Testing` | Framework-agnostic result assertions | [GitHub](https://github.com/sergteje/ResulTus/blob/main/src/ResulTus.Testing/README.md) |
 

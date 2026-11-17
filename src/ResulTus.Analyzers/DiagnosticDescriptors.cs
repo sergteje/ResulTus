@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 namespace ResulTus.Analyzers;
 
 /// <summary>
-/// The six diagnostics this package ships. A consumer suppresses or escalates a rule by id, so the
+/// The eight diagnostics this package ships. A consumer suppresses or escalates a rule by id, so the
 /// ids are part of the public contract and a test pins them.
 /// </summary>
 public static class DiagnosticDescriptors
@@ -82,6 +82,28 @@ public static class DiagnosticDescriptors
         isEnabledByDefault: true);
 
     /// <summary>
+    /// Gets the descriptor for an asynchronous result that is produced and never awaited.
+    /// </summary>
+    public static DiagnosticDescriptor UnawaitedResult { get; } = new(
+        id: "RESULT007",
+        title: "Async result is not awaited",
+        messageFormat: "This operation returns a result asynchronously and is never awaited; await it or assign the task",
+        category: ReliabilityCategory,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Gets the descriptor for an awaited result whose value is thrown away.
+    /// </summary>
+    public static DiagnosticDescriptor DiscardedAwait { get; } = new(
+        id: "RESULT008",
+        title: "Awaited result is discarded",
+        messageFormat: "The result of this await is discarded; assign it or check its outcome",
+        category: ReliabilityCategory,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Gets every descriptor, in id order.
     /// </summary>
     public static ImmutableArray<DiagnosticDescriptor> All { get; } = ImmutableArray.Create(
@@ -90,5 +112,7 @@ public static class DiagnosticDescriptors
         DiscardedError,
         RedundantBind,
         NestedResult,
-        ConstantEnsure);
+        ConstantEnsure,
+        UnawaitedResult,
+        DiscardedAwait);
 }

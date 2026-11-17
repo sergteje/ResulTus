@@ -11,15 +11,23 @@ public class DescriptorTests
     /// <summary>
     /// GIVEN the descriptor set
     /// WHEN the ids are read in order
-    /// THEN they MUST be exactly the six documented rules.
+    /// THEN they MUST be exactly the eight documented rules.
     /// </summary>
     [Fact]
-    public void All_ShouldBeTheSixDocumentedRules()
+    public void All_ShouldBeTheEightDocumentedRules()
     {
         DiagnosticDescriptors.All
             .Select(descriptor => descriptor.Id)
             .Should()
-            .Equal("RESULT001", "RESULT002", "RESULT003", "RESULT004", "RESULT005", "RESULT006");
+            .Equal(
+                "RESULT001",
+                "RESULT002",
+                "RESULT003",
+                "RESULT004",
+                "RESULT005",
+                "RESULT006",
+                "RESULT007",
+                "RESULT008");
     }
 
     /// <summary>
@@ -37,6 +45,8 @@ public class DescriptorTests
         DiagnosticDescriptors.RedundantBind.DefaultSeverity.Should().Be(DiagnosticSeverity.Info);
         DiagnosticDescriptors.NestedResult.DefaultSeverity.Should().Be(DiagnosticSeverity.Warning);
         DiagnosticDescriptors.ConstantEnsure.DefaultSeverity.Should().Be(DiagnosticSeverity.Warning);
+        DiagnosticDescriptors.UnawaitedResult.DefaultSeverity.Should().Be(DiagnosticSeverity.Warning);
+        DiagnosticDescriptors.DiscardedAwait.DefaultSeverity.Should().Be(DiagnosticSeverity.Warning);
     }
 
     /// <summary>

@@ -40,7 +40,7 @@ Those four facts are a trade, stated openly: the 32 B default tier and its array
 | [`ResulTus.HttpClient`](src/ResulTus.HttpClient/README.md) | Turns HTTP responses, ProblemDetails documents and transport failures into `Result<TSuccess, HttpClientError>`. |
 | [`ResulTus.Validation`](src/ResulTus.Validation/README.md) | Structured `ValidationErrors`/`ValidationIssue` and DataAnnotations validation. |
 | [`ResulTus.Validation.FluentValidation`](src/ResulTus.Validation.FluentValidation/README.md) | Runs an `IValidator<T>` and returns a `Result<T, ValidationErrors>` carrying every failure. |
-| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Roslyn analyzers (`RESULT001`–`RESULT006`) that turn result misuse into build-time diagnostics. |
+| [`ResulTus.Analyzers`](src/ResulTus.Analyzers/README.md) | Roslyn analyzers (`RESULT001`–`RESULT008`) that turn result misuse into build-time diagnostics. |
 | [`ResulTus.SourceGenerators`](src/ResulTus.SourceGenerators/README.md) | The `[ErrorFactory]` source generator (`RESULTGEN001`). |
 | [`ResulTus.Testing`](src/ResulTus.Testing/README.md) | Framework-agnostic result assertions for tests (`ShouldSucceed`, `ShouldFail`). |
 
@@ -242,6 +242,8 @@ Each differentiator is a verifiable fact, traceable to a file in `src/`.
 | `RESULT004` | Bind is a Map | Info |
 | `RESULT005` | Result nested in a Result | Warning |
 | `RESULT006` | Ensure predicate is constant | Warning |
+| `RESULT007` | Async result is not awaited | Warning |
+| `RESULT008` | Awaited result is discarded | Warning |
 
 ### A source generator for error factories
 

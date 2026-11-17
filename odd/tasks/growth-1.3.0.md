@@ -14,7 +14,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 
 - **S4 - the streaming half of the collection tier.** `ResulTus.Collections` has `WhenAllAsync`/`WhenAnyAsync` over `Task` and no `IAsyncEnumerable` support at all. Add the asynchronous mirror of the synchronous operations (`SequenceAsync`, `TraverseAsync`, `PartitionAsync`) over `IAsyncEnumerable<Result<T>>`, with the same names, order guarantees, first-failure rule and cancellation behavior, and with the pooled-buffer discipline the synchronous `Partition` already follows. Tests cover success, failure, empty stream and cancellation.
 
-- **S5 - the analyzer for the bug the async tier opened.** `ResulTus.Analyzers` ships `RESULT001`-`RESULT006`. Add `RESULT007` for a discarded `Task<Result<...>>` or `ValueTask<Result<...>>` (a fire-and-forget that loses the failure) and `RESULT008` for a `ValueTask<Result<...>>` consumed twice, both with the same documentation, severity and test discipline as the existing analyzers.
+- **S5 - the analyzers for the bug the async tier opened.** `ResulTus.Analyzers` ships `RESULT001`-`RESULT006`. Add `RESULT007` for a discarded `Task<Result<...>>` or `ValueTask<Result<...>>` (a fire-and-forget that loses the failure) and `RESULT008` for an `await` used as a whole expression statement whose value is a `Result` (the failure dropped after the work ran). The original wording asked for a `ValueTask` consumed twice; that shape needs control-flow precision the syntax model cannot give without false positives on branches and loops, so it is replaced by the awaited-discard rule, which is precise. `RESULT001` stops reporting awaited statements so one line carries one warning.
 
 - **S6 - versioning and delivery.** Each item ships as its own pull request with tests, docs and a `CHANGELOG.md` bullet under `## [Unreleased]`; the fifth and last pull request promotes `## [Unreleased]` to `## [1.3.0] - <date>` and moves `Version` in `Directory.Build.props` to `1.3.0`. `PackageValidationBaselineVersion` stays at `1.2.0` until 1.3.0 is published, then moves, exactly as the versioning spec requires. The API snapshot is regenerated in every pull request and only the affected assembly's file may change.
 
@@ -26,7 +26,7 @@ Objective: close the five highest-value gaps found while auditing the shipped su
 | T2 | S2 | delegated | done | this commit |
 | T3 | S3 | delegated | done | this commit |
 | T4 | S4 | delegated | done | this commit |
-| T5 | S5 | delegated | pending | - |
+| T5 | S5 | delegated | done | this commit |
 | T6 | S6 | inline | pending | - |
 
 ## Log
@@ -79,3 +79,16 @@ One deliberate divergence is documented: the asynchronous operations also check 
 Evidence: 133 of 133 collection tests on net8.0, net9.0, net10.0 and net11.0 (baseline 111), including three differential tests that run one input through both halves and compare outcomes, consumed prefix and mapper calls; ApiCompat 11 of 11 with three snapshot lines added to `ResulTus.Collections.txt`; build 0 warnings; snippet gate at 24 documents and 137 blocks.
 
 The only edit to the synchronous file widens `Grow<T>` from private to internal so both halves share it, with an unchanged body, because duplicating it would be a second implementation of the same growth rule.
+### L7 - T5: two analyzers for the async bug class, and one rule split
+
+`RESULT007` reports a `Task<Result<...>>` or `ValueTask<Result<...>>` produced as an expression statement and never awaited, so the outcome is unobserved and an exception inside it becomes an unobserved task exception. `RESULT008` reports an `await` used as a whole expression statement whose value is a `Result`, so the failure is dropped after the work ran. Both are `Warning`, both match the awaitable by namespace and metadata name rather than by display string, and both stay silent on the deliberate acknowledgement: `_ = SomethingAsync();` and `_ = await SomethingAsync();`.
+
+**Spec deviation, recorded.** S5 asked for `RESULT008` to catch a `ValueTask<Result<...>>` consumed twice. That needs control-flow precision: a textual count of awaits false-positives on mutually exclusive branches (`if (c) await vt; else await vt;`), on a loop that awaits once per iteration, and on a task returned to a helper that awaits it. Syntax plus the semantic model cannot separate those, so the awaited-discard rule shipped instead, which is precise, and S5 was rewritten to say so.
+
+**A rule split, not a duplicate.** The worker measured that `RESULT001` already reported `await SomethingAsync();`, because the await expression's static type is the unwrapped `Result`. Shipping `RESULT008` unchanged would have put two warnings on one line, so `RESULT001` now skips awaited statements and `RESULT008` owns that shape, with a test that pins the silence and the analyzers README row stating the ownership.
+
+**Precision is the product here.** The negative tests prove silence on `_ =` discards, non-result awaitables (`Task<int>`, `Task<string>`), a consumer's own `CustomTask<Result>`, and every shape where the value is assigned, returned, passed or tested.
+
+**Parity sweep.** The rule range moved from `RESULT001`-`RESULT006` to `RESULT001`-`RESULT008` in both root README editions, `src/ResulTus/README.md`, `src/ResulTus.SourceGenerators/README.md` and `odd/specs/versioning.md`, and the rule tables in both READMEs and `docs/error-handling.md` gained the two rows.
+
+**Evidence.** 53 of 53 analyzer tests on net8.0, net10.0 and net11.0 (baseline 47, plus the split test that pins `RESULT001`'s silence on an awaited statement), with the RED being `CS0246` for the two analyzers before they existed. Solution build 0 warnings. No snapshot changed, because `scripts/ApiSnapshot` excludes the analyzers by design.

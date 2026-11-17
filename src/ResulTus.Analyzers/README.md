@@ -8,9 +8,9 @@
   <img src="https://raw.githubusercontent.com/sergteje/ResulTus/main/assets/branding/logo-light.png" alt="ResulTus - Make every result count." width="420">
 </picture>
 
-This package ships six Roslyn analyzers that turn [ResulTus](https://github.com/sergteje/ResulTus)
+This package ships eight Roslyn analyzers that turn [ResulTus](https://github.com/sergteje/ResulTus)
 misuse into build-time diagnostics instead of a runtime surprise. The ids `RESULT001` through
-`RESULT006` are part of the public contract, so a rule is suppressed or escalated by id, not by
+`RESULT008` are part of the public contract, so a rule is suppressed or escalated by id, not by
 toggling the package.
 
 ## Install
@@ -34,12 +34,14 @@ later.
 
 | Id | Title | Severity | What it reports |
 | --- | --- | --- | --- |
-| `RESULT001` | Result is ignored | Warning | A result produced as an expression statement and then dropped, so its outcome is never read. Assigning it, discarding it with `_ =`, returning it, or passing it to another call are all deliberate and do not report. |
+| `RESULT001` | Result is ignored | Warning | A result produced as an expression statement and then dropped, so its outcome is never read. Assigning it, discarding it with `_ =`, returning it, or passing it to another call are all deliberate and do not report. An awaited statement is `RESULT008`'s shape and is not reported here. |
 | `RESULT002` | Outcome is not checked | Warning | A `GetValueOrDefault()` read with no argument whose receiver is never checked — by `IsSuccess`, `IsFailure`, `TryGetValue`, `Match`, `GetValueOr` or `Deconstruct` — anywhere in the enclosing member. |
 | `RESULT003` | Deconstruction discards the error | Warning | A result deconstruction whose last element is a discard (`_`). Every result tier puts the error last, so discarding it loses the failure. |
 | `RESULT004` | Bind is a Map | Info | A `Bind` whose lambda only wraps the value back in `Success`, which is what `Map` already does. |
 | `RESULT005` | Result nested in a Result | Warning | A `ToResult()` call on a receiver that is already a result, producing a result wrapped inside another. |
 | `RESULT006` | Ensure predicate is constant | Warning | An `Ensure` guard whose predicate is a lambda returning a constant `true` or `false`, so it cannot depend on the guarded value. |
+| `RESULT007` | Async result is not awaited | Warning | A `Task<Result<...>>` or `ValueTask<Result<...>>` produced as an expression statement and then dropped, so nothing observes the outcome and an exception inside it becomes an unobserved task exception. Assigning the task, discarding it with `_ =`, awaiting it, returning it, or passing it to another call are all deliberate and do not report. |
+| `RESULT008` | Awaited result is discarded | Warning | An `await` used as a whole expression statement whose awaited value is a `Result`, so the failure is lost after the work is done. Assigning the awaited value, returning it, passing it as an argument, using it in a condition, or discarding it with `_ = await` do not report. |
 
 `RESULT004` is `Info` because a redundant `Bind` is noise, not a lost outcome. Every other rule is
 a `Warning`.
