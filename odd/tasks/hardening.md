@@ -59,7 +59,7 @@ Objective: harden ResulTus across the audit roadmap (sections A, B, C, D) while 
 | T9 | S9 | inline | done | d0a2032 |
 | T10 | S10 | inline | done | d0a2032 |
 | T11 | S11 | inline | done | this commit |
-| T12 | S12 | inline | pending | - |
+| T12 | S12 | inline | done | this commit |
 | T13 | S13 | inline | pending | - |
 | T14 | S14 | delegated | pending | - |
 | T15 | S15 | inline | pending | - |
@@ -122,3 +122,15 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Cost.** One extra `dotnet test` execution per TFM in `build-and-test`; the coverage gate stays on net10.0 because it passes `--framework net10.0` explicitly, so the measurement is unchanged.
 
 **Risk:** item 5 (delivery) - CI job configuration changes. No stored data, security surface, public contract, or concurrency change.
+
+### L6 - FluentValidation behavior coverage (T12)
+
+**T12 / S12 - the audit premise was stale; one real gap closed.** `tests/ResulTus.Validation.Tests/FluentValidationTests.cs` already carried ten behavioral tests when this task started: sync success, sync multi-failure with property, message and code, repeated failures not deduplicated, an async-rule validator refused by the sync overload, async success, async failure including the asynchronous rule, cancellation-token forwarding, cancellation surfacing as `OperationCanceledException`, and the null-property-name projection. S12 asked to "add behavioral tests for the sync and async validation paths and the projection into `ValidationErrors`", so the only case the suite did not pin is the async overload's null-instance guard, which S12's own wording covers because it names both paths.
+
+**Change.** One test, `NullInstance_ValidateAsync_ShouldThrow`: a null instance through `ValidateAsync` throws `ArgumentNullException` and the asynchronous rule never observes a token, so the sync and async overloads reject the same input. It pins existing behavior, so it is a characterization test: no RED exists, the guard already shipped.
+
+**Evidence.** Release coverage gate, whole solution: ResulTus 100%, Extensions 98.64%, Collections 98.55%, Serialization 96.93%, AspNetCore 98.44%, HttpClient 93.21%, Logging 100%, Diagnostics 100%, Validation 100%, Testing 100%, Validation.FluentValidation 100%, all at or above the 90% line threshold. Validation tests: 29/29 on net8.0 and net11.0 (28 before the added test).
+
+**Observed, not scheduled.** The three `AsyncAllocationAuditTests` that fail in Debug pass in Release, which is why the Release coverage gate is green while a Debug suite run reports them; that is consistent with the owner's disposition and stays untouched.
+
+**Risk:** none of items 1-6. One test that asserts already-shipped behavior; no production code changed.
