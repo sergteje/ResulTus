@@ -38,6 +38,36 @@ BenchmarkDotNet reports a 99.9% confidence interval. Below that threshold a diff
 
 `0 B` on **both** the success and the failure path of every core operation. This is not a comparison, it is a floor. A competitor allocating where we allocate nothing is a marketing win; us allocating where a competitor does not is a defect.
 
+### 2.1 Technique map — where each technique lives
+
+The floor is earned by specific code, not by intent. This table is the index: when a change
+touches one of these mechanisms, this is the row that has to keep holding.
+
+| Technique | Where | Evidence it holds |
+| --- | --- | --- |
+| `readonly record struct` with the rich error stored inline | `src/ResulTus/` | `Error` 24 B, `Result<int>` 32 B, zero allocation on both paths (§4.2, Decision 001) |
+| No exception, no boxing, no dictionary on the failure path | `src/ResulTus/`, `src/ResulTus.Extensions/` | §4 baseline; the columns that used to box were closed by B1 |
+| `[MethodImpl(MethodImplOptions.AggressiveInlining)]` on the hot surface | `src/ResulTus/*.cs`, `src/ResulTus.Extensions/*.cs` | the wrapper stays inside the noise floor; the delegate is the only measurable cost left (§4.1, Finding 3) |
+| `ArrayPool<T>` rented and returned on every exit path, with `clearOnReturn` | `src/ResulTus.Collections/ResultCollectionExtensions.cs`, `TypedResultCollectionExtensions.cs` | `Partition` 12,480 B → 4,048 B on both sources (§4.7) |
+| `stackalloc` + `ReadOnlySpan<byte>` parsing instead of `Substring` | `src/ResulTus.Serialization/ErrorTypeJsonConverter.cs` | `stackalloc byte[12]`; `ErrorType` deserialization 40 B → 0 B (§4.8) |
+| One allocation per output, never per element | the indexed `Sequence`/`Traverse`/`Partition` overloads | non-materializers 0 B; materializers allocate only their output array (§4.7) |
+| Converter cached per `JsonSerializerOptions` | `src/ResulTus.Serialization/ResultJsonConverter.cs` | four rows faster with allocations unchanged (§4.8) |
+| `ValueTask` overloads over `Task` | `src/ResulTus.Extensions/ResultAsyncExtensions.cs` | no extra `Task` object on a synchronously completing path |
+| `sealed` on the classes that own a reference or a collection | `HttpClientError`, `HttpProblemDetails`, `ValidationErrors`, the analyzers, the converters | no virtual dispatch on the paths that touch them; the reason each one is a class at all is recorded in its XML doc |
+| A sink in every benchmark row | `tests/ResulTus.Benchmarks/` | a class-typed error reported `0 B` until the sink existed (§4.6) |
+| `MemoryDiagnoser` + the §2 noise floor before any verdict | this document, §5 | a single run is an anecdote, not a measurement (§4.1, Finding 4) |
+
+**Deliberately absent, and why.**
+
+- **`in` / `ref readonly` parameters on `Result<T>`** — the type is passed by value throughout
+  `src/ResulTus.Extensions` and measures at tie level. `in` on a 32 B hot struct adds an
+  indirection and can cost inlining; there is no measurement here that asks for it.
+- **GC configuration** (`ServerGarbageCollection`, `GCLatencyMode`, `TryStartNoGCRegion`) — those
+  are process-wide decisions of the consuming application. A library that sets them overrides its
+  host. Nothing in this repository touches them.
+- **`stackalloc` inside loops** — never. A stack allocation per iteration grows the frame by
+  iteration count, which is how a small buffer becomes a `StackOverflowException`.
+
 ## 3. Fair comparison rule
 
 Benchmarks must compare **equivalent semantics**. When a competitor's default type is structurally cheaper than ours, both readings are recorded:
