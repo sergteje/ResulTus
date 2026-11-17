@@ -234,3 +234,13 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Known limits, stated rather than hidden.** The generated project enables implicit usings, so a snippet that omits `using System;` still compiles although a pasted copy would not; the gate compiles the blocks, it does not execute them; and it costs about 26 seconds warm.
 
 **Risk:** item 5 (delivery) - one new CI step. No library code, public surface, or document content changed.
+
+### L14 - closure: a contract the roadmap broke, and the consolidated run
+
+**A regression the roadmap caused, caught by the suite.** Merging the coverage gate into `build-and-test` (T16) broke `DocfxSiteConfigTests.CiWorkflow_ShouldBuildDocfxSiteInDocsJob`, which asserted a job literal, `coverage-gate:`. The test was right to fail: it exists so a CI job cannot disappear silently. The contract it protects is the gate, not the job that hosted it, so `432844f` re-pins it where the gate now runs, adds the documentation snippet gate to the same assertion, and keeps every other job plus the read-only top-level permission. This is the kind of defect the roadmap's own checks are supposed to catch, and they did.
+
+**Coverage the new API cost, restored.** `Result` dropped to 97.47% lines after T14 because the unit overloads' two cancellation exits had no test. One test now covers both sources, before-start and in-flight cancellation, and asserts the delegate never ran; the package is back to 100%.
+
+**Consolidated Release run, the CI equivalent.** `dotnet build ResulTus.slnx -c Release`: 0 warnings, 0 errors. `dotnet test ResulTus.slnx -c Release --no-build`: 52 of 52 test-project runs green (13 projects on net8.0, net9.0, net10.0 and net11.0), ApiCompat included. Per-package coverage: 11 of 11 at or above 90% lines. Documentation snippet gate: 24 documents, 126 blocks, none excluded. The three `AsyncAllocationAuditTests` do not appear because Release is the configuration CI uses.
+
+**Roadmap state.** T1-T19 are done: 12 commits on `feature/hardening` after the two from the `1.1.2` slice. Remaining owner decisions, none of them engineering blockers: push, whether the slice ships as one pull request or as the forecast chain, the one-time line-ending renormalization, and enabling branch protection plus secret scanning in the repository settings.

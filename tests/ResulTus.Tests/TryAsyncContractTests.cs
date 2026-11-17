@@ -225,4 +225,45 @@ public class TryAsyncContractTests
         failed.TryGetError(out var error).Should().BeTrue();
         error.Message.Should().Be("boom");
     }
+
+    /// <summary>
+    /// GIVEN a unit delegate behind either source
+    /// WHEN the token is cancelled before the call, or the returned task is cancelled
+    /// THEN both MUST rethrow <see cref="OperationCanceledException"/>, so the unit overloads never
+    /// turn cancellation into a failure and never start cancelled work.
+    /// </summary>
+    [Fact]
+    public async Task UnitOverloads_WithCancellation_ShouldRethrow()
+    {
+        var cancelled = new CancellationToken(canceled: true);
+        var invoked = 0;
+
+        var taskBeforeStart = () => Result.TryAsync(
+            _ =>
+            {
+                invoked++;
+                return Task.CompletedTask;
+            },
+            cancelled);
+        var taskInFlight = () => Result.TryAsync(
+            _ => Task.FromCanceled(cancelled),
+            TestContext.Current.CancellationToken);
+        var valueTaskBeforeStart = () => Result.TryValueTaskAsync(
+            _ =>
+            {
+                invoked++;
+                return ValueTask.CompletedTask;
+            },
+            cancelled).AsTask();
+        var valueTaskInFlight = () => Result.TryValueTaskAsync(
+            _ => ValueTask.FromCanceled(cancelled),
+            TestContext.Current.CancellationToken).AsTask();
+
+        await taskBeforeStart.Should().ThrowAsync<OperationCanceledException>();
+        await taskInFlight.Should().ThrowAsync<OperationCanceledException>();
+        await valueTaskBeforeStart.Should().ThrowAsync<OperationCanceledException>();
+        await valueTaskInFlight.Should().ThrowAsync<OperationCanceledException>();
+
+        invoked.Should().Be(0);
+    }
 }
