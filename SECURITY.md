@@ -7,8 +7,8 @@ lines receive a fix only when the owner decides a backport is warranted.
 
 | Version | Supported |
 | ------- | --------- |
-| 1.1.x   | yes       |
-| < 1.1   | no        |
+| 1.2.x   | yes       |
+| < 1.2   | no        |
 
 ## Reporting a vulnerability
 

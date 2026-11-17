@@ -274,3 +274,21 @@ The owner settled the four open decisions in one message: "1 PR unico como 1.2.0
 **Deliberately not applied.** SHA pinning for Actions is left off: every workflow pins actions by tag (`actions/checkout@v7`), and turning the setting on would fail every run until sixteen action references are rewritten to full commit SHAs and Dependabot is taught to keep them. That is a change with its own pull request, not a checkbox. Requiring the CodeQL and dependency-review checks is also deferred until they have a green run on this pull request; requiring an unproven check risks blocking every future merge.
 
 **Correction carried in the same delivery.** `codeql.yml` was removed in `53f7904` because the repository already runs CodeQL through GitHub's default setup (L16).
+
+### L18 - review round: release, CI, template and security fixes
+
+CodeRabbit reviewed pull request 15 with fourteen inline findings, all labelled minor. Thirteen were valid; one is answered rather than changed. This entry covers the six outside the snippet gate; the seven gate findings are handled separately.
+
+**`release.yml` validated the notes after publishing (valid, and the worst of the batch).** The tag/version check and the extraction ran before the pushes only in appearance: the notes were extracted in the release-creation step, which runs after both `dotnet nuget push` calls. A missing changelog section would therefore publish thirteen packages and then fail to create the release they belong to. A dedicated `Extract release notes` step now runs immediately after the tag check, exports `NOTES_FILE` through `GITHUB_ENV`, and the release step consumes it; a failure stops the job before anything leaves the runner.
+
+**Whitespace-only notes (valid).** `-s` accepts a file holding a single newline, which is exactly what a heading followed by a blank line and the next heading produces. Measured with the shell CI uses: that fixture yields 1 byte (or 2 with the blank line), the old `-s` accepted it, and the new `[^[:space:]]` check rejects it while still accepting the real section's 874 bytes.
+
+**`dependency-review.yml` comment without permission (valid).** `comment-summary-in-pr: on-failure` needed `pull-requests: write`, which the workflow did not grant, so the setting could only warn. The check result already appears in the pull request's checks list, so the duplicate comment was removed instead of widening the token.
+
+**Provenance vs. repository signing (valid, answered by documentation).** nuget.org adds its own signature to the package it serves, so the published `.nupkg` is not byte-identical to the attested one and a consumer cannot verify it against the attestation. The step stays, because it gives the build artifact an immutable record of the workflow and commit that produced it, and its comment now says exactly what it does and does not prove.
+
+**`SECURITY.md` support table (valid).** It named `1.1.x` while this release ships `1.2.0`; it now names `1.2.x` and `< 1.2`.
+
+**Release commands in the contribution docs (valid, and broader than the reviewer saw).** The pull-request template told contributors to run the suite without a configuration, which is the Debug run that reports the three allocation audits as failures. The template, `CONTRIBUTING.md` and `AGENTS.md` now name `-c Release` and say why.
+
+**Declined: "do not state that 1.2.0 is published before release".** The sentence lives in the readme that is packed into the 1.2.0 packages, and those packages do not exist before the tag. Saying "ships at 1.2.0" is false only in the window between the merge and the tag push, and the alternative - a second commit per release to restate the version - would leave the packed readme of an older package pointing at a newer version. The previous release used the same convention. The reasoning is posted on the thread rather than applied.

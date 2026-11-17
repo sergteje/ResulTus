@@ -9,11 +9,13 @@ target `netstandard2.0`.
 ## Build and test
 
 ```bash
-dotnet build ResulTus.slnx
-dotnet test ResulTus.slnx
+dotnet build ResulTus.slnx -c Release
+dotnet test ResulTus.slnx -c Release
 ```
 
-Warnings are errors and every public member requires XML documentation, so a "green" build means
+Release is the configuration CI uses: three allocation audits in `ResulTus.Extensions.Tests` only
+hold there, so a Debug run reports them as failures. Warnings are errors and every public member
+requires XML documentation, so a "green" build means
 0 warnings and 0 errors. Never run the benchmark project as part of a normal build or test; it
 compiles through the solution and executes only when explicitly asked.
 

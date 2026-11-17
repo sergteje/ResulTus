@@ -16,12 +16,14 @@ and [`README.md`](README.md) first will make every other rule below obvious.
 ## Build and test
 
 ```bash
-dotnet build ResulTus.slnx
-dotnet test  ResulTus.slnx
+dotnet build ResulTus.slnx -c Release
+dotnet test  ResulTus.slnx -c Release
 ```
 
-Warnings are errors and every public member requires XML documentation, so a green build means
-0 warnings and 0 errors. Never run the benchmark project as part of a normal build or test; it
+Release is the configuration CI uses, and the one these commands must name: three allocation audits
+in `ResulTus.Extensions.Tests` measure the async pipeline and only hold there. Warnings are errors and
+every public member requires XML documentation, so a green build means 0 warnings and 0 errors.
+Never run the benchmark project as part of a normal build or test; it
 compiles through the solution and executes only when explicitly asked.
 
 ## Ground rules that decide how code is written here

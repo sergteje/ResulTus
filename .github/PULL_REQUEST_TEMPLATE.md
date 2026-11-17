@@ -8,7 +8,8 @@
 
 ## Checklist
 
-- [ ] `dotnet build ResulTus.slnx` and `dotnet test ResulTus.slnx` are green, with 0 warnings.
+- [ ] `dotnet build ResulTus.slnx -c Release` and `dotnet test ResulTus.slnx -c Release` are green,
+      with 0 warnings. Release is the configuration CI uses; three allocation audits only hold there.
 - [ ] Tests exercise the observable effect through the public interface, and one covers each rule
       the documentation or the issue states.
 - [ ] Public members carry XML documentation, and allocation-sensitive paths keep their measured
