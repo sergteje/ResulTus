@@ -48,9 +48,11 @@ snapshot tests gates this.
 A second gate runs when a package is packed, not when it is built: `EnablePackageValidation` in
 `Directory.Build.props` compares the packed surface against `PackageValidationBaselineVersion` and
 fails `dotnet pack` on a break, which is what protects a release whose snapshot diff was reviewed
-badly or not at all. The baseline is the last released version (`1.1.1` today) and moves forward
-when a new minor or major ships, so the comparison always targets a version consumers actually
-have.
+badly or not at all. The baseline is the last released version (`1.1.1` while `1.2.0` is being
+released) and moves forward when a new minor or major ships, so the comparison always targets a
+version consumers actually have. A baseline must already exist on the feed, so it is bumped in the
+change that follows the release, never in the release commit itself, which would compare the new
+version against itself and fail.
 
 ## The deprecation policy
 

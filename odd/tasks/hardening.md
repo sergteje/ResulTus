@@ -244,3 +244,17 @@ This follows the ranked audit (three defects A1-A3, seven consumer gaps B1-B7, f
 **Consolidated Release run, the CI equivalent.** `dotnet build ResulTus.slnx -c Release`: 0 warnings, 0 errors. `dotnet test ResulTus.slnx -c Release --no-build`: 52 of 52 test-project runs green (13 projects on net8.0, net9.0, net10.0 and net11.0), ApiCompat included. Per-package coverage: 11 of 11 at or above 90% lines. Documentation snippet gate: 24 documents, 126 blocks, none excluded. The three `AsyncAllocationAuditTests` do not appear because Release is the configuration CI uses.
 
 **Roadmap state.** T1-T19 are done: 12 commits on `feature/hardening` after the two from the `1.1.2` slice. Remaining owner decisions, none of them engineering blockers: push, whether the slice ships as one pull request or as the forecast chain, the one-time line-ending renormalization, and enabling branch protection plus secret scanning in the repository settings.
+
+### L15 - delivery as one pull request of 1.2.0 (owner, 2026-11-17)
+
+The owner settled the four open decisions in one message: "1 PR unico como 1.2.0 / 2 olvidado / 3 adelante / 4 ok". Recorded verbatim and interpreted as follows.
+
+**1 - one pull request, released as `1.2.0`.** The forecast chain (`1.1.2` then `1.2.0`) is dropped: the whole hardening slice ships as a single pull request whose version is `1.2.0`. `Directory.Build.props` moves `Version` to `1.2.0`, `CHANGELOG.md` turns its `[Unreleased]` section into `## [1.2.0] - 2026-11-17` with the link references shifted (`[Unreleased]` now compares from `v1.2.0`), and both README editions state that the packages ship at `1.2.0`. `PackageValidationBaselineVersion` stays at `1.1.1` on purpose: a baseline must already exist on the feed, so it moves in the change after the release; the versioning spec now says so.
+
+**2 - the line-ending renormalization is forgotten.** The owner's word is "olvidado". `.gitattributes` stays as the forward-looking definition and the 308-file renormalization will not happen, so this closes that item for good.
+
+**3 - the remote settings go ahead.** Branch protection on `main`, secret scanning with push protection, and the Actions hardening are applied from this session with the owner's explicit go. What was applied and what was deliberately left out are recorded in the delivery log entry that follows this decision.
+
+**4 - the baseline bump is acknowledged.** It happens after `1.2.0` is published, as the versioning spec now states.
+
+**A release defect found while preparing the release.** `release.yml` extracted the notes with `$0 == "## [1.2.0]"`, an equality match against a heading that carries a date, so every release so far published empty notes. It now matches the section by prefix and fails the job when the section produces no text, so a release can no longer be created with no notes.

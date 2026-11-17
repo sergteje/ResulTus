@@ -107,7 +107,13 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           NOTES=$(mktemp)
-          awk -v section="## [$VERSION]" 'found { if ($0 ~ /^## /) exit; print } $0 == section { found = 1 }' CHANGELOG.md > "$NOTES"
+          # The heading carries a date (`## [1.2.0] - 2026-11-17`), so the section is matched by
+          # prefix, not by equality: an equality match silently produced an empty notes file.
+          awk -v section="## [$VERSION]" 'found { if ($0 ~ /^## /) exit; print } index($0, section) == 1 { found = 1 }' CHANGELOG.md > "$NOTES"
+          if [ ! -s "$NOTES" ]; then
+            echo "::error::no changelog section '## [$VERSION]' produced release notes"
+            exit 1
+          fi
           gh release create "$GITHUB_REF_NAME" \
             --title "ResulTus $VERSION" \
             --notes-file "$NOTES" \
