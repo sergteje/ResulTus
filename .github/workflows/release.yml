@@ -94,7 +94,7 @@ jobs:
       # EnablePackageValidation in Directory.Build.props, which fails `dotnet pack` when the packed
       # surface breaks the released baseline.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             ${{ env.ARTIFACTS }}/*.nupkg
