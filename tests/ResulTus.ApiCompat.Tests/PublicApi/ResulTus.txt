@@ -36,8 +36,13 @@ F: ResulTus.ErrorType ResulTus.ErrorType.Forbidden
 F: ResulTus.ErrorType ResulTus.ErrorType.Timeout
 F: ResulTus.ErrorType ResulTus.ErrorType.Cancelled
 F: ResulTus.ErrorType ResulTus.ErrorType.Unexpected
+T: ResulTus.IResultOutcome
+P: System.Boolean ResulTus.IResultOutcome.IsSuccess { get; }
+P: System.String ResulTus.IResultOutcome.ResultType { get; }
+M: ResulTus.IResultOutcome.TryGetError(out ResulTus.Error error) -> System.Boolean
 T: ResulTus.Result
 P: System.Boolean ResulTus.Result.IsSuccess { get; }
+P: System.String ResulTus.Result.ResultType { get; }
 P: System.Boolean ResulTus.Result.IsFailure { get; }
 M: ResulTus.Result.Success() -> ResulTus.Result
 M: ResulTus.Result.Failure(ResulTus.Error error) -> ResulTus.Result
@@ -61,6 +66,7 @@ M: ResulTus.Result.Equals(System.Object obj) -> System.Boolean
 M: ResulTus.Result.Equals(ResulTus.Result other) -> System.Boolean
 T: ResulTus.Result<T>
 P: System.Boolean ResulTus.Result<T>.IsSuccess { get; }
+P: System.String ResulTus.Result<T>.ResultType { get; }
 P: System.Boolean ResulTus.Result<T>.IsFailure { get; }
 M: ResulTus.Result<T>.Success(T value) -> ResulTus.Result<T>
 M: ResulTus.Result<T>.Failure(ResulTus.Error error) -> ResulTus.Result<T>
@@ -70,6 +76,7 @@ M: ResulTus.Result<T>.Match(Func<T, TResult> onSuccess, Func<ResulTus.Error, TRe
 M: ResulTus.Result<T>.Deconstruct(out System.Boolean isSuccess, out T value, out ResulTus.Error error) -> System.Void
 M: ResulTus.Result<T>.TryGetValue(out T value, out ResulTus.Error error) -> System.Boolean
 M: ResulTus.Result<T>.TryGetValue(out T value) -> System.Boolean
+M: ResulTus.Result<T>.TryGetError(out ResulTus.Error error) -> System.Boolean
 M: ResulTus.Result<T>.GetValueOrDefault(T defaultValue) -> T
 M: ResulTus.Result<T>.GetValueOr(Func<ResulTus.Error, T> fallback) -> T
 M: ResulTus.Result<T>.ToString() -> System.String
@@ -87,6 +94,9 @@ O: ResulTus.Result<TSuccess, TError>.op_Implicit(TSuccess value) -> ResulTus.Res
 O: ResulTus.Result<TSuccess, TError>.op_Implicit(TError error) -> ResulTus.Result<TSuccess, TError>
 M: ResulTus.Result<TSuccess, TError>.Match(Func<TSuccess, TResult> onSuccess, Func<TError, TResult> onFailure) -> TResult
 M: ResulTus.Result<TSuccess, TError>.Deconstruct(out System.Boolean isSuccess, out TSuccess value, out TError error) -> System.Void
+M: ResulTus.Result<TSuccess, TError>.TryGetValue(out TSuccess value) -> System.Boolean
+M: ResulTus.Result<TSuccess, TError>.TryGetValue(out TSuccess value, out TError error) -> System.Boolean
+M: ResulTus.Result<TSuccess, TError>.TryGetError(out TError error) -> System.Boolean
 M: ResulTus.Result<TSuccess, TError>.ToString() -> System.String
 O: ResulTus.Result<TSuccess, TError>.op_Inequality(ResulTus.Result<TSuccess, TError> left, ResulTus.Result<TSuccess, TError> right) -> System.Boolean
 O: ResulTus.Result<TSuccess, TError>.op_Equality(ResulTus.Result<TSuccess, TError> left, ResulTus.Result<TSuccess, TError> right) -> System.Boolean

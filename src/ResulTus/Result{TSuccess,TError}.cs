@@ -132,4 +132,42 @@ public readonly record struct Result<TSuccess, TError>
         value = _value;
         error = _error;
     }
+
+    /// <summary>
+    /// Attempts to retrieve the success value.
+    /// </summary>
+    /// <param name="value">When this method returns, the success value if successful; otherwise, <c>default</c>.</param>
+    /// <returns><c>true</c> if the result is successful; <c>false</c> if it is a failure.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetValue(out TSuccess? value)
+    {
+        value = _value;
+        return _isSuccess == 1;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve the success value and the error.
+    /// </summary>
+    /// <param name="value">When this method returns, the success value if successful; otherwise, <c>default</c>.</param>
+    /// <param name="error">When this method returns, the error value if failed; otherwise, <c>default</c>.</param>
+    /// <returns><c>true</c> if the result is successful; <c>false</c> if it is a failure.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetValue(out TSuccess? value, out TError? error)
+    {
+        value = _value;
+        error = _error;
+        return _isSuccess == 1;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve the error value.
+    /// </summary>
+    /// <param name="error">When this method returns, the error value if failed; otherwise, <c>default</c>.</param>
+    /// <returns><c>true</c> if the result is a failure; <c>false</c> if it is a success.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetError(out TError? error)
+    {
+        error = _error;
+        return _isSuccess == 0;
+    }
 }

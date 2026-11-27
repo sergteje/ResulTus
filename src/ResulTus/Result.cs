@@ -17,7 +17,7 @@ namespace ResulTus;
 /// <see cref="Error.None"/> as the underlying error.
 /// </remarks>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public readonly record struct Result
+public readonly record struct Result : IResultOutcome
 {
     private readonly byte _isSuccess;
     private readonly Error _error;
@@ -37,6 +37,9 @@ public readonly record struct Result
     /// Gets a value indicating whether the result represents a successful outcome.
     /// </summary>
     public bool IsSuccess => _isSuccess == 1;
+
+    /// <inheritdoc />
+    public string ResultType => "Result";
 
     /// <summary>
     /// Gets a value indicating whether the result represents a failure.

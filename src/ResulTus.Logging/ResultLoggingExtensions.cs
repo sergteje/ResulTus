@@ -260,6 +260,99 @@ public static class ResultLoggingExtensions
         return LogGeneric(logger, result, levelSelector(error), message);
     }
 
+    /// <summary>
+    /// Logs a successful outcome at <see cref="LogLevel.Debug"/>.
+    /// </summary>
+    /// <param name="outcome">The non-generic outcome view to log.</param>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="message">An optional message that replaces the default rendered text.</param>
+    /// <returns>The same <paramref name="outcome"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <c>null</c>.</exception>
+    public static IResultOutcome LogSuccess(this IResultOutcome outcome, ILogger logger, string? message = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+
+        return outcome.IsSuccess ? LogOutcome(logger, outcome, LogLevel.Debug, message) : outcome;
+    }
+
+    /// <summary>
+    /// Logs a failed outcome at <see cref="LogLevel.Error"/>.
+    /// </summary>
+    /// <param name="outcome">The non-generic outcome view to log.</param>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="message">An optional message that replaces the default rendered text.</param>
+    /// <returns>The same <paramref name="outcome"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <c>null</c>.</exception>
+    public static IResultOutcome LogFailure(this IResultOutcome outcome, ILogger logger, string? message = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+
+        return outcome.IsSuccess ? outcome : LogOutcome(logger, outcome, LogLevel.Error, message);
+    }
+
+    /// <summary>
+    /// Logs an outcome once, at the level its outcome implies: <see cref="LogLevel.Debug"/> on
+    /// success, <see cref="LogLevel.Error"/> on failure.
+    /// </summary>
+    /// <param name="outcome">The non-generic outcome view to log.</param>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="message">An optional message that replaces the default rendered text.</param>
+    /// <returns>The same <paramref name="outcome"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="logger"/> is <c>null</c>.</exception>
+    public static IResultOutcome LogAll(this IResultOutcome outcome, ILogger logger, string? message = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+
+        return LogOutcome(
+            logger,
+            outcome,
+            outcome.IsSuccess ? LogLevel.Debug : LogLevel.Error,
+            message);
+    }
+
+    /// <summary>
+    /// Logs an outcome once, choosing the failure level from the error itself.
+    /// </summary>
+    /// <param name="outcome">The non-generic outcome view to log.</param>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="levelSelector">
+    /// Maps the error to a level. It is never invoked on a success, because there is no error to
+    /// classify.
+    /// </param>
+    /// <param name="message">An optional message that replaces the default rendered text.</param>
+    /// <returns>The same <paramref name="outcome"/>.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="logger"/> or <paramref name="levelSelector"/> is <c>null</c>.
+    /// </exception>
+    public static IResultOutcome LogAll(
+        this IResultOutcome outcome,
+        ILogger logger,
+        Func<Error, LogLevel> levelSelector,
+        string? message = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(levelSelector);
+
+        if (outcome.IsSuccess)
+        {
+            return LogOutcome(logger, outcome, LogLevel.Debug, message);
+        }
+
+        outcome.TryGetError(out var error);
+        return LogOutcome(logger, outcome, levelSelector(error), message);
+    }
+
+    private static IResultOutcome LogOutcome(
+        ILogger logger,
+        IResultOutcome outcome,
+        LogLevel level,
+        string? message)
+    {
+        outcome.TryGetError(out var error);
+        Write(logger, level, outcome.IsSuccess, error, outcome.ResultType, message);
+        return outcome;
+    }
+
     private static Result LogAt(this Result result, ILogger logger, LogLevel level, string? message)
     {
         ArgumentNullException.ThrowIfNull(logger);

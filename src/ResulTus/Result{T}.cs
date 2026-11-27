@@ -24,7 +24,7 @@ namespace ResulTus;
 /// <c>LayoutTests</c>; see docs/decisions/001-result-struct-size.md.
 /// </para>
 /// </remarks>
-public readonly record struct Result<T>
+public readonly record struct Result<T> : IResultOutcome
 {
     private readonly T _value;
     private readonly Error _error;
@@ -56,6 +56,9 @@ public readonly record struct Result<T>
     /// Gets a value indicating whether the result represents a successful outcome.
     /// </summary>
     public bool IsSuccess => _isSuccess == 1;
+
+    /// <inheritdoc />
+    public string ResultType => typeof(T).Name;
 
     /// <summary>
     /// Gets a value indicating whether the result represents a failure.
@@ -155,6 +158,18 @@ public readonly record struct Result<T>
     {
         value = _value;
         return _isSuccess == 1;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve the <see cref="Error"/> from the result.
+    /// </summary>
+    /// <param name="error">When this method returns, the <see cref="Error"/> if failed; otherwise, <see cref="Error.None"/>.</param>
+    /// <returns><c>true</c> if the result is a failure; <c>false</c> if it is a success.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetError(out Error error)
+    {
+        error = _error;
+        return _isSuccess == 0;
     }
 
     /// <summary>

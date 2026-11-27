@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). A `0.x` version, as SemVer
 defines it, means the public API may still change between minor releases.
 
+## [1.4.0] - 2026-11-27
+
+### Added
+
+- **`Result<TSuccess, TError>` exposes `TryGetValue` and `TryGetError`.** The typed tier now offers
+  `TryGetValue(out TSuccess? value)`, `TryGetValue(out TSuccess? value, out TError? error)` and
+  `TryGetError(out TError? error)`, so a caller reads the outcome without deconstructing or matching.
+  The shape mirrors `Result<T>` and keeps the same zero-allocation inline layout.
+- **`IResultOutcome` gives infrastructure a non-generic view of a result.** `Result` and `Result<T>`
+  implement the interface (`IsSuccess`, `ResultType`, `TryGetError`), so a generic pipeline behavior
+  or a logger can inspect a result whose success value type is unknown at compile time. The typed
+  `Result<TSuccess, TError>` tier stays out on purpose: its error type is not necessarily `Error`.
+- **`ResulTus.Logging` logs an `IResultOutcome`.** `LogSuccess`, `LogFailure` and both `LogAll`
+  overloads accept the non-generic view, using `ResultType` for the structured field, so a generic
+  mediator behavior can log results in one place instead of switching on the concrete type.
+
 ## [1.3.0] - 2026-11-17
 
 ### Added

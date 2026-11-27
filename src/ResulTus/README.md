@@ -56,6 +56,21 @@ if (ok.TryGetValue(out var value, out var error))
 }
 ```
 
+The generic tier exposes the same accessors, so it never needs a naked property either:
+
+```csharp
+Result<int, string> typed = Result<int, string>.Success(42);
+
+if (typed.TryGetValue(out var value, out var error))
+{
+    // use value
+}
+```
+
+`Result` and `Result<T>` also implement `IResultOutcome`, the non-generic view (`IsSuccess`,
+`ResultType`, `TryGetError`) that infrastructure uses when the success type is not known at compile
+time.
+
 Errors are built inline from the factory methods on `Error`:
 
 ```csharp

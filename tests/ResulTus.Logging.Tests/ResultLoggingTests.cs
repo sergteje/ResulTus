@@ -395,4 +395,87 @@ public class ResultLoggingTests
             call.Should().Throw<ArgumentNullException>();
         }
     }
+
+    /// <summary>
+    /// GIVEN a generic result viewed as <see cref="IResultOutcome"/>
+    /// WHEN it is logged with <c>LogAll</c>
+    /// THEN the non-generic view MUST log the generic type's name and the success state.
+    /// </summary>
+    [Fact]
+    public void OutcomeLogAll_OnGenericResult_ShouldUseTheNonGenericView()
+    {
+        var logger = new RecordingLogger();
+        IResultOutcome outcome = Result<int>.Success(42);
+
+        outcome.LogAll(logger);
+
+        logger.Entries.Should().ContainSingle();
+        logger.Entries[0].Fields["ResultType"].Should().Be("Int32");
+        logger.Entries[0].Fields["IsSuccess"].Should().Be(true);
+    }
+
+    /// <summary>
+    /// GIVEN a failed generic result viewed as <see cref="IResultOutcome"/>
+    /// WHEN it is logged with a level selector
+    /// THEN the selected level and the error fields MUST be written.
+    /// </summary>
+    [Fact]
+    public void OutcomeLogAll_OnFailure_ShouldCarryTheError()
+    {
+        var logger = new RecordingLogger();
+        IResultOutcome outcome = Result<string>.Failure(Error.Conflict("dup", "duplicate"));
+
+        outcome.LogAll(logger, _ => LogLevel.Warning);
+
+        logger.Entries.Should().ContainSingle();
+        logger.Entries[0].Level.Should().Be(LogLevel.Warning);
+        logger.Entries[0].Fields["ErrorCode"].Should().Be("dup");
+        logger.Entries[0].Fields["ResultType"].Should().Be("String");
+    }
+
+    /// <summary>
+    /// GIVEN a failed outcome viewed as <see cref="IResultOutcome"/>
+    /// WHEN it is logged with <c>LogSuccess</c>
+    /// THEN nothing MUST be written.
+    /// </summary>
+    [Fact]
+    public void OutcomeLogSuccess_OnFailure_ShouldWriteNothing()
+    {
+        var logger = new RecordingLogger();
+        IResultOutcome outcome = Result.Failure(Error.NotFound("missing"));
+
+        outcome.LogSuccess(logger);
+
+        logger.Entries.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// GIVEN a successful outcome viewed as <see cref="IResultOutcome"/>
+    /// WHEN it is logged with <c>LogFailure</c>
+    /// THEN nothing MUST be written.
+    /// </summary>
+    [Fact]
+    public void OutcomeLogFailure_OnSuccess_ShouldWriteNothing()
+    {
+        var logger = new RecordingLogger();
+        IResultOutcome outcome = Result.Success();
+
+        outcome.LogFailure(logger);
+
+        logger.Entries.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// GIVEN a <c>null</c> logger
+    /// WHEN the non-generic entry points are called
+    /// THEN they MUST throw <see cref="ArgumentNullException"/>.
+    /// </summary>
+    [Fact]
+    public void OutcomeNullLogger_ShouldThrow()
+    {
+        IResultOutcome outcome = Result.Success();
+
+        ((Action)(() => outcome.LogAll(null!))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => outcome.LogAll(null!, _ => LogLevel.Error))).Should().Throw<ArgumentNullException>();
+    }
 }

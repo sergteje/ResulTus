@@ -28,3 +28,7 @@ M: ResulTus.Logging.ResultLoggingExtensions.LogWarning(Result<T> result, Microso
 M: ResulTus.Logging.ResultLoggingExtensions.LogInformation(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
 M: ResulTus.Logging.ResultLoggingExtensions.LogAll(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> Result<T>
 M: ResulTus.Logging.ResultLoggingExtensions.LogAll(Result<T> result, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> Result<T>
+M: ResulTus.Logging.ResultLoggingExtensions.LogSuccess(ResulTus.IResultOutcome outcome, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.IResultOutcome
+M: ResulTus.Logging.ResultLoggingExtensions.LogFailure(ResulTus.IResultOutcome outcome, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.IResultOutcome
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(ResulTus.IResultOutcome outcome, Microsoft.Extensions.Logging.ILogger logger, System.String message) -> ResulTus.IResultOutcome
+M: ResulTus.Logging.ResultLoggingExtensions.LogAll(ResulTus.IResultOutcome outcome, Microsoft.Extensions.Logging.ILogger logger, System.Func<ResulTus.Error, Microsoft.Extensions.Logging.LogLevel> levelSelector, System.String message) -> ResulTus.IResultOutcome
