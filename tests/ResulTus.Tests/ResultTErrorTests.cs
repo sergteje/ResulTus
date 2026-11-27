@@ -96,4 +96,59 @@ public class ResultTErrorTests
 
         r.IsSuccess.Should().BeTrue();
     }
+
+    /// <summary>
+    /// GIVEN a successful <c>Result&lt;int, string&gt;</c>
+    /// WHEN <c>TryGetValue(out var value)</c>
+    /// THEN it MUST return <c>true</c> and the success value.
+    /// </summary>
+    [Fact]
+    public void TryGetValue_OnSuccess_ShouldReturnValue()
+    {
+        var r = Result<int, string>.Success(7);
+
+        r.TryGetValue(out var value).Should().BeTrue();
+        value.Should().Be(7);
+    }
+
+    /// <summary>
+    /// GIVEN a failed <c>Result&lt;int, string&gt;</c>
+    /// WHEN <c>TryGetValue(out _, out var error)</c>
+    /// THEN it MUST return <c>false</c> and the error.
+    /// </summary>
+    [Fact]
+    public void TryGetValue_OnFailure_ShouldReturnError()
+    {
+        var r = Result<int, string>.Failure("fail");
+
+        r.TryGetValue(out _, out var error).Should().BeFalse();
+        error.Should().Be("fail");
+    }
+
+    /// <summary>
+    /// GIVEN a failed <c>Result&lt;int, string&gt;</c>
+    /// WHEN <c>TryGetError(out var error)</c>
+    /// THEN it MUST return <c>true</c> and the error.
+    /// </summary>
+    [Fact]
+    public void TryGetError_OnFailure_ShouldReturnError()
+    {
+        var r = Result<int, string>.Failure("fail");
+
+        r.TryGetError(out var error).Should().BeTrue();
+        error.Should().Be("fail");
+    }
+
+    /// <summary>
+    /// GIVEN a successful <c>Result&lt;int, string&gt;</c>
+    /// WHEN <c>TryGetError</c>
+    /// THEN it MUST return <c>false</c>.
+    /// </summary>
+    [Fact]
+    public void TryGetError_OnSuccess_ShouldReturnFalse()
+    {
+        var r = Result<int, string>.Success(1);
+
+        r.TryGetError(out _).Should().BeFalse();
+    }
 }

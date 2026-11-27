@@ -79,6 +79,23 @@ Result<int> chosen = loaded.LogAll(
 // failure -> Warning for NotFound, Error otherwise; success -> Debug
 ```
 
+### Non-generic outcomes
+
+`Result` and `Result<T>` implement `IResultOutcome`, the non-generic view (`IsSuccess`,
+`ResultType`, `TryGetError`). The same verbs accept it, so a generic pipeline behavior or a
+middleware can log a result whose success type is not known at compile time:
+
+```csharp
+using ResulTus;
+using ResulTus.Logging;
+
+IResultOutcome outcome = Result<int>.Success(42);
+outcome.LogAll(logger);
+```
+
+`ResultType` carries `"Result"` for the unit tier and the success type's name for `Result<T>`, so the
+structured fields stay useful without reflection.
+
 ### Async verbs
 
 A `Task<Result>` or `Task<Result<T>>` source has the same verbs as `...Async` — `LogSuccessAsync`,
